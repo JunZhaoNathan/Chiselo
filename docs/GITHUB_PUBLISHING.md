@@ -23,7 +23,7 @@ Do not commit these to the repository:
 - `.build/`;
 - `outputs/`;
 - `Chiselo.app`;
-- `Chiselo-0.1.0.dmg`;
+- `Chiselo-0.1.1.dmg`;
 - logs, temp files, local caches, and unreferenced temporary screenshots.
 
 The DMG should be uploaded later as a GitHub Release asset.
@@ -140,19 +140,19 @@ To rebuild the default package:
 ```bash
 scripts/release-preflight.sh
 scripts/package-dmg.sh
-hdiutil verify outputs/Chiselo-0.1.0.dmg
+hdiutil verify outputs/Chiselo-0.1.1.dmg
 ```
 
 Default release asset:
 
 ```text
-outputs/Chiselo-0.1.0.dmg
+outputs/Chiselo-0.1.1.dmg
 ```
 
 If using a custom package output from the Codex build folder, upload:
 
 ```text
-outputs/codex-build/Chiselo-0.1.0.dmg
+outputs/codex-build/Chiselo-0.1.1.dmg
 ```
 
 Only upload one DMG to GitHub Releases unless you intentionally built multiple variants.
@@ -165,20 +165,20 @@ Only upload one DMG to GitHub Releases unless you intentionally built multiple v
 4. Create a new tag:
 
 ```text
-v0.1.0-preview.1
+v0.1.1-preview.1
 ```
 
 5. Release title:
 
 ```text
-Chiselo 0.1.0 Preview
+Chiselo 0.1.1 Preview
 ```
 
 6. Check `Set as a pre-release`.
 7. Paste the text from:
 
 ```text
-docs/RELEASE_NOTES_0.1.0_PREVIEW.md
+docs/RELEASE_NOTES_0.1.1_PREVIEW.md
 ```
 
 8. Upload the DMG file.

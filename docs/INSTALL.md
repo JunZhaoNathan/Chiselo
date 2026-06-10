@@ -2,7 +2,7 @@
 
 ## DMG Install
 
-1. Download `Chiselo-0.1.0.dmg` from GitHub Releases.
+1. Download `Chiselo-0.1.1.dmg` from GitHub Releases.
 2. Open the DMG.
 3. Drag `Chiselo.app` to `Applications`.
 4. Launch Chiselo from `Applications`.
@@ -26,7 +26,7 @@ Outputs:
 
 ```text
 outputs/Chiselo.app
-outputs/Chiselo-0.1.0.dmg
+outputs/Chiselo-0.1.1.dmg
 ```
 
 Custom output directory:
