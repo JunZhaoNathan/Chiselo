@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chiselo Test Page 03 - Delivery Form</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #edf0f3; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    body { display: grid; place-items: start center; padding: 28px; }
+    .document { width: min(1040px, 100%); background: #ffffff; border: 1px solid #d9e0e7; border-radius: 18px; box-shadow: 0 24px 64px rgba(23, 32, 51, .14); overflow: hidden; }
+    header { padding: 32px 40px; background: #172033; color: #fff; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+    h1 { margin: 0; font-size: 38px; line-height: 1.12; letter-spacing: 0; }
+    .doc-id { padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.12); color: #d8dee8; font-weight: 760; white-space: nowrap; }
+    main { padding: 30px 40px 42px; }
+    .intro { display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: stretch; }
+    .summary, .stamp, fieldset, .table-panel { border: 1px solid #d9e0e7; border-radius: 14px; background: #fbfcfd; }
+    .summary { padding: 24px; }
+    .summary p { margin: 0; color: #657184; font-size: 18px; line-height: 1.56; }
+    .stamp { display: grid; place-items: center; min-height: 168px; padding: 20px; text-align: center; }
+    .stamp img { display: block; width: 92px; height: 72px; margin-bottom: 12px; border-radius: 12px; }
+    .stamp strong { display: block; color: #0f766e; font-size: 44px; line-height: 1; }
+    .stamp span { display: block; margin-top: 10px; color: #657184; font-weight: 720; }
+    form { display: grid; gap: 22px; margin-top: 24px; }
+    fieldset { margin: 0; padding: 22px; }
+    legend { padding: 0 8px; color: #172033; font-weight: 850; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    label { display: grid; gap: 8px; color: #3e4b5e; font-size: 14px; font-weight: 760; }
+    input, select, textarea { width: 100%; border: 1px solid #cbd5df; border-radius: 10px; background: white; padding: 11px 12px; color: #172033; font: 15px/1.3 inherit; }
+    textarea { min-height: 96px; resize: vertical; }
+    .checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .check { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #d9e0e7; border-radius: 12px; background: white; color: #3e4b5e; font-size: 15px; }
+    .check input { width: auto; }
+    .table-panel { padding: 22px; }
+    h2 { margin: 0 0 16px; font-size: 22px; line-height: 1.2; letter-spacing: 0; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #e4e9ee; text-align: left; font-size: 15px; line-height: 1.45; }
+    th { background: #f1f5f9; color: #172033; }
+    td { color: #5b6879; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+    button { border: 0; border-radius: 10px; padding: 12px 16px; color: white; background: #2563eb; font-weight: 820; cursor: pointer; }
+    button.secondary { color: #172033; background: #e5eaf0; }
+    @media (max-width: 780px) {
+      body { padding: 12px; }
+      header, .intro, .grid, .checks { grid-template-columns: 1fr; }
+      main, header { padding-left: 22px; padding-right: 22px; }
+      .actions { justify-content: stretch; }
+      button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <section class="document">
+    <header>
+      <h1>交付验收表</h1>
+      <div class="doc-id">DOC-QA-HTML-003</div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <article class="summary">
+          <p>这个页面用于测试表单控件、复选框、表格、按钮和较密集信息结构。它不需要真实提交，只作为 Chiselo 导入、选择和导出流程的固定测试素材。</p>
+        </article>
+        <aside class="stamp">
+          <img alt="delivery fixture mark" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='184' height='144' viewBox='0 0 184 144'%3E%3Crect width='184' height='144' rx='24' fill='%23dff7f2'/%3E%3Cpath d='M50 74l27 27 58-64' fill='none' stroke='%230f766e' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+          <strong>READY</strong>
+          <span>Fixture status</span>
+        </aside>
+      </section>
+
+      <form>
+        <fieldset>
+          <legend>基础信息</legend>
+          <div class="grid">
+            <label>项目名称<input value="HTML 精修测试包"></label>
+            <label>负责人<input value="Chiselo QA"></label>
+            <label>交付类型<select><option>HTML + Slides</option><option>PDF</option><option>PPTX</option></select></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>验收项</legend>
+          <div class="checks">
+            <label class="check"><input type="checkbox" checked> 页面图片已内嵌或可访问</label>
+            <label class="check"><input type="checkbox" checked> 表格边框导入后可识别</label>
+            <label class="check"><input type="checkbox"> 长文本溢出已复核</label>
+            <label class="check"><input type="checkbox" checked> 导出格式命名已确认</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>备注</legend>
+          <label>交付说明<textarea>用于本地回归测试，可尝试修改文本、移动控件、复制表格行，并检查导出后的视觉一致性。</textarea></label>
+        </fieldset>
+
+        <section class="table-panel">
+          <h2>交付物列表</h2>
+          <table>
+            <thead><tr><th>文件</th><th>页数</th><th>检查点</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td>01-operations-dashboard.html</td><td>1</td><td>图表 / 表格 / 卡片</td><td>待测</td></tr>
+              <tr><td>02-editorial-brief.html</td><td>1</td><td>正文 / 图注 / 侧栏</td><td>待测</td></tr>
+              <tr><td>test-10-slide-deck.aislide</td><td>10</td><td>多页 slide deck</td><td>待测</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <div class="actions">
+          <button class="secondary" type="button">保存草稿</button>
+          <button type="button">标记通过</button>
+        </div>
+      </form>
+    </main>
+  </section>
+</body>
+</html>

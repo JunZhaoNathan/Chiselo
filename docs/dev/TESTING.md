@@ -23,9 +23,12 @@ swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
 swift scripts/precision-adjustment-test.swift
 swift scripts/five-slide-acceptance-test.swift
+swift scripts/generated-fixtures-editing-test.swift
+node scripts/validate-deck.mjs outputs/generated-fixture-edits/test-10-slide-deck-edited.aislide
 ```
 
 These use the bundled sample HTML page unless you pass a custom HTML path.
+`generated-fixtures-editing-test.swift` edits the generated HTML and `.aislide` fixtures with the Chiselo editor runtime, exports the edited files to `outputs/generated-fixture-edits/`, and checks text editing, image replacement, module movement, table edits, deck edits, and clean export.
 
 ## Demo Deck Checks
 

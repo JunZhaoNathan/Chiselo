@@ -39,7 +39,7 @@ final class FiveSlideAcceptanceTest: NSObject, WKNavigationDelegate, WKScriptMes
             let baseLiteral = try jsStringLiteral(baseHref)
             let script = """
             void window.ChiseloEditor.openHTMLFromBase64('\(base64)', \(baseLiteral))
-              .then(() => {
+              .then(async () => {
                 const editor = window.ChiseloEditor;
                 const before = editor.getHTMLSummary();
                 const tree = editor.getHTMLTree();
@@ -66,8 +66,10 @@ final class FiveSlideAcceptanceTest: NSObject, WKNavigationDelegate, WKScriptMes
 
                 const image = editor.selectHTML('img.demo-image');
                 if (!image) throw new Error('Missing demo image');
-                const replacedImage = editor.replaceSelectedImageFromBase64('image/svg+xml', replacementBase64);
+                let replacedImage = editor.replaceSelectedImageFromBase64('image/svg+xml', replacementBase64);
                 if (!replacedImage) throw new Error('Could not replace image');
+                replacedImage = await editor.settleSelectedImage();
+                if (!replacedImage) throw new Error('Replaced image did not settle');
                 editor.command('setLayoutFree');
                 editor.updateElement({
                   ...replacedImage,

@@ -39,7 +39,7 @@ final class DigitalTransformationAcceptanceTest: NSObject, WKNavigationDelegate,
             let baseLiteral = try jsStringLiteral(baseHref)
             let script = """
             void window.ChiseloEditor.openHTMLFromBase64('\(base64)', \(baseLiteral))
-              .then(() => {
+              .then(async () => {
                 const editor = window.ChiseloEditor;
                 const before = editor.getHTMLSummary();
                 const visualSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" rx="42" fill="#4b3b78"/><rect x="88" y="82" width="260" height="112" rx="28" fill="#ffffff"/><rect x="398" y="82" width="474" height="112" rx="28" fill="#f5efff"/><rect x="88" y="254" width="374" height="154" rx="28" fill="#ffc107"/><rect x="512" y="254" width="360" height="154" rx="28" fill="#c62828"/><text x="128" y="148" font-family="Arial" font-size="38" font-weight="800" fill="#15151b">Edited</text><text x="438" y="148" font-family="Arial" font-size="38" font-weight="800" fill="#15151b">by Chiselo</text><text x="128" y="342" font-family="Arial" font-size="34" font-weight="800" fill="#15151b">Digital Core</text><text x="552" y="342" font-family="Arial" font-size="34" font-weight="800" fill="#fff">AI Workflow</text></svg>';
@@ -87,8 +87,10 @@ final class DigitalTransformationAcceptanceTest: NSObject, WKNavigationDelegate,
 
                 const image = editor.selectHTML('img.hero-visual');
                 if (!image) throw new Error('Missing hero visual');
-                const replaced = editor.replaceSelectedImageFromBase64('image/svg+xml', visualBase64);
+                let replaced = editor.replaceSelectedImageFromBase64('image/svg+xml', visualBase64);
                 if (!replaced) throw new Error('Image replacement failed');
+                replaced = await editor.settleSelectedImage();
+                if (!replaced) throw new Error('Replaced image did not settle');
                 editor.command('setLayoutFree');
                 editor.updateElement({
                   ...replaced,

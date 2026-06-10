@@ -46,7 +46,7 @@ This avoids local machines where `~/.config` has incorrect permissions.
 Before a bigger public release, run the full preflight:
 
 ```bash
-FULL_PREFLIGHT=1 scripts/push-github-update.sh "Prepare 0.1.2 preview"
+FULL_PREFLIGHT=1 scripts/push-github-update.sh "Prepare 0.1.3 preview"
 ```
 
 This runs `scripts/release-preflight.sh` before committing.

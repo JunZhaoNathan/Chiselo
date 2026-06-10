@@ -81,6 +81,10 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
           const firstFrozenElement = frozenDeck.slides?.[0]?.elements?.[0];
           const selectedFrozenElement = firstFrozenElement ? editor.selectElementById(firstFrozenElement.id) : null;
 
+          const minimalHTML = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Minimal</title></head><body><main><h1>Minimal diagnostics fixture</h1><p>No images, media, SVG, or tables.</p></main></body></html>';
+          await editor.openHTMLFromBase64(btoa(minimalHTML), '');
+          const minimalDiagnostics = editor.getImportDiagnostics();
+
           const assertions = {
             fragmentWrapped: editor.exportHTML().includes('<html'),
             imageDetected: before.imageCount === 1,
@@ -98,7 +102,10 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             imageElementFrozen: frozenJSON.includes('"type":"image"'),
             imageSourcePreserved: frozenJSON.includes('missing-chiselo-image.png'),
             imageExportPreserved: frozenExport.includes('<img') && frozenExport.includes('missing-chiselo-image.png'),
-            deckLayerSelectionWorks: Boolean(firstFrozenElement && selectedFrozenElement && selectedFrozenElement.id === firstFrozenElement.id)
+            deckLayerSelectionWorks: Boolean(firstFrozenElement && selectedFrozenElement && selectedFrozenElement.id === firstFrozenElement.id),
+            minimalDiagnosticsNoResourceTarget: minimalDiagnostics.imageCount === 0 && minimalDiagnostics.mediaCount === 0 && minimalDiagnostics.resourceElementId === null,
+            minimalDiagnosticsNoTableTarget: minimalDiagnostics.tableCount === 0 && minimalDiagnostics.tableElementId === null,
+            minimalDiagnosticsNoSvgTarget: minimalDiagnostics.svgCount === 0 && minimalDiagnostics.svgElementId === null
           };
 
           const failed = Object.entries(assertions).filter(([, value]) => !value);
@@ -110,7 +117,8 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             type: 'result',
             assertions,
             before,
-            afterAddDiagnostics
+            afterAddDiagnostics,
+            minimalDiagnostics
           });
         })().catch(error => {
           window.webkit.messageHandlers.adapter.postMessage({ type: 'error', message: String(error && error.message || error) });

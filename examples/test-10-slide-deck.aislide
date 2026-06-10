@@ -1,0 +1,1313 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#f7fafc"
+  },
+  "slides": [
+    {
+      "id": "slide-01",
+      "title": "测试封面",
+      "elements": [
+        {
+          "id": "s01-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#f7fafc",
+            "stroke": "#f7fafc",
+            "strokeWidth": 0,
+            "radius": 0
+          }
+        },
+        {
+          "id": "s01-band",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 1280,
+          "h": 210,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#0f766e",
+            "stroke": "#0f766e",
+            "strokeWidth": 0,
+            "radius": 0
+          }
+        },
+        {
+          "id": "s01-kicker",
+          "type": "text",
+          "x": 92,
+          "y": 72,
+          "w": 440,
+          "h": 30,
+          "rotation": 0,
+          "z": 5,
+          "text": "CHISELO TEST FIXTURE",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 22,
+            "fontWeight": 820,
+            "lineHeight": 1.1,
+            "color": "#ccfbf1",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s01-title",
+          "type": "text",
+          "x": 90,
+          "y": 245,
+          "w": 760,
+          "h": 132,
+          "rotation": 0,
+          "z": 5,
+          "text": "10 页幻灯片测试 Deck",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 64,
+            "fontWeight": 860,
+            "lineHeight": 1.08,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s01-subtitle",
+          "type": "text",
+          "x": 94,
+          "y": 400,
+          "w": 720,
+          "h": 84,
+          "rotation": 0,
+          "z": 5,
+          "text": "覆盖文本、形状、图片、线条、卡片和多页缩略图，方便测试导入、编辑与导出。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 28,
+            "fontWeight": 450,
+            "lineHeight": 1.32,
+            "color": "#526173",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s01-visual",
+          "type": "image",
+          "imageSource": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='320' viewBox='0 0 420 320'%3E%3Crect width='420' height='320' rx='34' fill='%23e0f2fe'/%3E%3Crect x='56' y='60' width='132' height='88' rx='18' fill='%23ffffff' stroke='%230f766e' stroke-width='5'/%3E%3Crect x='232' y='60' width='132' height='88' rx='18' fill='%23ffffff' stroke='%232563eb' stroke-width='5'/%3E%3Crect x='144' y='190' width='132' height='88' rx='18' fill='%23ffffff' stroke='%23f59e0b' stroke-width='5'/%3E%3Cpath d='M188 104h44M232 104l-22-18M232 104l-22 18M210 148v42' fill='none' stroke='%23102033' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
+          "imageAlt": "deck fixture diagram",
+          "x": 830,
+          "y": 240,
+          "w": 330,
+          "h": 250,
+          "rotation": 0,
+          "z": 4,
+          "style": {
+            "stroke": "#cbd5e1",
+            "strokeWidth": 1,
+            "radius": 28
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-02",
+      "title": "测试范围",
+      "elements": [
+        {
+          "id": "s02-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 660,
+          "h": 66,
+          "rotation": 0,
+          "z": 10,
+          "text": "测试范围",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 50,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s02-rule",
+          "type": "line",
+          "x": 80,
+          "y": 140,
+          "w": 150,
+          "h": 8,
+          "rotation": 0,
+          "z": 9,
+          "style": {
+            "fill": "#0f766e",
+            "stroke": "#0f766e",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s02-card-1",
+          "type": "rect",
+          "x": 80,
+          "y": 198,
+          "w": 330,
+          "h": 280,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s02-card-2",
+          "type": "rect",
+          "x": 474,
+          "y": 198,
+          "w": 330,
+          "h": 280,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s02-card-3",
+          "type": "rect",
+          "x": 868,
+          "y": 198,
+          "w": 330,
+          "h": 280,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s02-text-1",
+          "type": "text",
+          "x": 112,
+          "y": 236,
+          "w": 265,
+          "h": 148,
+          "rotation": 0,
+          "z": 6,
+          "text": "HTML 页面\n卡片、图表、表格、长段落和表单控件。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 30,
+            "fontWeight": 760,
+            "lineHeight": 1.3,
+            "color": "#0f766e",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s02-text-2",
+          "type": "text",
+          "x": 506,
+          "y": 236,
+          "w": 265,
+          "h": 148,
+          "rotation": 0,
+          "z": 6,
+          "text": "Deck 元素\n文本、矩形、椭圆、线条、图片与图层顺序。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 30,
+            "fontWeight": 760,
+            "lineHeight": 1.3,
+            "color": "#2563eb",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s02-text-3",
+          "type": "text",
+          "x": 900,
+          "y": 236,
+          "w": 265,
+          "h": 148,
+          "rotation": 0,
+          "z": 6,
+          "text": "导出链路\n检查 HTML、PDF、PPTX 的结构与视觉一致性。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 30,
+            "fontWeight": 760,
+            "lineHeight": 1.3,
+            "color": "#b45309",
+            "textAlign": "left"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-03",
+      "title": "HTML 页面组",
+      "elements": [
+        {
+          "id": "s03-title",
+          "type": "text",
+          "x": 80,
+          "y": 62,
+          "w": 720,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "3 个 HTML 页面",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s03-table",
+          "type": "rect",
+          "x": 80,
+          "y": 172,
+          "w": 1110,
+          "h": 390,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 20
+          }
+        },
+        {
+          "id": "s03-head",
+          "type": "rect",
+          "x": 80,
+          "y": 172,
+          "w": 1110,
+          "h": 68,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#172033",
+            "stroke": "#172033",
+            "strokeWidth": 0,
+            "radius": 20
+          }
+        },
+        {
+          "id": "s03-head-text",
+          "type": "text",
+          "x": 112,
+          "y": 192,
+          "w": 880,
+          "h": 34,
+          "rotation": 0,
+          "z": 4,
+          "text": "文件 / 测试重点 / 预期覆盖",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 25,
+            "fontWeight": 820,
+            "lineHeight": 1.1,
+            "color": "#ffffff",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s03-row-1",
+          "type": "text",
+          "x": 112,
+          "y": 275,
+          "w": 990,
+          "h": 56,
+          "rotation": 0,
+          "z": 4,
+          "text": "01-operations-dashboard.html  /  指标卡片、趋势图、状态表格",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 26,
+            "fontWeight": 620,
+            "lineHeight": 1.22,
+            "color": "#2f4054",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s03-row-2",
+          "type": "text",
+          "x": 112,
+          "y": 372,
+          "w": 990,
+          "h": 56,
+          "rotation": 0,
+          "z": 4,
+          "text": "02-editorial-brief.html  /  长文、图注、侧栏、引用样式",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 26,
+            "fontWeight": 620,
+            "lineHeight": 1.22,
+            "color": "#2f4054",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s03-row-3",
+          "type": "text",
+          "x": 112,
+          "y": 468,
+          "w": 990,
+          "h": 56,
+          "rotation": 0,
+          "z": 4,
+          "text": "03-delivery-form.html  /  表单控件、复选框、按钮、交付列表",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 26,
+            "fontWeight": 620,
+            "lineHeight": 1.22,
+            "color": "#2f4054",
+            "textAlign": "left"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-04",
+      "title": "元素覆盖",
+      "elements": [
+        {
+          "id": "s04-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 690,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "元素类型覆盖",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s04-circle-1",
+          "type": "ellipse",
+          "x": 106,
+          "y": 190,
+          "w": 150,
+          "h": 150,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ccfbf1",
+            "stroke": "#0f766e",
+            "strokeWidth": 5,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s04-circle-2",
+          "type": "ellipse",
+          "x": 326,
+          "y": 190,
+          "w": 150,
+          "h": 150,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#dbeafe",
+            "stroke": "#2563eb",
+            "strokeWidth": 5,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s04-circle-3",
+          "type": "ellipse",
+          "x": 546,
+          "y": 190,
+          "w": 150,
+          "h": 150,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#fef3c7",
+            "stroke": "#f59e0b",
+            "strokeWidth": 5,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s04-circle-4",
+          "type": "ellipse",
+          "x": 766,
+          "y": 190,
+          "w": 150,
+          "h": 150,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#fee2e2",
+            "stroke": "#dc2626",
+            "strokeWidth": 5,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s04-circle-5",
+          "type": "ellipse",
+          "x": 986,
+          "y": 190,
+          "w": 150,
+          "h": 150,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#e5e7eb",
+            "stroke": "#475569",
+            "strokeWidth": 5,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s04-labels",
+          "type": "text",
+          "x": 98,
+          "y": 384,
+          "w": 1050,
+          "h": 80,
+          "rotation": 0,
+          "z": 5,
+          "text": "text    rect    ellipse    line    image",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Mono', monospace",
+            "fontSize": 38,
+            "fontWeight": 780,
+            "lineHeight": 1.2,
+            "color": "#172033",
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "s04-note",
+          "type": "text",
+          "x": 168,
+          "y": 512,
+          "w": 930,
+          "h": 68,
+          "rotation": 0,
+          "z": 5,
+          "text": "这些元素可用于验证选择框、缩略图计数、图层顺序和导出映射。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 28,
+            "fontWeight": 500,
+            "lineHeight": 1.3,
+            "color": "#526173",
+            "textAlign": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-05",
+      "title": "流程图",
+      "elements": [
+        {
+          "id": "s05-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 760,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "导入到导出的流程",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s05-node-1",
+          "type": "rect",
+          "x": 90,
+          "y": 230,
+          "w": 210,
+          "h": 120,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#0f766e",
+            "strokeWidth": 4,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s05-node-2",
+          "type": "rect",
+          "x": 390,
+          "y": 230,
+          "w": 210,
+          "h": 120,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#2563eb",
+            "strokeWidth": 4,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s05-node-3",
+          "type": "rect",
+          "x": 690,
+          "y": 230,
+          "w": 210,
+          "h": 120,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#f59e0b",
+            "strokeWidth": 4,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s05-node-4",
+          "type": "rect",
+          "x": 990,
+          "y": 230,
+          "w": 210,
+          "h": 120,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#dc2626",
+            "strokeWidth": 4,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s05-line-1",
+          "type": "line",
+          "x": 308,
+          "y": 286,
+          "w": 70,
+          "h": 8,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#94a3b8",
+            "stroke": "#94a3b8",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s05-line-2",
+          "type": "line",
+          "x": 608,
+          "y": 286,
+          "w": 70,
+          "h": 8,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#94a3b8",
+            "stroke": "#94a3b8",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s05-line-3",
+          "type": "line",
+          "x": 908,
+          "y": 286,
+          "w": 70,
+          "h": 8,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#94a3b8",
+            "stroke": "#94a3b8",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s05-labels",
+          "type": "text",
+          "x": 102,
+          "y": 263,
+          "w": 1085,
+          "h": 46,
+          "rotation": 0,
+          "z": 4,
+          "text": "打开 HTML     选择对象     精修布局     导出交付",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 28,
+            "fontWeight": 780,
+            "lineHeight": 1.2,
+            "color": "#172033",
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "s05-note",
+          "type": "text",
+          "x": 130,
+          "y": 432,
+          "w": 1030,
+          "h": 84,
+          "rotation": 0,
+          "z": 4,
+          "text": "流程图页用于观察线条元素、等距节点、文本对齐和缩放后的相对位置。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 30,
+            "fontWeight": 500,
+            "lineHeight": 1.32,
+            "color": "#526173",
+            "textAlign": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-06",
+      "title": "图片测试",
+      "elements": [
+        {
+          "id": "s06-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 760,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "图片元素测试",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s06-image",
+          "type": "image",
+          "imageSource": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='420' viewBox='0 0 720 420'%3E%3Crect width='720' height='420' rx='32' fill='%23e2e8f0'/%3E%3Crect x='54' y='58' width='612' height='304' rx='26' fill='%23ffffff'/%3E%3Cpath d='M92 300l118-112 82 78 92-126 184 160z' fill='%230f766e' opacity='.88'/%3E%3Ccircle cx='548' cy='116' r='48' fill='%23f59e0b'/%3E%3Crect x='98' y='86' width='240' height='28' rx='14' fill='%232563eb' opacity='.78'/%3E%3C/svg%3E",
+          "imageAlt": "embedded SVG image",
+          "x": 86,
+          "y": 178,
+          "w": 610,
+          "h": 356,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "stroke": "#cbd5e1",
+            "strokeWidth": 1,
+            "radius": 28
+          }
+        },
+        {
+          "id": "s06-card",
+          "type": "rect",
+          "x": 756,
+          "y": 178,
+          "w": 420,
+          "h": 356,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 24
+          }
+        },
+        {
+          "id": "s06-copy",
+          "type": "text",
+          "x": 794,
+          "y": 218,
+          "w": 340,
+          "h": 184,
+          "rotation": 0,
+          "z": 5,
+          "text": "验证点\n- imageSource data URL\n- 圆角边框\n- 缩略图图片计数\n- PPTX 导出映射",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 28,
+            "fontWeight": 620,
+            "lineHeight": 1.35,
+            "color": "#172033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s06-badge",
+          "type": "ellipse",
+          "x": 1020,
+          "y": 432,
+          "w": 84,
+          "h": 84,
+          "rotation": 0,
+          "z": 6,
+          "style": {
+            "fill": "#ccfbf1",
+            "stroke": "#0f766e",
+            "strokeWidth": 4,
+            "radius": 999
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-07",
+      "title": "文本层级",
+      "elements": [
+        {
+          "id": "s07-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 760,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "文本层级测试",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s07-large",
+          "type": "text",
+          "x": 92,
+          "y": 172,
+          "w": 520,
+          "h": 88,
+          "rotation": 0,
+          "z": 5,
+          "text": "64 px Display",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+            "fontSize": 64,
+            "fontWeight": 860,
+            "lineHeight": 1.05,
+            "color": "#0f766e",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s07-medium",
+          "type": "text",
+          "x": 92,
+          "y": 288,
+          "w": 720,
+          "h": 68,
+          "rotation": 0,
+          "z": 5,
+          "text": "32 px Section Title / 中文标题",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 32,
+            "fontWeight": 760,
+            "lineHeight": 1.18,
+            "color": "#172033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s07-body",
+          "type": "text",
+          "x": 92,
+          "y": 386,
+          "w": 720,
+          "h": 120,
+          "rotation": 0,
+          "z": 5,
+          "text": "20 px 正文文本用于检查多行换行、行高、文字编辑框和导出后的文本位置是否保持稳定。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 20,
+            "fontWeight": 450,
+            "lineHeight": 1.55,
+            "color": "#526173",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s07-right-card",
+          "type": "rect",
+          "x": 846,
+          "y": 168,
+          "w": 310,
+          "h": 338,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#172033",
+            "stroke": "#172033",
+            "strokeWidth": 0,
+            "radius": 26
+          }
+        },
+        {
+          "id": "s07-right-text",
+          "type": "text",
+          "x": 884,
+          "y": 214,
+          "w": 235,
+          "h": 210,
+          "rotation": 0,
+          "z": 5,
+          "text": "Dark Card\n反白文字\n居中对齐",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 34,
+            "fontWeight": 820,
+            "lineHeight": 1.28,
+            "color": "#ffffff",
+            "textAlign": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-08",
+      "title": "路线图",
+      "elements": [
+        {
+          "id": "s08-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 760,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "路线图页面",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s08-line",
+          "type": "line",
+          "x": 132,
+          "y": 342,
+          "w": 1010,
+          "h": 10,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#cbd5e1",
+            "stroke": "#cbd5e1",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s08-dot-1",
+          "type": "ellipse",
+          "x": 150,
+          "y": 304,
+          "w": 86,
+          "h": 86,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "fill": "#0f766e",
+            "stroke": "#ffffff",
+            "strokeWidth": 6,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s08-dot-2",
+          "type": "ellipse",
+          "x": 414,
+          "y": 304,
+          "w": 86,
+          "h": 86,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "fill": "#2563eb",
+            "stroke": "#ffffff",
+            "strokeWidth": 6,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s08-dot-3",
+          "type": "ellipse",
+          "x": 678,
+          "y": 304,
+          "w": 86,
+          "h": 86,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "fill": "#f59e0b",
+            "stroke": "#ffffff",
+            "strokeWidth": 6,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s08-dot-4",
+          "type": "ellipse",
+          "x": 942,
+          "y": 304,
+          "w": 86,
+          "h": 86,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "fill": "#dc2626",
+            "stroke": "#ffffff",
+            "strokeWidth": 6,
+            "radius": 999
+          }
+        },
+        {
+          "id": "s08-labels",
+          "type": "text",
+          "x": 96,
+          "y": 418,
+          "w": 1070,
+          "h": 116,
+          "rotation": 0,
+          "z": 5,
+          "text": "第 1 周：导入样例        第 2 周：编辑覆盖        第 3 周：导出比对        第 4 周：回归固化",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 27,
+            "fontWeight": 700,
+            "lineHeight": 1.45,
+            "color": "#172033",
+            "textAlign": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-09",
+      "title": "KPI 看板",
+      "elements": [
+        {
+          "id": "s09-title",
+          "type": "text",
+          "x": 78,
+          "y": 58,
+          "w": 760,
+          "h": 62,
+          "rotation": 0,
+          "z": 10,
+          "text": "KPI 看板页",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 48,
+            "fontWeight": 840,
+            "lineHeight": 1.1,
+            "color": "#102033",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s09-card-1",
+          "type": "rect",
+          "x": 86,
+          "y": 178,
+          "w": 330,
+          "h": 220,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s09-card-2",
+          "type": "rect",
+          "x": 474,
+          "y": 178,
+          "w": 330,
+          "h": 220,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s09-card-3",
+          "type": "rect",
+          "x": 862,
+          "y": 178,
+          "w": 330,
+          "h": 220,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#ffffff",
+            "stroke": "#d8e2ea",
+            "strokeWidth": 1,
+            "radius": 22
+          }
+        },
+        {
+          "id": "s09-metric-1",
+          "type": "text",
+          "x": 118,
+          "y": 222,
+          "w": 250,
+          "h": 112,
+          "rotation": 0,
+          "z": 5,
+          "text": "10\nslides",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 54,
+            "fontWeight": 860,
+            "lineHeight": 1.05,
+            "color": "#0f766e",
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "s09-metric-2",
+          "type": "text",
+          "x": 506,
+          "y": 222,
+          "w": 250,
+          "h": 112,
+          "rotation": 0,
+          "z": 5,
+          "text": "3\nHTML",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 54,
+            "fontWeight": 860,
+            "lineHeight": 1.05,
+            "color": "#2563eb",
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "s09-metric-3",
+          "type": "text",
+          "x": 894,
+          "y": 222,
+          "w": 250,
+          "h": 112,
+          "rotation": 0,
+          "z": 5,
+          "text": "71\nobjects",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 54,
+            "fontWeight": 860,
+            "lineHeight": 1.05,
+            "color": "#f59e0b",
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "s09-note",
+          "type": "text",
+          "x": 150,
+          "y": 476,
+          "w": 980,
+          "h": 78,
+          "rotation": 0,
+          "z": 5,
+          "text": "对象数量用于粗略检查缩略图摘要、选择性能和 deck 统计是否正常刷新。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 28,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "color": "#526173",
+            "textAlign": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide-10",
+      "title": "结束页",
+      "elements": [
+        {
+          "id": "s10-bg",
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "rotation": 0,
+          "z": 1,
+          "style": {
+            "fill": "#172033",
+            "stroke": "#172033",
+            "strokeWidth": 0,
+            "radius": 0
+          }
+        },
+        {
+          "id": "s10-accent",
+          "type": "rect",
+          "x": 92,
+          "y": 98,
+          "w": 126,
+          "h": 12,
+          "rotation": 0,
+          "z": 2,
+          "style": {
+            "fill": "#14b8a6",
+            "stroke": "#14b8a6",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s10-title",
+          "type": "text",
+          "x": 90,
+          "y": 176,
+          "w": 780,
+          "h": 150,
+          "rotation": 0,
+          "z": 5,
+          "text": "测试素材已准备好",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 66,
+            "fontWeight": 880,
+            "lineHeight": 1.08,
+            "color": "#ffffff",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s10-subtitle",
+          "type": "text",
+          "x": 94,
+          "y": 354,
+          "w": 760,
+          "h": 92,
+          "rotation": 0,
+          "z": 5,
+          "text": "可直接用 Chiselo 打开 HTML 页面或 .aislide deck，继续做导入、编辑、导出回归测试。",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif",
+            "fontSize": 30,
+            "fontWeight": 460,
+            "lineHeight": 1.35,
+            "color": "#cbd5e1",
+            "textAlign": "left"
+          }
+        },
+        {
+          "id": "s10-pill",
+          "type": "rect",
+          "x": 94,
+          "y": 500,
+          "w": 356,
+          "h": 62,
+          "rotation": 0,
+          "z": 3,
+          "style": {
+            "fill": "#14b8a6",
+            "stroke": "#14b8a6",
+            "strokeWidth": 0,
+            "radius": 99
+          }
+        },
+        {
+          "id": "s10-pill-text",
+          "type": "text",
+          "x": 126,
+          "y": 516,
+          "w": 292,
+          "h": 32,
+          "rotation": 0,
+          "z": 5,
+          "text": "examples/test-10-slide-deck.aislide",
+          "style": {
+            "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Mono', monospace",
+            "fontSize": 15,
+            "fontWeight": 820,
+            "lineHeight": 1.2,
+            "color": "#ffffff",
+            "textAlign": "center"
+          }
+        }
+      ]
+    }
+  ]
+}

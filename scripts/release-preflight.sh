@@ -38,6 +38,8 @@ swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
 swift scripts/precision-adjustment-test.swift
 swift scripts/five-slide-acceptance-test.swift
+swift scripts/generated-fixtures-editing-test.swift
+node scripts/validate-deck.mjs outputs/generated-fixture-edits/test-10-slide-deck-edited.aislide
 
 echo "==> Demo acceptance"
 node scripts/generate-digital-transformation-slides.mjs

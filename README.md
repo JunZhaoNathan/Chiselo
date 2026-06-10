@@ -19,10 +19,10 @@ It is not a site builder, not a rich text editor, and not only an HTML-to-PPT to
 
 ## Download
 
-The latest public preview is `Chiselo-0.1.2.dmg`.
+The latest public preview is `Chiselo-0.1.3.dmg`.
 
-- [Preview Release](https://github.com/JunZhaoNathan/Chiselo/releases/tag/v0.1.2-preview.1)
-- [Release Notes](docs/releases/RELEASE_NOTES_0.1.2_PREVIEW.md)
+- [Preview Release](https://github.com/JunZhaoNathan/Chiselo/releases/tag/v0.1.3-preview.1)
+- [Release Notes](docs/releases/RELEASE_NOTES_0.1.3_PREVIEW.md)
 
 The preview build is ad-hoc signed and not notarized. If macOS blocks the first launch, the DMG includes `首次打开帮助.txt` with step-by-step fixes for `Open Anyway`, Finder right-click `Open`, and quarantine removal.
 

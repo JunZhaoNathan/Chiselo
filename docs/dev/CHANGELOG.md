@@ -2,6 +2,16 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.3 - 2026-06-10
+
+Stability patch focused on repeatable HTML editing and generated fixture coverage.
+
+- Made HTML image replacement refresh after image load/layout settle so selection boxes and exports stay stable.
+- Made import diagnostics tolerate pages with no images, media, SVG, or tables.
+- Defaulted direct HTML layout adjustments to transform mode to reduce accidental document-flow changes.
+- Added generated HTML and `.aislide` fixtures plus an editing regression script that verifies text edits, image replacement, module movement, table edits, deck edits, and clean export.
+- Updated release and packaging docs for the `0.1.3` preview release.
+
 ## 0.1.2 - 2026-06-10
 
 Patch preview update focused on first-install guidance for non-technical users.

@@ -34,7 +34,7 @@
   let directSelectedNodes = [];
   let directHadDoctype = true;
   let directBaseHref = "";
-  let directLayoutMode = "free";
+  let directLayoutMode = "transform";
   let pendingDirectTextEditNode = null;
   let activeDirectTextEditNode = null;
   let htmlTreeTimer = null;
@@ -2018,6 +2018,10 @@
     return node.dataset.chiseloId;
   }
 
+  function optionalDirectId(node) {
+    return node ? ensureDirectId(node) : null;
+  }
+
   function directNodePath(node) {
     const doc = node.ownerDocument;
     const parts = [];
@@ -3041,6 +3045,65 @@
     if (typeof nextElement.imageAlt === "string") node.setAttribute("alt", nextElement.imageAlt);
   }
 
+  function nextFrame() {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      requestAnimationFrame(finish);
+      setTimeout(finish, 50);
+    });
+  }
+
+  function waitForImageReady(image, timeout = 700) {
+    if (!image || !image.isConnected) return Promise.resolve();
+    return new Promise((resolve) => {
+      let settled = false;
+      let timer = null;
+      const cleanup = () => {
+        image.removeEventListener("load", finish);
+        image.removeEventListener("error", finish);
+        if (timer) clearTimeout(timer);
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+
+      if (image.complete) {
+        queueMicrotask(finish);
+      } else {
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+        timer = setTimeout(finish, timeout);
+      }
+    });
+  }
+
+  async function settleDirectImageNode(image) {
+    if (editorMode !== "html" || !image || !image.isConnected) return null;
+    await waitForImageReady(image);
+    await nextFrame();
+    await nextFrame();
+    if (!image.isConnected) return null;
+
+    scheduleDirectLayoutRefresh();
+    scheduleHTMLTreeChanged();
+    scheduleHTMLDiagnosticsChanged();
+
+    if (isDirectSelected(image)) {
+      updateSelectionBox();
+      postSelectionChanged();
+    }
+
+    return isDirectSelected(image) ? selectedElement() : directElementPayloadForNode(image, directNodeRect(image));
+  }
+
   function replaceSelectedImageSrc(src) {
     if (editorMode !== "html" || !directSelectedNode) return null;
     const image = selectedImageNode();
@@ -3051,12 +3114,18 @@
     selectDirectNode(image);
     scheduleHTMLTreeChanged();
     postSelectionChanged();
-    return selectedElement();
+    const result = selectedElement();
+    settleDirectImageNode(image);
+    return result;
   }
 
   function replaceSelectedImageFromBase64(mimeType, base64) {
     if (!mimeType || !base64) return null;
     return replaceSelectedImageSrc(`data:${mimeType};base64,${base64}`);
+  }
+
+  function settleSelectedImage() {
+    return settleDirectImageNode(selectedImageNode());
   }
 
   function selectedImageNode() {
@@ -4150,9 +4219,9 @@ ${htmlSlides}
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
       overlapCount: layoutDiagnostics.overlapCount,
-      resourceElementId: ensureDirectId(brokenImageNodes[0] || brokenMediaNodes[0] || images[0] || media[0] || null),
-      tableElementId: ensureDirectId(spanTables[0] || tables[0] || null),
-      svgElementId: ensureDirectId(svgNodes[0] || images.find((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")) || null),
+      resourceElementId: optionalDirectId(brokenImageNodes[0] || brokenMediaNodes[0] || images[0] || media[0] || null),
+      tableElementId: optionalDirectId(spanTables[0] || tables[0] || null),
+      svgElementId: optionalDirectId(svgNodes[0] || images.find((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")) || null),
       textOverflowElementId: layoutDiagnostics.textOverflowElementId,
       outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
       overlapElementId: layoutDiagnostics.overlapElementId,
@@ -4637,6 +4706,7 @@ ${htmlSlides}
     selectHTMLAtPoint,
     replaceSelectedImageFromBase64,
     replaceSelectedImageSrc,
+    settleSelectedImage,
     setBackdropStyle,
     setSelectedHTMLText,
     updateElement

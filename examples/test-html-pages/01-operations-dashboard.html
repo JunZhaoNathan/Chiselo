@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chiselo Test Page 01 - Operations Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #eef2f6; color: #16202a; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    body { display: grid; justify-items: center; padding: 28px; }
+    .page { width: min(1120px, 100%); min-height: 760px; background: #fbfcfd; border: 1px solid #d9e1e8; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 60px rgba(36, 54, 73, .15); }
+    header { display: grid; grid-template-columns: 1fr auto; gap: 10px 24px; align-items: end; padding: 34px 42px 26px; background: linear-gradient(135deg, #0f766e, #2563eb); color: white; }
+    h1 { margin: 0; max-width: 760px; font-size: 42px; line-height: 1.08; letter-spacing: 0; }
+    .subtitle { margin: 12px 0 0; max-width: 720px; color: rgba(255,255,255,.84); font-size: 19px; line-height: 1.5; }
+    .period { grid-column: 2; grid-row: 1 / span 2; padding: 12px 18px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(255,255,255,.14); font-weight: 760; white-space: nowrap; }
+    main { padding: 30px 42px 42px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .metric { min-height: 132px; padding: 20px; border: 1px solid #dce5ec; border-radius: 16px; background: white; }
+    .metric b { display: block; margin-bottom: 10px; color: #0f766e; font-size: 34px; line-height: 1; }
+    .metric span { color: #667789; font-size: 15px; line-height: 1.42; }
+    .content { display: grid; grid-template-columns: 1.08fr .92fr; gap: 22px; margin-top: 24px; }
+    .panel { padding: 24px; border: 1px solid #dce5ec; border-radius: 16px; background: white; }
+    h2 { margin: 0 0 16px; font-size: 24px; line-height: 1.15; letter-spacing: 0; }
+    p, li, td, th { font-size: 16px; line-height: 1.48; }
+    p, li, td { color: #5d6e7f; }
+    .chart { width: 100%; height: auto; border-radius: 14px; border: 1px solid #dce5ec; background: #f6f9fb; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #e3eaf0; text-align: left; }
+    th { color: #183247; background: #f3f7fa; font-weight: 760; }
+    tr:last-child td { border-bottom: 0; }
+    .status { display: inline-block; min-width: 72px; padding: 5px 9px; border-radius: 999px; text-align: center; font-size: 13px; font-weight: 760; }
+    .status.ok { color: #0f766e; background: #dff7f2; }
+    .status.warn { color: #92400e; background: #fef3c7; }
+    .status.risk { color: #b91c1c; background: #fee2e2; }
+    .checklist { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+    .checklist li { padding: 12px 14px; border-radius: 12px; background: #f7fafc; }
+    @media (max-width: 840px) {
+      body { padding: 14px; }
+      header, .content { grid-template-columns: 1fr; }
+      .period { grid-column: 1; grid-row: auto; justify-self: start; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      main, header { padding-left: 22px; padding-right: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="page">
+    <header>
+      <h1>运营交付仪表盘</h1>
+      <p class="subtitle">用于测试 HTML 导入、文字节点选择、表格识别、内嵌图片和响应式布局的样例页面。</p>
+      <div class="period">2026 Q2 / Test Fixture</div>
+    </header>
+
+    <main>
+      <section class="metrics" aria-label="核心指标">
+        <article class="metric"><b>94%</b><span>关键里程碑按期完成，较上周提升 6 个百分点。</span></article>
+        <article class="metric"><b>18</b><span>待处理异常工单，其中 5 条需要产品负责人确认。</span></article>
+        <article class="metric"><b>2.7h</b><span>平均响应时长，目标值为 4 小时以内。</span></article>
+        <article class="metric"><b>31</b><span>本周完成交付物校验，覆盖 HTML / PDF / PPTX。</span></article>
+      </section>
+
+      <section class="content">
+        <article class="panel">
+          <h2>本周趋势</h2>
+          <img class="chart" alt="weekly delivery trend chart" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='310' viewBox='0 0 620 310'%3E%3Crect width='620' height='310' rx='18' fill='%23f6f9fb'/%3E%3Cg stroke='%23d9e1e8' stroke-width='1'%3E%3Cpath d='M68 52H570M68 112H570M68 172H570M68 232H570'/%3E%3C/g%3E%3Cpath d='M70 236 C150 196 165 156 234 166 C300 176 318 88 384 104 C452 120 482 78 566 62' fill='none' stroke='%230f766e' stroke-width='9' stroke-linecap='round'/%3E%3Cpath d='M70 248 C150 230 184 226 234 210 C298 190 326 194 384 168 C452 138 492 132 566 118' fill='none' stroke='%232563eb' stroke-width='7' stroke-linecap='round' opacity='.75'/%3E%3Cg fill='%2316202a' font-family='Arial,sans-serif' font-size='18' font-weight='700'%3E%3Ctext x='68' y='286'%3EMon%3C/text%3E%3Ctext x='185' y='286'%3ETue%3C/text%3E%3Ctext x='304' y='286'%3EWed%3C/text%3E%3Ctext x='424' y='286'%3EThu%3C/text%3E%3Ctext x='532' y='286'%3EFri%3C/text%3E%3C/g%3E%3C/svg%3E">
+        </article>
+
+        <aside class="panel">
+          <h2>交付检查清单</h2>
+          <ul class="checklist">
+            <li>确认页面内所有图片均为可访问资源或 data URL。</li>
+            <li>检查长文本是否溢出卡片和表格单元格。</li>
+            <li>导出前清理测试按钮、浮层和临时脚本。</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="panel" style="margin-top: 22px;">
+        <h2>风险与状态</h2>
+        <table>
+          <thead>
+            <tr><th>模块</th><th>负责人</th><th>状态</th><th>下一步</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>HTML 导入</td><td>Editor</td><td><span class="status ok">正常</span></td><td>继续补充复杂 DOM 样例</td></tr>
+            <tr><td>PPTX 导出</td><td>Exporter</td><td><span class="status warn">观察</span></td><td>对比文字位置与图片裁切</td></tr>
+            <tr><td>表格编辑</td><td>Canvas</td><td><span class="status risk">需复核</span></td><td>覆盖 rowspan / colspan 场景</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </section>
+</body>
+</html>

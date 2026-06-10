@@ -24,7 +24,7 @@ final class DirectHTMLCanvasInteractionTest: NSObject, WKNavigationDelegate, WKS
         self.webView = webView
         webView.loadFileURL(editorURL, allowingReadAccessTo: editorURL.deletingLastPathComponent())
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 45) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 75) { [weak self] in
             self?.fail("Timed out waiting for direct interaction result.")
         }
     }
