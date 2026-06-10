@@ -6,7 +6,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/outputs}"
 DEFAULT_OUTPUT_DIR="$ROOT_DIR/outputs"
 APP_NAME="Chiselo"
 BUNDLE_ID="app.chiselo.editor"
-VERSION="0.1.1"
+VERSION="0.1.2"
 BUILD_CONFIG="release"
 BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$BUILD_CONFIG"
 APP_BUNDLE="$ROOT_DIR/.build/package/$APP_NAME.app"
@@ -162,7 +162,15 @@ Chisel your HTML
 
 首次打开提示
 ------------
-这是本地打包的未公证版本。如果 macOS 提示无法打开，请在 Finder 中右键点击 Chiselo.app，选择“打开”，再确认一次。
+这是本地打包的未公证版本。第一次安装如果 macOS 拦住，请先看同目录里的：
+
+- 首次打开帮助.txt
+
+最常见的解决方式：
+
+1. 先把 Chiselo.app 拖到 Applications 再打开。
+2. 在 Finder 中右键点击 Chiselo.app，选择“打开”，再确认一次。
+3. 如果系统设置里出现“仍要打开”，点它即可。
 
 当前能力
 --------
@@ -195,6 +203,70 @@ Chisel your HTML
 - 当前是开发预览版。
 - 复杂脚本页面、跨域资源、动画和伪元素的深度编辑仍在迭代。
 - 若只是试用，请先复制 HTML 文件再打开编辑。
+README
+
+cat > "$DMG_STAGING/首次打开帮助.txt" <<'README'
+Chiselo 首次打开帮助
+=====================
+
+如果你是第一次安装 Chiselo，macOS 可能会提示：
+
+- “无法验证开发者”
+- “已损坏，应该移到废纸篓”
+- “无法打开，因为 Apple 无法检查其是否包含恶意软件”
+
+这通常不是文件坏了，而是因为当前预览版还没有做 Apple 公证。
+
+推荐按下面顺序尝试：
+
+方案 1：右键打开
+----------------
+1. 先把 Chiselo.app 拖到 Applications。
+2. 打开 Finder -> Applications。
+3. 找到 Chiselo.app。
+4. 右键点击它，选择“打开”。
+5. 系统再次提示时，再点一次“打开”。
+
+这是最简单、最推荐的方式。
+
+方案 2：系统设置里点“仍要打开”
+-----------------------------
+1. 先尝试双击一次 Chiselo.app。
+2. 出现拦截提示后，打开：
+   系统设置 -> 隐私与安全性
+3. 向下滚动到安全区域。
+4. 如果看到 Chiselo 被拦截，点击“仍要打开”。
+5. 再次确认打开。
+
+方案 3：如果提示“移到废纸篓”或“已损坏”
+--------------------------------------
+有些 macOS 版本会把未公证应用直接说成“已损坏”。如果你确认这个 App 是从 GitHub Release 下载的，可以在终端执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Chiselo.app
+```
+
+执行后，再回到 Applications 里双击或右键打开。
+
+方案 4：从源码运行
+------------------
+如果你熟悉命令行，也可以直接从源码启动：
+
+```bash
+swift run Chiselo
+```
+
+需要：
+
+- macOS 13 或更高
+- Xcode Command Line Tools
+- Swift 5.9 或更高
+
+补充提醒
+--------
+- 请优先从 GitHub Release 下载官方 DMG。
+- 第一次打开时，最好先把 App 拖到 Applications，不要直接在 DMG 里运行。
+- 如果依然无法打开，重新下载 DMG 再试一次。
 README
 
 echo "==> Creating DMG"

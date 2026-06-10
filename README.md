@@ -31,9 +31,9 @@ This repository is intentionally transparent: Chiselo is a vibe-coded project st
 
 ## Preview Download
 
-The latest public preview is prepared for GitHub Releases as `Chiselo-0.1.1.dmg`.
+The latest public preview is prepared for GitHub Releases as `Chiselo-0.1.2.dmg`.
 
-Release notes are in [docs/RELEASE_NOTES_0.1.1_PREVIEW.md](docs/RELEASE_NOTES_0.1.1_PREVIEW.md). Publishing steps are in [docs/GITHUB_PUBLISHING.md](docs/GITHUB_PUBLISHING.md).
+Release notes are in [docs/RELEASE_NOTES_0.1.2_PREVIEW.md](docs/RELEASE_NOTES_0.1.2_PREVIEW.md). Publishing steps are in [docs/GITHUB_PUBLISHING.md](docs/GITHUB_PUBLISHING.md).
 
 ![Chiselo editor preview](assets/chiselo-editor-preview.png)
 
@@ -74,7 +74,7 @@ AI-generated HTML editor, AI HTML editor, visual HTML editor, editable HTML edit
 
 Download the latest DMG from GitHub Releases once releases are published.
 
-For the preview release, download `Chiselo-0.1.1.dmg`, open it, and drag `Chiselo.app` to `Applications`.
+For the preview release, download `Chiselo-0.1.2.dmg`, open it, and drag `Chiselo.app` to `Applications`.
 
 For local development builds:
 
@@ -86,7 +86,7 @@ The package script writes:
 
 ```text
 outputs/Chiselo.app
-outputs/Chiselo-0.1.1.dmg
+outputs/Chiselo-0.1.2.dmg
 ```
 
 To write package artifacts somewhere else:
@@ -95,7 +95,7 @@ To write package artifacts somewhere else:
 OUTPUT_DIR=/path/to/output scripts/package-dmg.sh
 ```
 
-The DMG is currently ad-hoc signed and not notarized. On first launch, macOS may require Finder right-click -> Open.
+The DMG is currently ad-hoc signed and not notarized. On first launch, macOS may require Finder right-click -> Open. The DMG now also includes a first-launch troubleshooting text file for blocked or “move to trash” alerts.
 
 ## Run From Source
 

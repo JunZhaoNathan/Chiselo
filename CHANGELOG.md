@@ -2,6 +2,15 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.2 - 2026-06-10
+
+Patch preview update focused on first-install guidance for non-technical users.
+
+- Added a dedicated `首次打开帮助.txt` file into the DMG package.
+- Expanded first-launch troubleshooting for blocked, unverified, and “move to trash” macOS alerts.
+- Documented `Open Anyway`, Finder right-click `Open`, and quarantine removal steps.
+- Updated packaging and publishing docs for the `0.1.2` preview release.
+
 ## 0.1.1 - 2026-06-10
 
 Patch preview update focused on repository polish, HTML editing stability, and issue navigation.
