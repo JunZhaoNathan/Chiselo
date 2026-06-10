@@ -96,6 +96,12 @@ struct HTMLDiagnostics: Codable, Equatable {
     var textOverflowCount: Int?
     var outOfBoundsCount: Int?
     var overlapCount: Int?
+    var resourceElementId: String?
+    var tableElementId: String?
+    var svgElementId: String?
+    var textOverflowElementId: String?
+    var outOfBoundsElementId: String?
+    var overlapElementId: String?
     var issues: [HTMLDiagnosticIssue]?
 
     static let empty = HTMLDiagnostics(
@@ -112,6 +118,12 @@ struct HTMLDiagnostics: Codable, Equatable {
         textOverflowCount: 0,
         outOfBoundsCount: 0,
         overlapCount: 0,
+        resourceElementId: nil,
+        tableElementId: nil,
+        svgElementId: nil,
+        textOverflowElementId: nil,
+        outOfBoundsElementId: nil,
+        overlapElementId: nil,
         issues: []
     )
 

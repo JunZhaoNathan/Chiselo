@@ -4075,6 +4075,12 @@ ${htmlSlides}
         textOverflowCount: 0,
         outOfBoundsCount: 0,
         overlapCount: 0,
+        resourceElementId: null,
+        tableElementId: null,
+        svgElementId: null,
+        textOverflowElementId: null,
+        outOfBoundsElementId: null,
+        overlapElementId: null,
         issues: []
       };
     }
@@ -4082,6 +4088,7 @@ ${htmlSlides}
     const images = [...doc.querySelectorAll("img")];
     const media = [...doc.querySelectorAll("video, audio")];
     const tables = [...doc.querySelectorAll("table")];
+    const svgNodes = [...doc.querySelectorAll("svg")];
     const exported = exportDirectHTML();
     const issues = [];
     const brokenImageNodes = images.filter((image) => image.dataset.chiseloResourceState === "broken");
@@ -4143,15 +4150,21 @@ ${htmlSlides}
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
       overlapCount: layoutDiagnostics.overlapCount,
+      resourceElementId: ensureDirectId(brokenImageNodes[0] || brokenMediaNodes[0] || images[0] || media[0] || null),
+      tableElementId: ensureDirectId(spanTables[0] || tables[0] || null),
+      svgElementId: ensureDirectId(svgNodes[0] || images.find((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")) || null),
+      textOverflowElementId: layoutDiagnostics.textOverflowElementId,
+      outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
+      overlapElementId: layoutDiagnostics.overlapElementId,
       issues
     };
   }
 
   function collectLayoutDiagnostics(doc, issues) {
     return {
-      textOverflowCount: collectTextOverflowIssues(doc, issues),
-      outOfBoundsCount: collectOutOfBoundsIssues(doc, issues),
-      overlapCount: collectOverlapIssues(doc, issues)
+      ...collectTextOverflowIssues(doc, issues),
+      ...collectOutOfBoundsIssues(doc, issues),
+      ...collectOverlapIssues(doc, issues)
     };
   }
 
@@ -4159,27 +4172,31 @@ ${htmlSlides}
     const selector = `${DIRECT_TEXT_BLOCK_SELECTOR},${DIRECT_SAFE_INLINE_SELECTOR},div,label,a,button`;
     const candidates = [...doc.querySelectorAll(selector)].slice(0, MAX_HTML_DIAGNOSTIC_NODES);
     let count = 0;
+    let firstElementId = null;
 
     for (const node of candidates) {
       if (!isTextOverflowDiagnosticCandidate(node)) continue;
       if (!hasTextOverflow(node)) continue;
 
       count += 1;
+      const elementId = ensureDirectId(node);
+      if (!firstElementId) firstElementId = elementId;
       addDiagnosticIssue(issues, {
         kind: "text-overflow",
         severity: "error",
         title: "文字溢出",
         detail: truncateDiagnosticText(normalizedText(node), "文本超出当前框"),
-        elementId: ensureDirectId(node)
+        elementId
       });
     }
 
-    return count;
+    return { textOverflowCount: count, textOverflowElementId: firstElementId };
   }
 
   function collectOutOfBoundsIssues(doc, issues) {
     const nodes = diagnosticLayoutNodes(doc);
     let count = 0;
+    let firstElementId = null;
 
     for (const node of nodes) {
       const frame = diagnosticFrameForNode(node);
@@ -4189,16 +4206,18 @@ ${htmlSlides}
       if (overflow <= 4) continue;
 
       count += 1;
+      const elementId = ensureDirectId(node);
+      if (!firstElementId) firstElementId = elementId;
       addDiagnosticIssue(issues, {
         kind: "out-of-bounds",
         severity: "error",
         title: "元素越界",
         detail: `${diagnosticNodeLabel(node)} 超出可视容器 ${Math.round(overflow)}px`,
-        elementId: ensureDirectId(node)
+        elementId
       });
     }
 
-    return count;
+    return { outOfBoundsCount: count, outOfBoundsElementId: firstElementId };
   }
 
   function collectOverlapIssues(doc, issues) {
@@ -4206,6 +4225,7 @@ ${htmlSlides}
       .filter((node) => isOverlapDiagnosticNode(node))
       .slice(0, 90);
     let count = 0;
+    let firstElementId = null;
     const reported = new Set();
 
     for (let index = 0; index < nodes.length; index += 1) {
@@ -4225,6 +4245,8 @@ ${htmlSlides}
         if (overlapRatio < 0.48 || rectArea(overlap) < 320) continue;
 
         count += 1;
+        const elementId = first.dataset.chiseloId || ensureDirectId(first);
+        if (!firstElementId) firstElementId = elementId;
         const key = `${ensureDirectId(first)}:${ensureDirectId(second)}`;
         if (reported.has(key)) continue;
         reported.add(key);
@@ -4233,12 +4255,12 @@ ${htmlSlides}
           severity: "warning",
           title: "元素重叠",
           detail: `${diagnosticNodeLabel(first)} 与 ${diagnosticNodeLabel(second)} 重叠`,
-          elementId: first.dataset.chiseloId
+          elementId
         });
       }
     }
 
-    return count;
+    return { overlapCount: count, overlapElementId: firstElementId };
   }
 
   function addDiagnosticIssue(issues, issue) {
@@ -4420,6 +4442,7 @@ ${htmlSlides}
     } else {
       selectDirectNode(node);
     }
+    node.scrollIntoView?.({ block: "center", inline: "center", behavior: "smooth" });
     return selectedElement();
   }
 

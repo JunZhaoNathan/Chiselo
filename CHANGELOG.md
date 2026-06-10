@@ -25,3 +25,4 @@ Initial public preview preparation.
 - Reorganized the app source into a top-level `Chiselo/` folder for a cleaner public GitHub layout.
 - Fixed CI paths after repository cleanup.
 - Locked typography during HTML text editing and forced plain-text paste to avoid accidental font mismatches.
+- Made delivery-check summary rows clickable so resource, table, SVG, overflow, bounds, and overlap warnings can jump to the related HTML element.

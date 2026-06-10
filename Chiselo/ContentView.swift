@@ -745,14 +745,20 @@ private struct HTMLDeliveryCheckCard: View {
                     icon: resourceIcon,
                     title: "资源",
                     detail: resourceDetail,
-                    color: resourceColor
-                )
+                    color: resourceColor,
+                    isClickable: diagnostics.resourceElementId != nil
+                ) {
+                    if let elementId = diagnostics.resourceElementId {
+                        model.selectHTMLNode(id: elementId)
+                    }
+                }
 
                 DeliveryCheckRow(
                     icon: diagnostics.cleanExport ? "checkmark.seal" : "exclamationmark.triangle",
                     title: "干净 HTML",
                     detail: diagnostics.cleanExport ? "无编辑器临时标记" : "导出仍含临时标记",
-                    color: diagnostics.cleanExport ? successColor : MaterialTheme.accentDanger
+                    color: diagnostics.cleanExport ? successColor : MaterialTheme.accentDanger,
+                    isClickable: false
                 )
 
                 if diagnostics.tableCount > 0 {
@@ -760,8 +766,13 @@ private struct HTMLDeliveryCheckCard: View {
                         icon: diagnostics.spanTableCount > 0 ? "tablecells.badge.ellipsis" : "tablecells",
                         title: "表格",
                         detail: diagnostics.spanTableCount > 0 ? "\(diagnostics.tableCount) 个表格，\(diagnostics.spanTableCount) 个含合并单元格" : "\(diagnostics.tableCount) 个表格",
-                        color: diagnostics.spanTableCount > 0 ? warningColor : successColor
-                    )
+                        color: diagnostics.spanTableCount > 0 ? warningColor : successColor,
+                        isClickable: diagnostics.tableElementId != nil
+                    ) {
+                        if let elementId = diagnostics.tableElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
 
                 if diagnostics.svgCount > 0 {
@@ -769,8 +780,13 @@ private struct HTMLDeliveryCheckCard: View {
                         icon: "scribble.variable",
                         title: "SVG",
                         detail: "\(diagnostics.svgCount) 个 SVG/矢量图形",
-                        color: warningColor
-                    )
+                        color: warningColor,
+                        isClickable: diagnostics.svgElementId != nil
+                    ) {
+                        if let elementId = diagnostics.svgElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
 
                 if (diagnostics.textOverflowCount ?? 0) > 0 {
@@ -778,8 +794,13 @@ private struct HTMLDeliveryCheckCard: View {
                         icon: "text.badge.exclamationmark",
                         title: "文字",
                         detail: "\(diagnostics.textOverflowCount ?? 0) 处文字溢出",
-                        color: MaterialTheme.accentDanger
-                    )
+                        color: MaterialTheme.accentDanger,
+                        isClickable: diagnostics.textOverflowElementId != nil
+                    ) {
+                        if let elementId = diagnostics.textOverflowElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
 
                 if (diagnostics.outOfBoundsCount ?? 0) > 0 {
@@ -787,8 +808,13 @@ private struct HTMLDeliveryCheckCard: View {
                         icon: "arrow.up.left.and.arrow.down.right",
                         title: "边界",
                         detail: "\(diagnostics.outOfBoundsCount ?? 0) 个元素超出页面",
-                        color: MaterialTheme.accentDanger
-                    )
+                        color: MaterialTheme.accentDanger,
+                        isClickable: diagnostics.outOfBoundsElementId != nil
+                    ) {
+                        if let elementId = diagnostics.outOfBoundsElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
 
                 if (diagnostics.overlapCount ?? 0) > 0 {
@@ -796,8 +822,13 @@ private struct HTMLDeliveryCheckCard: View {
                         icon: "square.stack.3d.up",
                         title: "重叠",
                         detail: "\(diagnostics.overlapCount ?? 0) 处明显重叠",
-                        color: warningColor
-                    )
+                        color: warningColor,
+                        isClickable: diagnostics.overlapElementId != nil
+                    ) {
+                        if let elementId = diagnostics.overlapElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
             }
 
@@ -895,29 +926,45 @@ private struct DeliveryCheckRow: View {
     var title: String
     var detail: String
     var color: Color
+    var isClickable: Bool = false
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(color)
-                .frame(width: 18, height: 18)
-                .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
+        Button {
+            action?()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
                     .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(MaterialTheme.ink)
-                Text(detail)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(MaterialTheme.muted)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-            }
+                    .foregroundStyle(color)
+                    .frame(width: 18, height: 18)
+                    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
 
-            Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text(detail)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 0)
+
+                if isClickable {
+                    Image(systemName: "scope")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.primary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .disabled(!isClickable)
+        .opacity(isClickable ? 1 : 0.88)
     }
 }
 
