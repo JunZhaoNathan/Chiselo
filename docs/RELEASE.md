@@ -31,3 +31,5 @@ hdiutil verify outputs/Chiselo-0.1.0.dmg
 Do not commit `.app` or `.dmg` binaries to the repository. Upload them as release assets.
 
 For first-time publishing, use [GITHUB_PUBLISHING.md](GITHUB_PUBLISHING.md).
+
+For routine update pushes after the repository exists, use [GITHUB_UPDATE_WORKFLOW.md](GITHUB_UPDATE_WORKFLOW.md).

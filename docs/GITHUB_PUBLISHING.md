@@ -190,6 +190,16 @@ After publishing:
 6. Launch with Finder right-click -> Open if macOS blocks it.
 7. Open an HTML file, edit text, export clean HTML/PDF/PPTX.
 
+## Future Updates
+
+After the first publish, use:
+
+```bash
+scripts/push-github-update.sh "Describe this update"
+```
+
+The saved workflow is in [GITHUB_UPDATE_WORKFLOW.md](GITHUB_UPDATE_WORKFLOW.md).
+
 ## Common Problems
 
 `fatal: remote origin already exists`
