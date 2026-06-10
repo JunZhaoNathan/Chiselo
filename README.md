@@ -1,5 +1,10 @@
 # Chiselo
 
+[![CI](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml/badge.svg)](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml)
+[![Preview Release](https://img.shields.io/github/v/release/JunZhaoNathan/Chiselo?display_name=tag&include_prereleases&label=preview)](https://github.com/JunZhaoNathan/Chiselo/releases)
+[![License: Non-Commercial](https://img.shields.io/badge/license-non--commercial-orange)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/JunZhaoNathan/Chiselo?style=social)](https://github.com/JunZhaoNathan/Chiselo/stargazers)
+
 **Chisel your HTML.**
 
 中文定位：Chiselo 用来打磨你的 HTML。HTML 是主资产，Chiselo 在真实浏览器渲染之上提供 Office-like / PPT-like 的可视化编辑层，让你修改 AI 生成或现有的网页、文档、海报、仪表盘和 HTML 演示，再导出为干净 HTML、PDF 或 PPTX。
