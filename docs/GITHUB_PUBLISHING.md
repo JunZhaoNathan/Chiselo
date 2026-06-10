@@ -50,10 +50,28 @@ Short description:
 Chisel your HTML: HTML as the primary asset, Office-like visual editing, multi-format output.
 ```
 
+Alternative shorter description:
+
+```text
+A macOS visual editor for polishing AI-generated HTML and exporting clean HTML, PDF, and PPTX.
+```
+
+About text:
+
+```text
+Chiselo helps you polish existing or AI-generated HTML with an Office-like visual editing layer. Built through vibe coding by a humanities-background creator, with thanks to Codex and GPT.
+```
+
 Topics:
 
 ```text
-macos swiftui wkwebview html-editor ai-generated-html visual-editor layout-editor pdf-export pptx-export non-commercial
+macos swiftui wkwebview html-editor ai-generated-html visual-editor wysiwyg layout-editor office-like ppt-like pdf-export pptx-export vibe-coding non-commercial source-available
+```
+
+Star reminder for README or pinned issue:
+
+```text
+If Chiselo helps you or you are interested in AI-native software creation, please star the repository so more people can find it.
 ```
 
 ## Step 1: Create The GitHub Repository

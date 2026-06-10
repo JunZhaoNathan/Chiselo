@@ -4,6 +4,8 @@
 
 中文定位：Chiselo 用来打磨你的 HTML。HTML 是主资产，Chiselo 在真实浏览器渲染之上提供 Office-like / PPT-like 的可视化编辑层，让你修改 AI 生成或现有的网页、文档、海报、仪表盘和 HTML 演示，再导出为干净 HTML、PDF 或 PPTX。
 
+If you are interested in AI-generated HTML, visual editing, or software built through vibe coding, please star this repository so more people can find the project.
+
 Chiselo is a native macOS editor built around **HTML as the primary asset + an Office-like visual editing layer + multi-format output**. It is for polishing AI-generated or existing HTML pages, A4 documents, posters, dashboards, and HTML slide-style presentations.
 
 It is not a rich text editor and not a format converter. The goal is an **Office-like visual editing layer for HTML**: keep the browser-rendered HTML as the real document, then let people select visible objects, move them, resize them, edit text, repair tables/images, and deliver the result as clean HTML, high-fidelity PDF, or best-effort object-editable PPTX.
@@ -12,7 +14,15 @@ It is not a rich text editor and not a format converter. The goal is an **Office
 
 Chiselo is an early development preview. It already edits real HTML DOM nodes, but complex scripts, responsive layouts, pseudo-elements, animations, cross-origin resources, and perfect multi-format output are still active research areas.
 
-This repository is intentionally transparent: Chiselo is a vibe-coded project started by a non-programmer with AI assistance. Code quality is being improved in public, step by step.
+This repository is intentionally transparent: Chiselo is a vibe-coded project started by a humanities-background creator who does not come from a programming background. The project was built with AI assistance, especially Codex and GPT. Code quality is being improved in public, step by step.
+
+## Creator Note
+
+我是一个文科生，不懂代码。Chiselo 是我用 vibe coding 一步步做出来的软件实验：把想法讲清楚，让 AI 帮我写、改、测试、重构，再反复打磨成一个真正能用的 macOS 应用。
+
+感谢 Codex 和 GPT。没有这些工具，我很难把“像 Office 一样打磨 HTML”这个想法推进到可运行的软件。
+
+如果你觉得这个方向有价值，欢迎 star。它会帮助更多人看到这个项目，也会给我继续打磨下去的动力。
 
 ## Preview Download
 
@@ -50,6 +60,10 @@ See [LICENSE](LICENSE). This is a non-commercial license and is not an OSI-appro
 - Export clean standalone HTML.
 - Export high-fidelity PDF by rendering each detected page/slide.
 - Export best-effort object-level PPTX with editable text boxes, shapes, tables, and image objects where possible.
+
+## Keywords
+
+AI-generated HTML editor, visual HTML editor, WYSIWYG HTML layout editor, Office-like HTML editor, PPT-like HTML editor, macOS HTML editor, WKWebView editor, HTML to PDF, HTML to PPTX, source-available non-commercial software, vibe coding app.
 
 ## Install
 

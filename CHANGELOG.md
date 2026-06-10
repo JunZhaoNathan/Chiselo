@@ -17,3 +17,4 @@ Initial public preview preparation.
 - Added smoke, interaction, precision, import adapter, visual QA, and export scripts.
 - Added source-available non-commercial license and GitHub-ready documentation.
 - Added first-preview release notes and a step-by-step GitHub publishing guide.
+- Added GitHub repository copy, creator note, discovery keywords, and star reminder.

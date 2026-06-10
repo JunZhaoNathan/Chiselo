@@ -4,6 +4,8 @@ Chiselo is a native macOS app for polishing existing or AI-generated HTML with a
 
 中文：Chiselo 用来打磨你的 HTML。HTML 是主资产，Chiselo 在真实浏览器渲染之上提供类似 Office / PPT 的可视化编辑层，让你快速修文字、修布局、调元素，然后导出可交付文件。
 
+Creator note: Chiselo was built through vibe coding by a humanities-background creator who does not come from a programming background. Thanks to Codex and GPT for making this kind of software exploration possible.
+
 ## Who This Preview Is For
 
 - People who already have an HTML page, document, poster, dashboard, or HTML slide-style presentation.
