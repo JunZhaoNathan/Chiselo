@@ -32,7 +32,7 @@ When opening a real local HTML or Chiselo deck file, Chiselo creates a one-time 
 
 When saving over an existing HTML or deck file, Chiselo first copies the previous version into a sibling `.chiselo-history/` folder with a timestamped filename. Use the `备份` toolbar button to reveal that folder from the current document.
 
-Use the `恢复` toolbar button to restore the newest snapshot. Chiselo asks for confirmation and saves the current file into `.chiselo-history/` before restoring.
+Use the `恢复` toolbar button to open the version history browser. Select any snapshot to see its timestamp, filename, and file size, then restore that specific version. Chiselo asks for confirmation and saves the current file into `.chiselo-history/` before restoring.
 
 ## Images
 

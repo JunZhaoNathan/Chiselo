@@ -14,20 +14,23 @@ The core idea:
 ## Near Term
 
 - Improve hover actions for images, text, tables, cards, and grouped objects.
-- Add visible rulers and measurement readouts.
-- Improve snapping, alignment guides, and distribution controls.
 - Add visual save preview and diff before overwriting original HTML.
-- Add a visual history browser for `.chiselo-history/` snapshots.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
 
 ## Medium Term
 
 - Better layout freezing for responsive pages.
-- Page/slide boundary detection for AI-generated HTML.
 - More reliable object grouping and ungrouping.
 - Layer panel with drag-to-reorder.
 - Export QA report explaining what could and could not map to editable PPTX.
+
+## Recently Landed
+
+- Page/slide boundary detection for AI-generated HTML.
+- Visible page boundaries, center references, ruler ticks, snapping guides, and distribution controls.
+- Export preflight with HTML/PDF readiness and PPTX editability scoring.
+- Visual history browser for `.chiselo-history/` snapshots.
 
 ## Long Term
 

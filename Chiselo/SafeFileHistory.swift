@@ -1,6 +1,15 @@
 import Foundation
 
 final class SafeFileHistory {
+    struct VersionSnapshot: Identifiable, Equatable {
+        var url: URL
+        var createdAt: Date?
+        var byteCount: Int64
+
+        var id: String { url.path }
+        var filename: String { url.lastPathComponent }
+    }
+
     private struct SnapshotRank {
         let timestamp: String
         let suffix: Int
@@ -66,8 +75,12 @@ final class SafeFileHistory {
     }
 
     func latestVersionSnapshot(for url: URL) throws -> URL? {
+        try versionSnapshots(for: url).first?.url
+    }
+
+    func versionSnapshots(for url: URL) throws -> [VersionSnapshot] {
         let directory = historyDirectory(for: url)
-        guard fileManager.fileExists(atPath: directory.path) else { return nil }
+        guard fileManager.fileExists(atPath: directory.path) else { return [] }
 
         let extensionName = url.pathExtension
         let prefix = "\(baseName(for: url))-"
@@ -96,7 +109,14 @@ final class SafeFileHistory {
                 return leftRank.suffix > rightRank.suffix
             }
             return left.url.lastPathComponent > right.url.lastPathComponent
-        }.first?.url
+        }.map { item in
+            let values = try? item.url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            return VersionSnapshot(
+                url: item.url,
+                createdAt: Self.snapshotDate(from: item.rank.timestamp) ?? values?.contentModificationDate,
+                byteCount: Int64(values?.fileSize ?? 0)
+            )
+        }
     }
 
     private func backupURL(for url: URL, fallbackExtension: String) -> URL {
@@ -148,4 +168,8 @@ final class SafeFileHistory {
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         return formatter
     }()
+
+    private static func snapshotDate(from timestamp: String) -> Date? {
+        snapshotTimestampFormatter.date(from: timestamp)
+    }
 }

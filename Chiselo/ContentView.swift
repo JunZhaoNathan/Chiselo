@@ -57,6 +57,10 @@ struct ContentView: View {
             ExportPreflightPanel()
                 .environmentObject(model)
         }
+        .sheet(isPresented: historyBrowserBinding) {
+            HistoryBrowserPanel()
+                .environmentObject(model)
+        }
     }
 
     private var fileDropTargetBinding: Binding<Bool> {
@@ -72,6 +76,14 @@ struct ContentView: View {
             model.isExportPreflightPresented
         } set: { isPresented in
             model.isExportPreflightPresented = isPresented
+        }
+    }
+
+    private var historyBrowserBinding: Binding<Bool> {
+        Binding {
+            model.isHistoryBrowserPresented
+        } set: { isPresented in
+            model.isHistoryBrowserPresented = isPresented
         }
     }
 }
@@ -354,10 +366,10 @@ private struct AppToolbar: View {
                 .help("打开当前文件的 Chiselo 版本快照目录")
 
                 ToolbarActionButton(title: "恢复", icon: "arrow.counterclockwise.circle") {
-                    model.restoreLatestSnapshot()
+                    model.presentHistoryBrowser()
                 }
                 .disabled(!model.canRevealSafetyFolder)
-                .help("从最近的 Chiselo 版本快照恢复当前文件")
+                .help("浏览 Chiselo 版本快照并恢复指定版本")
             }
 
             MaterialDivider()
@@ -1017,6 +1029,211 @@ private extension HTMLDiagnostics {
     private func boundedScore(_ value: Int) -> Int {
         min(100, max(0, value))
     }
+}
+
+private struct HistoryBrowserPanel: View {
+    @EnvironmentObject private var model: EditorModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                    .frame(width: 42, height: 42)
+                    .background(MaterialTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("版本历史")
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text(headerSubtitle)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+
+                Spacer()
+
+                Button {
+                    model.refreshHistorySnapshots()
+                } label: {
+                    Label("刷新", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(MaterialButtonStyle())
+            }
+            .padding(20)
+            .background(MaterialTheme.surfaceStrong)
+
+            if model.historySnapshots.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(Array(model.historySnapshots.enumerated()), id: \.element.id) { index, snapshot in
+                            HistorySnapshotRow(
+                                snapshot: snapshot,
+                                isLatest: index == 0,
+                                isSelected: snapshot.id == model.selectedHistorySnapshotID
+                            ) {
+                                model.selectedHistorySnapshotID = snapshot.id
+                            }
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+
+            Divider()
+
+            HStack(spacing: 10) {
+                Button {
+                    model.revealSafetyFolder()
+                } label: {
+                    Label("打开目录", systemImage: "folder")
+                }
+                .buttonStyle(MaterialButtonStyle())
+
+                Spacer()
+
+                Button("关闭") {
+                    dismiss()
+                }
+                .buttonStyle(MaterialButtonStyle())
+
+                Button {
+                    model.restoreSelectedHistorySnapshot()
+                } label: {
+                    Label("恢复所选", systemImage: "arrow.counterclockwise.circle")
+                }
+                .buttonStyle(MaterialButtonStyle(filled: true))
+                .disabled(model.selectedHistorySnapshotID == nil)
+            }
+            .padding(16)
+            .background(MaterialTheme.surfaceStrong)
+        }
+        .frame(width: 620, height: 560)
+        .onAppear {
+            model.refreshHistorySnapshots()
+        }
+    }
+
+    private var headerSubtitle: String {
+        if model.historySnapshots.isEmpty {
+            return "当前文件还没有可恢复的保存快照"
+        }
+        return "\(model.historySnapshots.count) 个可恢复版本，最新版本在最上方"
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "clock.badge.questionmark")
+                .font(.system(size: 42, weight: .semibold))
+                .foregroundStyle(MaterialTheme.primary)
+            Text("还没有保存快照")
+                .font(.system(size: 16, weight: .heavy))
+                .foregroundStyle(MaterialTheme.ink)
+            Text("覆盖保存 HTML 或 slides 文件后，Chiselo 会自动把旧版本放进 `.chiselo-history`，之后就能在这里复查和恢复。")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 360)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
+}
+
+private struct HistorySnapshotRow: View {
+    var snapshot: SafeFileHistory.VersionSnapshot
+    var isLatest: Bool
+    var isSelected: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "clock")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(isSelected ? Color.white : MaterialTheme.primary)
+                    .frame(width: 26, height: 26)
+                    .background(iconBackground, in: RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 7) {
+                        Text(formatDate(snapshot.createdAt))
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(isSelected ? Color.white : MaterialTheme.ink)
+                        if isLatest {
+                            Text("最新")
+                                .font(.system(size: 9, weight: .heavy))
+                                .foregroundStyle(isSelected ? Color.white : MaterialTheme.primary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(latestBadgeBackground, in: RoundedRectangle(cornerRadius: 5))
+                        }
+                    }
+
+                    Text(snapshot.filename)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.86) : MaterialTheme.muted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 0)
+
+                Text(formatBytes(snapshot.byteCount))
+                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.86) : MaterialTheme.muted)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(isSelected ? Color.clear : MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private var rowBackground: Color {
+        isSelected ? MaterialTheme.primary : MaterialTheme.surfaceTint
+    }
+
+    private var iconBackground: Color {
+        isSelected ? Color.white.opacity(0.18) : MaterialTheme.primary.opacity(0.10)
+    }
+
+    private var latestBadgeBackground: Color {
+        isSelected ? Color.white.opacity(0.18) : MaterialTheme.primary.opacity(0.10)
+    }
+
+    private func formatDate(_ date: Date?) -> String {
+        guard let date else { return "未知时间" }
+        return Self.dateFormatter.string(from: date)
+    }
+
+    private func formatBytes(_ byteCount: Int64) -> String {
+        Self.byteFormatter.string(fromByteCount: byteCount)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    private static let byteFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter
+    }()
 }
 
 private struct DocumentNavigator: View {

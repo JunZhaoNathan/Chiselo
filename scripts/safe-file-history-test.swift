@@ -51,6 +51,19 @@ struct SafeFileHistoryTest {
         let latestContent = try latestSnapshot.map { try String(contentsOf: $0, encoding: .utf8) }
         try expect(latestContent == "newer html", "Expected latest snapshot to contain the newest pre-save content.")
 
+        let snapshots = try history.versionSnapshots(for: htmlURL)
+        try expect(snapshots.count == 2, "Expected history browser list to include both snapshots.")
+        try expect(
+            canonicalPath(snapshots.first?.url) == canonicalPath(secondSnapshot),
+            "Expected history browser list to sort newest snapshot first."
+        )
+        try expect(
+            canonicalPath(snapshots.last?.url) == canonicalPath(firstSnapshot),
+            "Expected history browser list to keep older snapshot after newest."
+        )
+        try expect(snapshots.allSatisfy { $0.createdAt != nil }, "Expected snapshots to expose display dates.")
+        try expect(snapshots.allSatisfy { $0.byteCount > 0 }, "Expected snapshots to expose file sizes.")
+
         print("Safe file history test OK")
     }
 

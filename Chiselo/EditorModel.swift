@@ -73,6 +73,9 @@ final class EditorModel: ObservableObject {
     @Published var documentStats: DocumentStats = .empty
     @Published var htmlDiagnostics: HTMLDiagnostics = .empty
     @Published var isExportPreflightPresented: Bool = false
+    @Published var isHistoryBrowserPresented: Bool = false
+    @Published var historySnapshots: [SafeFileHistory.VersionSnapshot] = []
+    @Published var selectedHistorySnapshotID: String?
 
     var hasOpenDocument: Bool {
         activeTabID != nil && !tabs.isEmpty
@@ -926,6 +929,50 @@ final class EditorModel: ObservableObject {
         status = "还没有保存快照，已显示当前文件位置"
     }
 
+    func presentHistoryBrowser() {
+        guard openedURL != nil else {
+            status = "当前文件还没有保存位置"
+            return
+        }
+
+        refreshHistorySnapshots()
+        isHistoryBrowserPresented = true
+        status = historySnapshots.isEmpty ? "没有找到可恢复的版本快照" : "已打开版本历史"
+    }
+
+    func refreshHistorySnapshots() {
+        guard let openedURL else {
+            historySnapshots = []
+            selectedHistorySnapshotID = nil
+            return
+        }
+
+        do {
+            let snapshots = try safeFileHistory.versionSnapshots(for: openedURL)
+            let previousSelection = selectedHistorySnapshotID
+            updatePublished(\.historySnapshots, to: snapshots)
+            if let previousSelection, snapshots.contains(where: { $0.id == previousSelection }) {
+                selectedHistorySnapshotID = previousSelection
+            } else {
+                selectedHistorySnapshotID = snapshots.first?.id
+            }
+        } catch {
+            historySnapshots = []
+            selectedHistorySnapshotID = nil
+            status = "读取版本历史失败：\(error.localizedDescription)"
+        }
+    }
+
+    func restoreSelectedHistorySnapshot() {
+        guard let selectedHistorySnapshotID,
+              let snapshot = historySnapshots.first(where: { $0.id == selectedHistorySnapshotID }) else {
+            status = "请选择一个版本快照"
+            return
+        }
+
+        restoreSnapshot(at: snapshot.url)
+    }
+
     func restoreLatestSnapshot() {
         guard let openedURL else {
             status = "当前文件还没有保存位置"
@@ -938,8 +985,27 @@ final class EditorModel: ObservableObject {
                 return
             }
 
+            restoreSnapshot(at: snapshotURL)
+        } catch {
+            status = "恢复失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func restoreSnapshot(at snapshotURL: URL) {
+        guard let openedURL else {
+            status = "当前文件还没有保存位置"
+            return
+        }
+
+        do {
+            guard FileManager.default.fileExists(atPath: snapshotURL.path) else {
+                status = "快照不存在或已被移动"
+                refreshHistorySnapshots()
+                return
+            }
+
             let alert = NSAlert()
-            alert.messageText = "恢复最近的 Chiselo 快照？"
+            alert.messageText = "恢复这个 Chiselo 快照？"
             alert.informativeText = "将用 \(snapshotURL.lastPathComponent) 覆盖当前文件。覆盖前会先为当前文件再保存一份快照。"
             alert.alertStyle = .warning
             alert.addButton(withTitle: "恢复")
@@ -966,6 +1032,7 @@ final class EditorModel: ObservableObject {
                 loadDeckJSON(restoredContent)
             }
 
+            refreshHistorySnapshots()
             status = "已恢复 \(snapshotURL.lastPathComponent)"
         } catch {
             status = "恢复失败：\(error.localizedDescription)"
