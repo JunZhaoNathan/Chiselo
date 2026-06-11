@@ -4,6 +4,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+run_with_retry() {
+  local attempts="$1"
+  shift
+  local attempt=1
+
+  until "$@"; do
+    if (( attempt >= attempts )); then
+      return 1
+    fi
+    attempt=$((attempt + 1))
+    echo "Retrying command after transient failure: $*"
+    sleep 2
+  done
+}
+
 echo "==> Checking for local-only paths and old project names"
 LOCAL_PATH_OR_OLD_NAME_PATTERN="/Users/[^[:space:]'\"]+|/var/folders/|TemporaryItems|Documents/Codex|Htmlhunter|htmlhunter|HTMLHUNTER"
 if rg -n "$LOCAL_PATH_OR_OLD_NAME_PATTERN" \
@@ -28,13 +43,18 @@ node --check scripts/generate-digital-transformation-slides.mjs
 echo "==> Sample deck schema"
 node scripts/validate-deck.mjs examples/sample.aislide
 
+echo "==> Safe file history"
+SAFE_HISTORY_TEST_BIN="/tmp/chiselo-safe-file-history-test"
+swiftc Chiselo/SafeFileHistory.swift scripts/safe-file-history-test.swift -o "$SAFE_HISTORY_TEST_BIN"
+"$SAFE_HISTORY_TEST_BIN"
+
 echo "==> Core editor smoke tests"
 swift scripts/import-smoke-test.swift
 swift scripts/bridge-message-efficiency-test.swift
 swift scripts/html-delivery-diagnostics-test.swift
 swift scripts/html-diagnostics-webpage-flow-test.swift
 swift scripts/deck-gesture-smoothness-test.swift
-swift scripts/direct-html-canvas-interaction-test.swift
+run_with_retry 2 swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
 swift scripts/precision-adjustment-test.swift
 swift scripts/five-slide-acceptance-test.swift

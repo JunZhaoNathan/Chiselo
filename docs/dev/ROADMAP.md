@@ -17,6 +17,7 @@ The core idea:
 - Add visible rulers and measurement readouts.
 - Improve snapping, alignment guides, and distribution controls.
 - Add visual save preview and diff before overwriting original HTML.
+- Add a visual history browser for `.chiselo-history/` snapshots.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
 

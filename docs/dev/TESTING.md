@@ -7,6 +7,8 @@ swift build
 node --check Chiselo/Resources/Editor/editor.js
 node --check scripts/generate-digital-transformation-slides.mjs
 node scripts/validate-deck.mjs examples/sample.aislide
+swiftc Chiselo/SafeFileHistory.swift scripts/safe-file-history-test.swift -o /tmp/chiselo-safe-file-history-test
+/tmp/chiselo-safe-file-history-test
 ```
 
 ## Release Preflight

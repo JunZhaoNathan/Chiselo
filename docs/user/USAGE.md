@@ -22,6 +22,14 @@ Each document opens in a browser-style tab.
 
 `Transform` mode writes `transform: translate(...)` and is gentler when preserving the original document flow matters.
 
+## Safe Saving
+
+When opening a real local HTML or Chiselo deck file, Chiselo creates a one-time sibling backup named like `filename.chiselo-backup.html` or `filename.chiselo-backup.aislide`. If that backup already exists, Chiselo keeps it instead of replacing it.
+
+When saving over an existing HTML or deck file, Chiselo first copies the previous version into a sibling `.chiselo-history/` folder with a timestamped filename. Use the `备份` toolbar button to reveal that folder from the current document.
+
+Use the `恢复` toolbar button to restore the newest snapshot. Chiselo asks for confirmation and saves the current file into `.chiselo-history/` before restoring.
+
 ## Images
 
 Select an image and use the replace image action. Chiselo embeds the replacement as a data URL so exported HTML remains portable.

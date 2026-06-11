@@ -6,7 +6,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/outputs}"
 DEFAULT_OUTPUT_DIR="$ROOT_DIR/outputs"
 APP_NAME="Chiselo"
 BUNDLE_ID="app.chiselo.editor"
-VERSION="0.1.3"
+VERSION="0.1.4"
 BUILD_CONFIG="release"
 BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$BUILD_CONFIG"
 APP_BUNDLE="$ROOT_DIR/.build/package/$APP_NAME.app"
@@ -196,7 +196,8 @@ Chisel your HTML
 - 表格行列操作包含 rowspan / colspan 合并单元格保护。
 - 配套自动视觉 QA 脚本可逐页截图检查越界、遮挡和文本溢出。
 - 导出干净 HTML、高保真 PDF、对象级可编辑 PPTX；输出格式服务于 HTML 主资产的最终交付。
-- 保存前会为覆盖写回的 HTML 创建 .chiselo-backup 备份。
+- 打开真实 HTML/deck 文件时会保留 .chiselo-backup 原始备份；保存覆盖前会写入 .chiselo-history 版本快照。
+- 工具栏可打开备份目录，也可确认后恢复最近快照。
 
 注意事项
 --------

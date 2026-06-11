@@ -333,7 +333,19 @@ private struct AppToolbar: View {
                     model.saveDeck()
                 }
                 .disabled(!model.hasOpenDocument)
-                .help("保存当前文件")
+                .help("保存当前文件，并在覆盖前生成版本快照")
+
+                ToolbarActionButton(title: "备份", icon: "clock.arrow.circlepath") {
+                    model.revealSafetyFolder()
+                }
+                .disabled(!model.canRevealSafetyFolder)
+                .help("打开当前文件的 Chiselo 版本快照目录")
+
+                ToolbarActionButton(title: "恢复", icon: "arrow.counterclockwise.circle") {
+                    model.restoreLatestSnapshot()
+                }
+                .disabled(!model.canRevealSafetyFolder)
+                .help("从最近的 Chiselo 版本快照恢复当前文件")
             }
 
             MaterialDivider()

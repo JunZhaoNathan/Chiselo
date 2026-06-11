@@ -85,9 +85,13 @@ final class EditorModel: ObservableObject {
         return deck.slides[selectedSlideIndex].elements
     }
 
+    var canRevealSafetyFolder: Bool {
+        openedURL != nil
+    }
+
     weak var webView: WKWebView?
     private var openedURL: URL?
-    private var backedUpHTMLURLs: Set<URL> = []
+    private let safeFileHistory = SafeFileHistory()
     private var activeRenderExporter: HTMLRenderExporter?
     private var isSwitchingTabs = false
     private let editorBackdropDefaultsKey = "Chiselo.EditorBackdrop"
@@ -892,12 +896,76 @@ final class EditorModel: ObservableObject {
         guard let url = openedURL ?? chooseSaveURL(defaultName: "deck.aislide", contentTypes: deckContentTypes) else { return }
 
         do {
+            let snapshotURL = try safeFileHistory.protectFileBeforeOverwrite(at: url, fallbackExtension: "aislide")
             try json.write(to: url, atomically: true, encoding: .utf8)
             openedURL = url
             updateActiveTabAfterSave(url: url, mode: "deck", content: json)
-            status = "Saved \(url.lastPathComponent)"
+            status = safeFileHistory.saveStatus(for: url, snapshotURL: snapshotURL)
         } catch {
             status = "Save failed: \(error.localizedDescription)"
+        }
+    }
+
+    func revealSafetyFolder() {
+        guard let openedURL else {
+            status = "当前文件还没有保存位置"
+            return
+        }
+
+        let historyDirectory = safeFileHistory.historyDirectory(for: openedURL)
+        if FileManager.default.fileExists(atPath: historyDirectory.path) {
+            NSWorkspace.shared.open(historyDirectory)
+            status = "已打开版本快照目录"
+            return
+        }
+
+        NSWorkspace.shared.activateFileViewerSelecting([openedURL])
+        status = "还没有保存快照，已显示当前文件位置"
+    }
+
+    func restoreLatestSnapshot() {
+        guard let openedURL else {
+            status = "当前文件还没有保存位置"
+            return
+        }
+
+        do {
+            guard let snapshotURL = try safeFileHistory.latestVersionSnapshot(for: openedURL) else {
+                status = "没有找到可恢复的版本快照"
+                return
+            }
+
+            let alert = NSAlert()
+            alert.messageText = "恢复最近的 Chiselo 快照？"
+            alert.informativeText = "将用 \(snapshotURL.lastPathComponent) 覆盖当前文件。覆盖前会先为当前文件再保存一份快照。"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "恢复")
+            alert.addButton(withTitle: "取消")
+
+            guard alert.runModal() == .alertFirstButtonReturn else {
+                status = "已取消恢复"
+                return
+            }
+
+            _ = try safeFileHistory.protectFileBeforeOverwrite(
+                at: openedURL,
+                fallbackExtension: documentMode == "html" ? "html" : "aislide"
+            )
+            try FileManager.default.removeItem(at: openedURL)
+            try FileManager.default.copyItem(at: snapshotURL, to: openedURL)
+
+            let restoredContent = try readTextFile(at: openedURL)
+            updateActiveTabAfterSave(url: openedURL, mode: documentMode, content: restoredContent)
+
+            if documentMode == "html" {
+                importHTML(restoredContent, from: openedURL)
+            } else {
+                loadDeckJSON(restoredContent)
+            }
+
+            status = "已恢复 \(snapshotURL.lastPathComponent)"
+        } catch {
+            status = "恢复失败：\(error.localizedDescription)"
         }
     }
 
@@ -1293,32 +1361,16 @@ final class EditorModel: ObservableObject {
                 guard let url = self.openedURL ?? self.chooseSaveURL(defaultName: "document.html", contentTypes: [.html]) else { return }
 
                 do {
-                    try self.backupHTMLIfNeeded(at: url)
+                    let snapshotURL = try self.safeFileHistory.protectFileBeforeOverwrite(at: url, fallbackExtension: "html")
                     try html.write(to: url, atomically: true, encoding: .utf8)
                     self.openedURL = url
                     self.updateActiveTabAfterSave(url: url, mode: "html", content: html)
-                    self.status = "Saved \(url.lastPathComponent)"
+                    self.status = self.safeFileHistory.saveStatus(for: url, snapshotURL: snapshotURL)
                 } catch {
                     self.status = "Save failed: \(error.localizedDescription)"
                 }
             }
         }
-    }
-
-    private func backupHTMLIfNeeded(at url: URL) throws {
-        guard FileManager.default.fileExists(atPath: url.path), !backedUpHTMLURLs.contains(url) else { return }
-
-        let backupURL = url
-            .deletingPathExtension()
-            .appendingPathExtension("chiselo-backup")
-            .appendingPathExtension(url.pathExtension.isEmpty ? "html" : url.pathExtension)
-
-        if FileManager.default.fileExists(atPath: backupURL.path) {
-            try FileManager.default.removeItem(at: backupURL)
-        }
-
-        try FileManager.default.copyItem(at: url, to: backupURL)
-        backedUpHTMLURLs.insert(url)
     }
 
     private func chooseSaveURL(defaultName: String, contentTypes: [UTType]) -> URL? {
@@ -1475,6 +1527,7 @@ final class EditorModel: ObservableObject {
     private func applyOpenTabReadResults(_ results: [OpenTabReadResult]) {
         var lastID: UUID?
         var lastFailure: String?
+        var lastSafetyWarning: String?
         var openedCount = 0
         var reusedCount = 0
 
@@ -1485,6 +1538,15 @@ final class EditorModel: ObservableObject {
                     lastID = existingID
                     reusedCount += 1
                     continue
+                }
+
+                do {
+                    try safeFileHistory.backupOriginalIfNeeded(
+                        at: payload.url,
+                        fallbackExtension: payload.mode == "html" ? "html" : "aislide"
+                    )
+                } catch {
+                    lastSafetyWarning = "安全备份失败：\(payload.url.lastPathComponent) \(error.localizedDescription)"
                 }
 
                 let id = UUID()
@@ -1508,6 +1570,10 @@ final class EditorModel: ObservableObject {
                 status = "这些文件已经打开，已切换到 \(title)"
             } else {
                 status = "已打开 \(openedCount) 个新文件"
+            }
+
+            if let lastSafetyWarning {
+                status += " · \(lastSafetyWarning)"
             }
         } else {
             status = lastFailure ?? "没有可打开的文件"

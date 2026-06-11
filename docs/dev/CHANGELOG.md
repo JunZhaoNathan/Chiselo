@@ -2,6 +2,15 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.4 - 2026-06-11
+
+- Added safer real-file editing: opening a local HTML/deck file creates a one-time `.chiselo-backup` sibling copy.
+- Added save-time version snapshots in a sibling `.chiselo-history/` folder for HTML and deck files.
+- Preserved existing `.chiselo-backup` files across app sessions instead of replacing the earliest safety copy.
+- Added a toolbar shortcut to reveal the current document's backup/history folder.
+- Added a confirmed restore action for the newest `.chiselo-history/` snapshot.
+- Added a safe-file-history regression test to cover backup preservation and same-second snapshot ordering.
+
 ## 0.1.3 - 2026-06-10
 
 Stability patch focused on repeatable HTML editing and generated fixture coverage.
