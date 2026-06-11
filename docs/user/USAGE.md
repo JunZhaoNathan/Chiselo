@@ -24,6 +24,8 @@ Each document opens in a browser-style tab.
 
 Chiselo shows detected page or slide boundaries on the canvas with center reference lines and ruler ticks. Dragging or resizing objects can snap to the detected page edges and center lines for more precise page-level adjustment.
 
+For repeated HTML objects, use `子对象` or `同类` in the `精修` panel to select multiple objects, then use `同宽`, `同高`, `横等距`, or `纵等距` in `对齐` to make card, image, metric, and module groups consistent.
+
 ## Safe Saving
 
 When opening a real local HTML or Chiselo deck file, Chiselo creates a one-time sibling backup named like `filename.chiselo-backup.html` or `filename.chiselo-backup.aislide`. If that backup already exists, Chiselo keeps it instead of replacing it.

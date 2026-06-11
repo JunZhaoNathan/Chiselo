@@ -9,6 +9,7 @@ All notable changes to Chiselo will be documented here.
 - Added import-adapter coverage for semantic page and table-cell recognition.
 - Added visual page/slide boundary overlays with center lines and ruler ticks for direct HTML and deck editing.
 - Added page/slide frame edges and centers to direct HTML snapping so movement and resizing can align to the detected page frame.
+- Added HTML multi-selection commands for matching width/height and distributing objects horizontally or vertically.
 
 ## 0.1.4 - 2026-06-11
 

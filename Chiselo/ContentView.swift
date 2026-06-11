@@ -1460,7 +1460,7 @@ private struct InspectorPanel: View {
             objectGroup(element)
             geometryGroup
             quickAdjustGroup
-            alignmentGroup
+            alignmentGroup(for: element)
         case .style:
             styleGroups(for: element)
             boxStyleGroup
@@ -1468,7 +1468,7 @@ private struct InspectorPanel: View {
         case .arrange:
             layerStackGroup
             layerGroup
-            alignmentGroup
+            alignmentGroup(for: element)
         case .html:
             htmlControlsGroup
         }
@@ -1758,16 +1758,31 @@ private struct InspectorPanel: View {
         }
     }
 
-    private var alignmentGroup: some View {
+    private func alignmentGroup(for element: EditorElement) -> some View {
         GroupBox("对齐") {
-            Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                GridRow {
-                    CommandButton(title: "左", icon: "align.horizontal.left", command: "alignLeft")
-                    CommandButton(title: "居中", icon: "align.horizontal.center", command: "alignCenter")
+            VStack(spacing: 8) {
+                Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                    GridRow {
+                        CommandButton(title: "左", icon: "align.horizontal.left", command: "alignLeft")
+                        CommandButton(title: "居中", icon: "align.horizontal.center", command: "alignCenter")
+                    }
+                    GridRow {
+                        CommandButton(title: "右", icon: "align.horizontal.right", command: "alignRight")
+                        CommandButton(title: "垂直中", icon: "align.vertical.center", command: "alignMiddle")
+                    }
                 }
-                GridRow {
-                    CommandButton(title: "右", icon: "align.horizontal.right", command: "alignRight")
-                    CommandButton(title: "垂直中", icon: "align.vertical.center", command: "alignMiddle")
+
+                if element.type == "html-group" {
+                    Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
+                            CommandButton(title: "同宽", icon: "arrow.left.and.right.square", command: "matchWidth")
+                            CommandButton(title: "同高", icon: "arrow.up.and.down.square", command: "matchHeight")
+                        }
+                        GridRow {
+                            CommandButton(title: "横等距", icon: "arrow.left.and.right", command: "distributeHorizontal")
+                            CommandButton(title: "纵等距", icon: "arrow.up.and.down", command: "distributeVertical")
+                        }
+                    }
                 }
             }
         }

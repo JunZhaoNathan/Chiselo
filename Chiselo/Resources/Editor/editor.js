@@ -1203,6 +1203,18 @@
       case "alignBottom":
         alignSelected("bottom");
         return;
+      case "matchWidth":
+        matchSelectedSize("width");
+        return;
+      case "matchHeight":
+        matchSelectedSize("height");
+        return;
+      case "distributeHorizontal":
+        distributeSelected("horizontal");
+        return;
+      case "distributeVertical":
+        distributeSelected("vertical");
+        return;
       case "fitWidth":
         fitSelected("width");
         return;
@@ -1438,6 +1450,18 @@
     }
     render();
     postSelectionChanged();
+  }
+
+  function matchSelectedSize(mode) {
+    if (editorMode === "html") {
+      matchDirectSelectedSize(mode);
+    }
+  }
+
+  function distributeSelected(axis) {
+    if (editorMode === "html") {
+      distributeDirectSelected(axis);
+    }
   }
 
   function snapSelectedToGrid(grid = 8) {
@@ -3616,6 +3640,61 @@
       applyDirectRect(directSelectedNode, rect);
     }
     updateSelectionBox();
+    postSelectionChanged();
+  }
+
+  function matchDirectSelectedSize(mode) {
+    const nodes = topLevelDirectNodes(directSelectionNodes());
+    if (nodes.length < 2 || !directSelectedNode?.isConnected) return;
+
+    const reference = nodes.includes(directSelectedNode) ? directSelectedNode : nodes[0];
+    const referenceRect = directNodeRect(reference);
+
+    pushHistory();
+    for (const node of nodes) {
+      const rect = directNodeRect(node);
+      if (mode === "width") rect.w = referenceRect.w;
+      if (mode === "height") rect.h = referenceRect.h;
+      applyDirectRect(node, rect);
+    }
+    setDirectSelection(nodes, reference);
+    updateSelectionBox();
+    scheduleDirectLayoutRefresh();
+    postSelectionChanged();
+  }
+
+  function distributeDirectSelected(axis) {
+    const nodes = topLevelDirectNodes(directSelectionNodes());
+    if (nodes.length < 3) return;
+
+    const ordered = [...nodes].sort((a, b) => {
+      const rectA = directNodeRect(a);
+      const rectB = directNodeRect(b);
+      return axis === "horizontal" ? rectA.x - rectB.x : rectA.y - rectB.y;
+    });
+    const rects = ordered.map((node) => ({ node, rect: directNodeRect(node) }));
+    const bounds = directNodesBounds(ordered);
+    const totalSize = rects.reduce((sum, item) => sum + (axis === "horizontal" ? item.rect.w : item.rect.h), 0);
+    const span = axis === "horizontal" ? bounds.w : bounds.h;
+    const gap = (span - totalSize) / Math.max(1, rects.length - 1);
+
+    pushHistory();
+    let cursor = axis === "horizontal" ? bounds.x : bounds.y;
+    for (const item of rects) {
+      const nextRect = { ...item.rect };
+      if (axis === "horizontal") {
+        nextRect.x = cursor;
+        cursor += nextRect.w + gap;
+      } else {
+        nextRect.y = cursor;
+        cursor += nextRect.h + gap;
+      }
+      applyDirectRect(item.node, nextRect);
+    }
+
+    setDirectSelection(nodes, directSelectedNode && nodes.includes(directSelectedNode) ? directSelectedNode : nodes[nodes.length - 1]);
+    updateSelectionBox();
+    scheduleDirectLayoutRefresh();
     postSelectionChanged();
   }
 

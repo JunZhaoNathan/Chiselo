@@ -53,6 +53,9 @@ final class PrecisionAdjustmentTest: NSObject, WKNavigationDelegate, WKScriptMes
                     .map((field) => ({ field, actual: rect[field], expected: expected[field], delta: Number((rect[field] - expected[field]).toFixed(3)) }));
                   results.push({ name, rect, expected, tolerance: tol, pass: failures.length === 0, failures });
                 };
+                const assertTrue = (name, pass, detail = {}) => {
+                  results.push({ name, pass, ...detail });
+                };
                 const select = (selector) => {
                   const item = editor.selectHTML(selector);
                   if (!item) throw new Error(`Missing ${selector}`);
@@ -93,19 +96,50 @@ final class PrecisionAdjustmentTest: NSObject, WKNavigationDelegate, WKScriptMes
                 editor.updateElement({ ...group, x: 720, y: 420, w: 360, h: 150 });
                 assertRect('multi-select group boundary', editor.getSelection(), { x: 720, y: 420, w: 360, h: 150 }, 1);
 
-                const g1 = select('#g1');
-                const g2 = select('#g2');
-                const g3 = select('#g3');
+                const scaledG1 = select('#g1');
+                const scaledG2 = select('#g2');
+                const scaledG3 = select('#g3');
                 const childChecks = [
-                  { name: 'group child g1 remains inside', rect: g1 },
-                  { name: 'group child g2 remains inside', rect: g2 },
-                  { name: 'group child g3 remains inside', rect: g3 }
+                  { name: 'group child g1 remains inside', rect: scaledG1 },
+                  { name: 'group child g2 remains inside', rect: scaledG2 },
+                  { name: 'group child g3 remains inside', rect: scaledG3 }
                 ].map((item) => ({
                   name: item.name,
                   rect: item.rect,
                   pass: item.rect.x >= 719 && item.rect.y >= 419 && item.rect.x + item.rect.w <= 1081 && item.rect.y + item.rect.h <= 571
                 }));
                 results.push(...childChecks);
+
+                const reference = select('#g1');
+                editor.command('selectSameClass');
+                editor.command('matchWidth');
+                editor.command('matchHeight');
+                editor.command('distributeHorizontal');
+                const horizontalG1 = select('#g1');
+                const horizontalG2 = select('#g2');
+                const horizontalG3 = select('#g3');
+                const horizontalGap12 = Math.round(horizontalG2.x - (horizontalG1.x + horizontalG1.w));
+                const horizontalGap23 = Math.round(horizontalG3.x - (horizontalG2.x + horizontalG2.w));
+                assertTrue('multi-select match width/height', close(horizontalG1.w, reference.w) && close(horizontalG2.w, reference.w) && close(horizontalG3.w, reference.w) && close(horizontalG1.h, reference.h) && close(horizontalG2.h, reference.h) && close(horizontalG3.h, reference.h), {
+                  rects: [horizontalG1, horizontalG2, horizontalG3],
+                  reference: { w: reference.w, h: reference.h }
+                });
+                assertTrue('multi-select distribute horizontal gaps', close(horizontalGap12, horizontalGap23), {
+                  gaps: [horizontalGap12, horizontalGap23]
+                });
+
+                select('#g1');
+                editor.command('selectSameClass');
+                editor.command('distributeVertical');
+                const verticalG1 = select('#g1');
+                const verticalG2 = select('#g2');
+                const verticalG3 = select('#g3');
+                const verticalOrdered = [verticalG1, verticalG2, verticalG3].sort((a, b) => a.y - b.y);
+                const verticalGap12 = Math.round(verticalOrdered[1].y - (verticalOrdered[0].y + verticalOrdered[0].h));
+                const verticalGap23 = Math.round(verticalOrdered[2].y - (verticalOrdered[1].y + verticalOrdered[1].h));
+                assertTrue('multi-select distribute vertical gaps', close(verticalGap12, verticalGap23), {
+                  gaps: [verticalGap12, verticalGap23]
+                });
 
                 const exported = editor.exportHTML();
                 const failed = results.filter((item) => !item.pass);
@@ -195,8 +229,8 @@ private let precisionFixtureHTML = """
     .group-stage { position: absolute; left: 720px; top: 270px; width: 360px; height: 140px; }
     .group-item { position: absolute; top: 0; width: 90px; height: 70px; border-radius: 12px; background: #ffc107; display: grid; place-items: center; font-weight: 900; }
     #g1 { left: 0; }
-    #g2 { left: 130px; top: 35px; }
-    #g3 { left: 260px; top: 70px; }
+    #g2 { left: 130px; top: 35px; width: 114px; height: 82px; }
+    #g3 { left: 260px; top: 70px; width: 74px; height: 64px; }
   </style>
 </head>
 <body>
