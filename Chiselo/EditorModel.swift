@@ -590,7 +590,7 @@ final class EditorModel: ObservableObject {
                 updatePublished(\.selectedElement, to: message.element)
                 updatePublished(\.selectionPath, to: message.path)
                 if let element = message.element {
-                    updatePublished(\.status, to: message.path ?? "已选中 \(element.id)")
+                    updatePublished(\.status, to: "已选中 \(element.semanticLabel ?? element.tagName ?? element.type)")
                 } else {
                     updatePublished(\.status, to: "未选中对象")
                 }
@@ -679,6 +679,8 @@ final class EditorModel: ObservableObject {
             type: type,
             tagName: bridgeString(object["tagName"]),
             htmlPath: bridgeString(object["htmlPath"]),
+            semanticRole: bridgeString(object["semanticRole"]),
+            semanticLabel: bridgeString(object["semanticLabel"]),
             layoutMode: bridgeString(object["layoutMode"]),
             imageSource: bridgeString(object["imageSource"]),
             imageAlt: bridgeString(object["imageAlt"]),

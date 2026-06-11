@@ -10,7 +10,7 @@ Each document opens in a browser-style tab.
 
 - Click rendered HTML content to select an element.
 - Double-click text-like elements to edit text in place.
-- Use the left DOM tree only when nested elements are hard to click.
+- Use the left object structure only when nested objects are hard to click. Chiselo labels common AI-generated HTML parts as page, title, image, table, card, module, and cell so you can work from the rendered document instead of reading raw DOM tags.
 - Use Shift/Cmd-click for multi-select.
 - Press arrow keys to nudge selected objects.
 - Hold Shift with arrow keys for larger nudges.

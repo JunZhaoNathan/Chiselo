@@ -1433,6 +1433,8 @@
         type: "html-group",
         tagName: "group",
         htmlPath: `已选中 ${nodes.length} 个对象`,
+        semanticRole: "selection-group",
+        semanticLabel: "多选对象",
         layoutMode: directLayoutMode,
         x: rect.x,
         y: rect.y,
@@ -1452,11 +1454,14 @@
 
   function directElementPayloadForNode(node, rect) {
     const style = node.ownerDocument.defaultView.getComputedStyle(node);
+    const semantic = directSemanticForNode(node);
     return {
       id: ensureDirectId(node),
       type: "html",
       tagName: node.tagName.toLowerCase(),
       htmlPath: directNodePath(node),
+      semanticRole: semantic.role,
+      semanticLabel: semantic.label,
       layoutMode: directLayoutMode,
       imageSource: node.matches?.("img") ? (node.currentSrc || node.getAttribute("src") || "") : null,
       imageAlt: node.matches?.("img") ? (node.getAttribute("alt") || "") : null,
@@ -2077,8 +2082,54 @@
       label: htmlTreeLabel(node),
       path: directNodePath(node),
       tagName: node.tagName.toLowerCase(),
+      semanticRole: directSemanticForNode(node).role,
+      semanticLabel: directSemanticForNode(node).label,
       children: children.length ? children : null
     };
+  }
+
+  function directSemanticForNode(node) {
+    if (!node || !node.matches) return { role: "object", label: "对象" };
+
+    const tag = node.tagName.toLowerCase();
+    const names = `${node.id || ""} ${[...node.classList || []].join(" ")}`.toLowerCase();
+
+    if (tag === "body") return { role: "page", label: "页面" };
+    if (tag === "main") return { role: "main", label: "正文区" };
+    if (tag === "header") return { role: "header", label: "标题区" };
+    if (tag === "footer") return { role: "footer", label: "页脚" };
+    if (tag === "nav") return { role: "navigation", label: "导航" };
+    if (tag === "aside") return { role: "sidebar", label: "侧栏" };
+    if (/^(h[1-6])$/.test(tag)) return { role: "heading", label: `标题 ${tag.toUpperCase()}` };
+    if (tag === "p") return { role: "paragraph", label: "段落" };
+    if (tag === "span" || tag === "strong" || tag === "em" || tag === "small") return { role: "text", label: "文本" };
+    if (tag === "ul" || tag === "ol") return { role: "list", label: "列表" };
+    if (tag === "li") return { role: "list-item", label: "列表项" };
+    if (tag === "img" || tag === "picture") return { role: "image", label: "图片" };
+    if (tag === "figure") return { role: "figure", label: "图文组" };
+    if (tag === "figcaption") return { role: "caption", label: "图注" };
+    if (tag === "table") return { role: "table", label: "表格" };
+    if (tag === "thead" || tag === "tbody" || tag === "tfoot") return { role: "table-section", label: "表格区域" };
+    if (tag === "tr") return { role: "table-row", label: "表格行" };
+    if (tag === "th") return { role: "table-header-cell", label: "表头单元格" };
+    if (tag === "td") return { role: "table-cell", label: "单元格" };
+    if (tag === "a") return { role: "link", label: "链接" };
+    if (tag === "button") return { role: "button", label: "按钮" };
+    if (tag === "form") return { role: "form", label: "表单" };
+    if (["input", "textarea", "select", "label"].includes(tag)) return { role: "form-control", label: "表单项" };
+    if (["video", "audio", "iframe"].includes(tag)) return { role: "media", label: "媒体" };
+    if (["svg", "canvas"].includes(tag)) return { role: "graphic", label: "图形" };
+
+    if (/slide|page|sheet|canvas|screen|cover/.test(names)) return { role: "page", label: "页面" };
+    if (/hero|banner|masthead|title/.test(names)) return { role: "header", label: "标题区" };
+    if (/card|panel|tile|box/.test(names)) return { role: "card", label: "卡片" };
+    if (/table|matrix|grid/.test(names)) return { role: "table-like", label: "表格/矩阵" };
+    if (/chart|graph|figure|visual/.test(names)) return { role: "visual", label: "图表" };
+    if (/module|block|section|content|item/.test(names)) return { role: "module", label: "模块" };
+
+    if (tag === "section" || tag === "article") return { role: "module", label: "模块" };
+    if (tag === "div") return { role: "container", label: "容器" };
+    return { role: "object", label: "对象" };
   }
 
   function visibleTreeChildren(node) {

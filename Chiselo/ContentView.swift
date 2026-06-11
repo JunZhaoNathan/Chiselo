@@ -573,7 +573,7 @@ private struct DocumentNavigator: View {
 
                         if !model.htmlTree.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("HTML 结构")
+                                Text("对象结构")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 2)
@@ -610,7 +610,7 @@ private struct DocumentNavigator: View {
     }
 
     private var navigatorSubtitle: String {
-        model.documentMode == "html" ? "HTML 结构" : "版面与对象"
+        model.documentMode == "html" ? "页面对象" : "版面与对象"
     }
 
 }
@@ -636,7 +636,7 @@ private struct NavigatorMetricsBar: View {
             }
 
             if let htmlNodeCount, htmlNodeCount > 0 {
-                MetricPill(value: "\(htmlNodeCount)", label: "节点", icon: "curlybraces")
+                MetricPill(value: "\(htmlNodeCount)", label: "对象", icon: "square.3.layers.3d")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1333,10 +1333,15 @@ private struct HTMLTreeRow: View, Equatable {
                         .foregroundStyle(isSelected ? Color.white.opacity(0.84) : MaterialTheme.muted.opacity(0.62))
                         .frame(width: 10, height: 12)
 
-                    Text(node.tagName.uppercased())
-                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    Image(systemName: node.chiseloIconName)
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(isSelected ? Color.white : MaterialTheme.primaryDark)
-                        .frame(width: 46, alignment: .leading)
+                        .frame(width: 14, height: 14)
+
+                    Text(node.chiseloTypeLabel)
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(isSelected ? Color.white : MaterialTheme.primaryDark)
+                        .frame(width: 56, alignment: .leading)
 
                     Text(node.label)
                         .font(.system(size: 11, weight: .semibold))
@@ -1387,7 +1392,7 @@ private enum InspectorTab: String, CaseIterable, Identifiable {
     case layout = "几何"
     case style = "样式"
     case arrange = "层级"
-    case html = "HTML"
+    case html = "精修"
 
     var id: String { rawValue }
 }
@@ -1499,15 +1504,19 @@ private struct InspectorPanel: View {
     private func objectGroup(_ element: EditorElement) -> some View {
         GroupBox("对象") {
             VStack(alignment: .leading, spacing: 8) {
+                LabeledContent("对象", value: element.chiseloTypeLabel)
                 LabeledContent("ID", value: element.id)
-                LabeledContent("类型", value: element.type)
                 if let tagName = element.tagName {
-                    LabeledContent("标签", value: tagName)
+                    LabeledContent("原始标签", value: tagName)
                 }
                 if let layoutMode = element.layoutMode {
                     LabeledContent("布局", value: layoutMode)
                 }
                 if let path = element.htmlPath ?? model.selectionPath {
+                    Text("原始位置")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(MaterialTheme.primary)
                     Text(path)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1776,11 +1785,11 @@ private struct InspectorPanel: View {
                 }
             }
 
-            GroupBox("DOM 导航") {
+            GroupBox("层级导航") {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {
-                        CommandButton(title: "父级", icon: "arrow.up.to.line", command: "selectParent")
-                        CommandButton(title: "子级", icon: "arrow.down.to.line", command: "selectFirstChild")
+                        CommandButton(title: "上层", icon: "arrow.up.to.line", command: "selectParent")
+                        CommandButton(title: "下层", icon: "arrow.down.to.line", command: "selectFirstChild")
                     }
                     GridRow {
                         CommandButton(title: "上一个", icon: "arrow.left.to.line", command: "selectPreviousSibling")
@@ -1901,7 +1910,7 @@ private struct InspectorSelectionHeader: View {
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(MaterialTheme.ink)
                         .lineLimit(1)
-                    Text(element.type.uppercased())
+                    Text(element.chiseloTypeLabel)
                         .font(.system(size: 9, weight: .heavy))
                         .foregroundStyle(MaterialTheme.primaryDark)
                         .padding(.horizontal, 6)
@@ -1933,23 +1942,11 @@ private struct InspectorSelectionHeader: View {
     }
 
     private var title: String {
-        if let tagName = element.tagName, !tagName.isEmpty {
-            return tagName.uppercased()
-        }
-        return element.id
+        element.chiseloDisplayTitle
     }
 
     private var iconName: String {
-        switch element.tagName?.lowercased() {
-        case "img":
-            return "photo"
-        case "table", "thead", "tbody", "tfoot", "tr", "td", "th":
-            return "tablecells"
-        case "h1", "h2", "h3", "p", "span", "li", "button", "a", "label":
-            return "textformat"
-        default:
-            return element.type == "text" ? "textformat" : "square.on.square"
-        }
+        element.chiseloIconName
     }
 }
 
@@ -2047,22 +2044,11 @@ private struct LayerStackRow: View, Equatable {
             return alt
         }
 
-        if let tagName = element.tagName, !tagName.isEmpty {
-            return tagName.uppercased()
-        }
-
-        return element.id
+        return element.chiseloTypeLabel
     }
 
     private var iconName: String {
-        switch element.type {
-        case "text":
-            return "textformat"
-        case "image":
-            return "photo"
-        default:
-            return element.tagName?.lowercased() == "img" ? "photo" : "square"
-        }
+        element.chiseloIconName
     }
 
     private var rowBackground: Color {
@@ -2075,6 +2061,150 @@ private struct LayerStackRow: View, Equatable {
 
     private var zBadgeBackground: Color {
         isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.55)
+    }
+}
+
+private extension EditorElement {
+    var chiseloDisplayTitle: String {
+        if let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+            return text
+        }
+
+        if let alt = imageAlt?.trimmingCharacters(in: .whitespacesAndNewlines), !alt.isEmpty {
+            return alt
+        }
+
+        return chiseloTypeLabel
+    }
+
+    var chiseloTypeLabel: String {
+        if let semanticLabel, !semanticLabel.isEmpty {
+            return semanticLabel
+        }
+
+        switch tagName?.lowercased() {
+        case "img":
+            return "图片"
+        case "table":
+            return "表格"
+        case "td", "th":
+            return "单元格"
+        case "h1", "h2", "h3", "h4", "h5", "h6":
+            return "标题"
+        case "p":
+            return "段落"
+        case "li":
+            return "列表项"
+        case "section", "article":
+            return "模块"
+        case "header":
+            return "标题区"
+        case "footer":
+            return "页脚"
+        case "group":
+            return "多选对象"
+        default:
+            if type == "text" { return "文本" }
+            if type == "image" { return "图片" }
+            if type == "html-group" { return "多选对象" }
+            return "对象"
+        }
+    }
+
+    var chiseloIconName: String {
+        switch semanticRole ?? "" {
+        case "heading", "paragraph", "text", "list-item", "caption":
+            return "textformat"
+        case "image", "figure":
+            return "photo"
+        case "table", "table-section", "table-row", "table-cell", "table-header-cell", "table-like":
+            return "tablecells"
+        case "page":
+            return "doc"
+        case "header":
+            return "rectangle.topthird.inset.filled"
+        case "footer":
+            return "rectangle.bottomthird.inset.filled"
+        case "card", "module", "container":
+            return "square.3.layers.3d"
+        case "selection-group":
+            return "square.grid.2x2"
+        case "graphic", "visual":
+            return "chart.xyaxis.line"
+        case "media":
+            return "play.rectangle"
+        case "link":
+            return "link"
+        case "button", "form-control", "form":
+            return "slider.horizontal.3"
+        default:
+            switch type {
+            case "text":
+                return "textformat"
+            case "image":
+                return "photo"
+            default:
+                return tagName?.lowercased() == "img" ? "photo" : "square.on.square"
+            }
+        }
+    }
+}
+
+private extension HTMLTreeNode {
+    var chiseloTypeLabel: String {
+        if let semanticLabel, !semanticLabel.isEmpty {
+            return semanticLabel
+        }
+
+        switch tagName.lowercased() {
+        case "img":
+            return "图片"
+        case "table":
+            return "表格"
+        case "td", "th":
+            return "单元格"
+        case "h1", "h2", "h3", "h4", "h5", "h6":
+            return "标题"
+        case "p":
+            return "段落"
+        case "li":
+            return "列表项"
+        case "section", "article":
+            return "模块"
+        case "header":
+            return "标题区"
+        default:
+            return "对象"
+        }
+    }
+
+    var chiseloIconName: String {
+        switch semanticRole ?? "" {
+        case "heading", "paragraph", "text", "list-item", "caption":
+            return "textformat"
+        case "image", "figure":
+            return "photo"
+        case "table", "table-section", "table-row", "table-cell", "table-header-cell", "table-like":
+            return "tablecells"
+        case "page":
+            return "doc"
+        case "header":
+            return "rectangle.topthird.inset.filled"
+        case "footer":
+            return "rectangle.bottomthird.inset.filled"
+        case "card", "module", "container":
+            return "square.3.layers.3d"
+        case "graphic", "visual":
+            return "chart.xyaxis.line"
+        case "media":
+            return "play.rectangle"
+        case "link":
+            return "link"
+        case "button", "form-control", "form":
+            return "slider.horizontal.3"
+        default:
+            return tagName.lowercased() == "img" ? "photo" : "square"
+        }
     }
 }
 
@@ -2279,21 +2409,11 @@ private struct StatusSelectionSummary: View {
     }
 
     private var title: String {
-        if let tagName = element.tagName, !tagName.isEmpty {
-            return tagName.uppercased()
-        }
-        return element.type.uppercased()
+        element.chiseloTypeLabel
     }
 
     private var iconName: String {
-        switch element.type {
-        case "image":
-            return "photo"
-        case "text":
-            return "textformat"
-        default:
-            return element.tagName?.lowercased() == "img" ? "photo" : "square"
-        }
+        element.chiseloIconName
     }
 }
 

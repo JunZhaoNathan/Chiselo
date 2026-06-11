@@ -23,6 +23,8 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var type: String
     var tagName: String?
     var htmlPath: String?
+    var semanticRole: String?
+    var semanticLabel: String?
     var layoutMode: String?
     var imageSource: String?
     var imageAlt: String?
@@ -68,6 +70,8 @@ struct HTMLTreeNode: Codable, Identifiable, Equatable {
     var label: String
     var path: String
     var tagName: String
+    var semanticRole: String?
+    var semanticLabel: String?
     var children: [HTMLTreeNode]?
 }
 
