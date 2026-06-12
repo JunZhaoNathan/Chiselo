@@ -1,7 +1,7 @@
 # Chiselo
 
 [![CI](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml/badge.svg)](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml)
-[![Preview Release](https://img.shields.io/github/v/release/JunZhaoNathan/Chiselo?display_name=tag&include_prereleases&label=preview)](https://github.com/JunZhaoNathan/Chiselo/releases)
+[![Latest Release](https://img.shields.io/github/v/release/JunZhaoNathan/Chiselo?display_name=tag&label=latest)](https://github.com/JunZhaoNathan/Chiselo/releases/latest)
 [![License: Non-Commercial](https://img.shields.io/badge/license-non--commercial-orange)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/JunZhaoNathan/Chiselo?style=social)](https://github.com/JunZhaoNathan/Chiselo/stargazers)
 
@@ -23,7 +23,7 @@ Current source and package version: `0.1.5`.
 
 The latest published DMG is still `Chiselo-0.1.4.dmg` until the next GitHub Release asset is uploaded.
 
-- [Preview Release](https://github.com/JunZhaoNathan/Chiselo/releases/tag/v0.1.4-preview.1)
+- [Latest Release](https://github.com/JunZhaoNathan/Chiselo/releases/latest)
 - [0.1.5 Preview Notes](docs/releases/RELEASE_NOTES_0.1.5_PREVIEW.md)
 - [Latest Published Release Notes](docs/releases/RELEASE_NOTES_0.1.4_PREVIEW.md)
 

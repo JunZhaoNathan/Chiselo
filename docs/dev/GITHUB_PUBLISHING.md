@@ -165,24 +165,27 @@ Only upload one DMG to GitHub Releases unless you intentionally built multiple v
 4. Create a new tag:
 
 ```text
-v0.1.5-preview.1
+v0.1.5
 ```
 
 5. Release title:
 
 ```text
-Chiselo 0.1.5 Preview
+Chiselo 0.1.5
 ```
 
-6. Check `Set as a pre-release`.
-7. Paste the text from:
+6. Leave `Set as a pre-release` unchecked for downloadable public builds.
+7. In the `Set as latest release` menu, keep the release eligible for `Latest` unless you are publishing an experimental build without download buttons.
+8. Paste the text from:
 
 ```text
 docs/releases/RELEASE_NOTES_0.1.5_PREVIEW.md
 ```
 
-8. Upload the DMG file.
-9. Click `Publish release`.
+9. Upload the DMG file.
+10. Click `Publish release`.
+
+GitHub's latest-release API ignores draft and prerelease builds. If the website download button points to `https://github.com/JunZhaoNathan/Chiselo/releases/latest` or uses the latest release API, the public DMG release must not be marked as a prerelease.
 
 ## Step 6: First Public Smoke Check
 
