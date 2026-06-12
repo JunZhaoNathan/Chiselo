@@ -22,6 +22,8 @@ function check(condition, message) {
 
 check(deck && typeof deck === "object", "Deck must be an object.");
 check(deck.version === 1, "Deck version must be 1.");
+if (deck.irVersion !== undefined) check(typeof deck.irVersion === "string", "Deck irVersion must be a string.");
+if (deck.sourceKind !== undefined) check(typeof deck.sourceKind === "string", "Deck sourceKind must be a string.");
 check(deck.canvas && typeof deck.canvas === "object", "Deck canvas is required.");
 check(Array.isArray(deck.slides) && deck.slides.length > 0, "Deck needs at least one slide.");
 
@@ -54,6 +56,24 @@ for (const [slideIndex, slide] of (deck.slides || []).entries()) {
     if (element.type === "text") {
       check(typeof element.text === "string", `${prefix}: text elements need text.`);
       check(element.style && isNumber(element.style.fontSize), `${prefix}: text elements need style.fontSize.`);
+    }
+
+    if (element.type === "image") {
+      check(
+        typeof element.imageSource === "string" || typeof element.src === "string",
+        `${prefix}: image elements need imageSource or src.`
+      );
+    }
+
+    for (const key of ["tagName", "htmlPath", "semanticRole", "semanticLabel", "sourceKind", "editability", "fidelity", "captureNote", "layoutMode", "imageSource", "imageAlt"]) {
+      if (element[key] !== undefined) check(typeof element[key] === "string", `${prefix}: ${key} must be a string.`);
+    }
+
+    if (element.frame !== undefined) {
+      check(element.frame && typeof element.frame === "object", `${prefix}: frame must be an object.`);
+      for (const key of ["x", "y", "w", "h"]) {
+        check(isNumber(element.frame?.[key]), `${prefix}: frame.${key} must be a finite number.`);
+      }
     }
   }
 }

@@ -162,7 +162,7 @@ final class PostdocLayoutAdjustmentTest: NSObject, WKNavigationDelegate, WKScrip
                   frozenDeck: JSON.stringify(frozenDeck, null, 2),
                   report: {
                     input: '\(htmlURL.lastPathComponent)',
-                    mode: 'Direct HTML + Freeze Layout',
+                    mode: 'Direct HTML + Editable Version',
                     sheetCount,
                     beforeSummary,
                     beforeDiagnostics,

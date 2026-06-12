@@ -7,6 +7,8 @@
   "additionalProperties": false,
   "properties": {
     "version": { "const": 1 },
+    "irVersion": { "type": "string" },
+    "sourceKind": { "type": "string" },
     "canvas": {
       "type": "object",
       "required": ["width", "height", "background"],
@@ -50,6 +52,29 @@
         "rotation": { "type": "number" },
         "z": { "type": "number" },
         "locked": { "type": "boolean" },
+        "tagName": { "type": "string" },
+        "htmlPath": { "type": "string" },
+        "semanticRole": { "type": "string" },
+        "semanticLabel": { "type": "string" },
+        "sourceKind": { "type": "string" },
+        "editability": { "type": "string" },
+        "fidelity": { "type": "string" },
+        "captureNote": { "type": "string" },
+        "layoutMode": { "type": "string" },
+        "imageSource": { "type": "string" },
+        "imageAlt": { "type": "string" },
+        "frame": {
+          "type": "object",
+          "required": ["x", "y", "w", "h"],
+          "additionalProperties": false,
+          "properties": {
+            "label": { "type": "string" },
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "w": { "type": "number", "minimum": 1 },
+            "h": { "type": "number", "minimum": 1 }
+          }
+        },
         "text": { "type": "string" },
         "src": { "type": "string" },
         "style": {

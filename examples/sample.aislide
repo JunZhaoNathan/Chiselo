@@ -8,7 +8,7 @@
   "slides": [
     {
       "id": "slide-1",
-      "title": "AI HTML Slide",
+      "title": "HTML Refinement Sample",
       "elements": [
         {
           "id": "title",
@@ -38,7 +38,7 @@
           "h": 88,
           "rotation": 0,
           "z": 19,
-          "text": "A native macOS editor for precise AI-generated HTML slides.",
+          "text": "A native macOS editor for precise HTML refinement and delivery.",
           "style": {
             "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
             "fontSize": 28,

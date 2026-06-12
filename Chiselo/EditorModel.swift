@@ -685,6 +685,10 @@ final class EditorModel: ObservableObject {
             htmlPath: bridgeString(object["htmlPath"]),
             semanticRole: bridgeString(object["semanticRole"]),
             semanticLabel: bridgeString(object["semanticLabel"]),
+            sourceKind: bridgeString(object["sourceKind"]),
+            editability: bridgeString(object["editability"]),
+            fidelity: bridgeString(object["fidelity"]),
+            captureNote: bridgeString(object["captureNote"]),
             layoutMode: bridgeString(object["layoutMode"]),
             imageSource: bridgeString(object["imageSource"]),
             imageAlt: bridgeString(object["imageAlt"]),
@@ -1128,11 +1132,11 @@ final class EditorModel: ObservableObject {
         }
 
         guard documentMode == "html" else {
-            status = "冻结版式适用于 HTML 文档模式"
+            status = "转为可编辑版适用于 HTML 文档模式"
             return
         }
 
-        status = "正在冻结当前 HTML 版式..."
+        status = "正在生成可编辑版..."
 
         exportCurrentHTML { [weak self] html in
             guard let self else { return }
@@ -1145,14 +1149,14 @@ final class EditorModel: ObservableObject {
             }
 
             guard let data = html.data(using: .utf8) else {
-                self.status = "冻结失败：无法编码 HTML"
+                self.status = "生成可编辑版失败：无法编码 HTML"
                 return
             }
 
             let base64 = data.base64EncodedString()
             let baseHref = self.openedURL?.deletingLastPathComponent().absoluteString ?? ""
             guard let baseLiteral = self.jsStringLiteral(baseHref) else {
-                self.status = "冻结失败：无法生成资源路径"
+                self.status = "生成可编辑版失败：无法生成资源路径"
                 return
             }
 
@@ -1166,12 +1170,12 @@ final class EditorModel: ObservableObject {
                     guard let self else { return }
 
                     if let error {
-                        self.status = "冻结失败：\(error.localizedDescription)"
+                        self.status = "生成可编辑版失败：\(error.localizedDescription)"
                         return
                     }
 
                     guard let json = result as? String, !json.isEmpty else {
-                        self.status = "冻结失败：没有生成固定画布"
+                        self.status = "生成可编辑版失败：没有生成对象结构"
                         return
                     }
 
@@ -1181,7 +1185,7 @@ final class EditorModel: ObservableObject {
                     self.activeTabID = id
                     self.openedURL = nil
                     self.loadDeckJSON(json)
-                    self.status = "已生成冻结版式：\(title)"
+                    self.status = "已生成可编辑版：\(title)"
                 }
             }
         }
@@ -1733,12 +1737,14 @@ final class EditorModel: ObservableObject {
 
     private func frozenLayoutTitle() -> String {
         let baseTitle = activeTabIndex.flatMap { tabs.indices.contains($0) ? tabs[$0].title : nil } ?? "HTML 文档"
-        let root = baseTitle.replacingOccurrences(of: " - 冻结版式", with: "")
-        var title = "\(root) - 冻结版式"
+        let root = baseTitle
+            .replacingOccurrences(of: " - 冻结版式", with: "")
+            .replacingOccurrences(of: " - 可编辑版", with: "")
+        var title = "\(root) - 可编辑版"
         var suffix = 2
         let existing = Set(tabs.map(\.title))
         while existing.contains(title) {
-            title = "\(root) - 冻结版式 \(suffix)"
+            title = "\(root) - 可编辑版 \(suffix)"
             suffix += 1
         }
         return title

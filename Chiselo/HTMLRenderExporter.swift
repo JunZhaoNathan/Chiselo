@@ -408,6 +408,7 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
     }
 
     private static let emuPerPixel = 914_400.0 / 96.0
+    private static let pageSelector = ".slide, .sheet, .page, [data-slide], [data-page], [role=doc-page], [aria-roledescription=slide], [class~=slide], [class^=slide-], [class*=slide-], [class~=page], [class^=page-], [class*=page-], [id^=slide], [id*=-slide], [id^=page], [id*=-page]"
 
     private static func runZip(in root: URL, output: URL) throws {
         let process = Process()
@@ -425,9 +426,30 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
 
     private static let collectScript = """
     (() => {
-      const pages = [...document.querySelectorAll('.slide, .sheet, [data-slide], [data-page]')];
+      const pages = exportPageNodes();
       if (pages.length) return pages.length;
       return document.body ? 1 : 0;
+
+      function exportPageNodes() {
+        const candidates = [...document.querySelectorAll('\(pageSelector)')].filter(isExportPageCandidate);
+        const candidateSet = new Set(candidates);
+        return candidates.filter((node) => {
+          let parent = node.parentElement;
+          while (parent && parent !== document.body && parent !== document.documentElement) {
+            if (candidateSet.has(parent)) return false;
+            parent = parent.parentElement;
+          }
+          return true;
+        });
+      }
+
+      function isExportPageCandidate(node) {
+        if (!node || node === document.body || node === document.documentElement) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) <= 0.01) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width >= 240 && rect.height >= 160;
+      }
     })();
     """
 
@@ -460,7 +482,7 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
     private static func preparePageScript(index: Int) -> String {
         """
         (() => {
-          const pages = [...document.querySelectorAll('.slide, .sheet, [data-slide], [data-page]')];
+          const pages = exportPageNodes();
           let target = pages[\(index)];
           let style = document.getElementById('__chiselo_export_style');
           if (!style) {
@@ -493,6 +515,27 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
             width: Math.max(640, Math.ceil(rect.width || document.documentElement.scrollWidth || 1280)),
             height: Math.max(360, Math.ceil(rect.height || document.documentElement.scrollHeight || 720))
           };
+
+          function exportPageNodes() {
+            const candidates = [...document.querySelectorAll('\(pageSelector)')].filter(isExportPageCandidate);
+            const candidateSet = new Set(candidates);
+            return candidates.filter((node) => {
+              let parent = node.parentElement;
+              while (parent && parent !== document.body && parent !== document.documentElement) {
+                if (candidateSet.has(parent)) return false;
+                parent = parent.parentElement;
+              }
+              return true;
+            });
+          }
+
+          function isExportPageCandidate(node) {
+            if (!node || node === document.body || node === document.documentElement) return false;
+            const style = getComputedStyle(node);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) <= 0.01) return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width >= 240 && rect.height >= 160;
+          }
         })();
         """
     }
@@ -502,7 +545,7 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
       try {
       const ignoredTags = new Set(["SCRIPT", "STYLE", "META", "LINK", "TITLE", "HEAD", "NOSCRIPT", "TEMPLATE"]);
       const textTags = new Set(["A", "B", "BUTTON", "CAPTION", "CODE", "DD", "DT", "EM", "FIGCAPTION", "H1", "H2", "H3", "H4", "H5", "H6", "LABEL", "LEGEND", "LI", "P", "PRE", "SMALL", "SPAN", "STRONG", "TD", "TEXTAREA", "TH"]);
-      const pageCandidates = [...document.querySelectorAll(".slide, .sheet, [data-slide], [data-page]")];
+      const pageCandidates = exportPageNodes();
       const pageNodes = pageCandidates.length ? pageCandidates : [document.body || document.documentElement].filter(Boolean);
       let nextID = 2;
 
@@ -517,6 +560,27 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
+      }
+
+      function exportPageNodes() {
+        const candidates = [...document.querySelectorAll("\#(pageSelector)")].filter(isExportPageCandidate);
+        const candidateSet = new Set(candidates);
+        return candidates.filter((node) => {
+          let parent = node.parentElement;
+          while (parent && parent !== document.body && parent !== document.documentElement) {
+            if (candidateSet.has(parent)) return false;
+            parent = parent.parentElement;
+          }
+          return true;
+        });
+      }
+
+      function isExportPageCandidate(node) {
+        if (!node || node === document.body || node === document.documentElement) return false;
+        const style = getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden" || number(style.opacity, 1) <= 0.01) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width >= 240 && rect.height >= 160;
       }
 
       function parseColor(value) {

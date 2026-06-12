@@ -9,10 +9,13 @@ Creator note: Chiselo was built through vibe coding by a humanities-background c
 ## What Changed In 0.1.6
 
 - Added generator compatibility diagnostics for Dify-like and script-rendered HTML.
+- Added `转为可编辑版` Layout IR v1 for turning rendered HTML into deterministic editable text, image, shape, pseudo-element, and whole-object fallback elements.
+- Shows editability metadata for captured objects, including directly editable text, replaceable images, adjustable shapes, approximated pseudo-elements, and iframe/canvas whole-object fallbacks.
+- Uses consistent page/slide boundary detection for editable capture and export.
 - Detects runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
 - Makes dynamically inserted titles, images, tables, and modules join the editing and delivery-check pipeline after import.
 - Temporarily lets empty transparent hit layers pass through clicks inside the editor so the real visible object underneath can be selected.
-- Adds generator compatibility rows, issue icons, export scoring penalties, and guidance for when Freeze Layout is the safer precision-editing path.
+- Adds generator compatibility rows, issue icons, export scoring penalties, and guidance for when `转为可编辑版` is the safer precision-editing path.
 - Keeps exported HTML clean by stripping Chiselo editing markers before delivery.
 - Updates packaging to `0.1.6`.
 

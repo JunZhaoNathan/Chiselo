@@ -33,7 +33,7 @@ struct ChiseloApp: App {
                 .keyboardShortcut("s", modifiers: .command)
                 .disabled(!model.hasOpenDocument)
 
-                Button("冻结版式") {
+                Button("转为可编辑版") {
                     model.freezeCurrentHTMLLayout()
                 }
                 .keyboardShortcut("f", modifiers: [.command, .shift])

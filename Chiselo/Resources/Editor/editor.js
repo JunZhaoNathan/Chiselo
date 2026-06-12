@@ -18,7 +18,8 @@
   const MAX_HTML_TREE_NODES = 260;
   const MAX_HTML_DIAGNOSTIC_NODES = 520;
   const MAX_HTML_DIAGNOSTIC_ISSUES = 12;
-  const DIRECT_FIXED_FRAME_SELECTOR = ".slide,.sheet,.page,[data-slide],[data-page]";
+  const DIRECT_FIXED_FRAME_SELECTOR = ".slide,.sheet,.page,[data-slide],[data-page],[role='doc-page'],[aria-roledescription='slide'],[class~='slide'],[class^='slide-'],[class*=' slide-'],[class~='page'],[class^='page-'],[class*=' page-'],[id^='slide'],[id*='-slide'],[id^='page'],[id*='-page']";
+  const CAPTURE_PAGE_SELECTOR = DIRECT_FIXED_FRAME_SELECTOR;
   const DIRECT_RUNTIME_ROOT_SELECTOR = "#app,#root,#__next,#__nuxt,[data-reactroot],[data-v-app],[ng-version]";
   const handles = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
   const DIRECT_TEXT_BLOCK_SELECTOR = "p,h1,h2,h3,h4,h5,h6,li,figcaption,caption,td,th,button,a,label,pre";
@@ -1601,8 +1602,7 @@
 
   function directElementFramePayload(node) {
     if (!node || !node.isConnected) return null;
-    const page = node.closest(DIRECT_FIXED_FRAME_SELECTOR);
-    const frameNode = page && page !== node ? page : null;
+    const frameNode = directPageFrameNodeFor(node);
     const rect = frameNode ? directNodeRect(frameNode) : directCanvasRect();
     return {
       label: frameNode ? pageFrameLabel(frameNode, 0, 1) : "画布",
@@ -3886,8 +3886,8 @@
   }
 
   function directAlignmentFrame(node) {
-    const page = node.closest(DIRECT_FIXED_FRAME_SELECTOR);
-    if (page && page !== node) return directNodeRect(page);
+    const page = directPageFrameNodeFor(node);
+    if (page) return directNodeRect(page);
     return directCanvasRect();
   }
 
@@ -3902,8 +3902,7 @@
       return [{ index: 0, label: "页面", rect: directCanvasRect() }];
     }
 
-    const candidates = uniqueElements([...doc.querySelectorAll(DIRECT_FIXED_FRAME_SELECTOR)])
-      .filter((node) => node !== doc.body && node !== doc.documentElement && isDirectNodeVisible(node));
+    const candidates = directPageFrameCandidates(doc);
     const candidateSet = new Set(candidates);
     const topLevelPages = candidates.filter((node) => {
       let parent = node.parentElement;
@@ -3937,6 +3936,28 @@
     const semantic = directSemanticForNode(node);
     if (semantic.role === "page") return total > 1 ? `页面 ${index + 1}` : "页面";
     return total > 1 ? `${semantic.label} ${index + 1}` : semantic.label;
+  }
+
+  function directPageFrameCandidates(doc) {
+    if (!doc?.body) return [];
+    return uniqueElements([...doc.querySelectorAll(DIRECT_FIXED_FRAME_SELECTOR)])
+      .filter((node) => node !== doc.body && node !== doc.documentElement && isDirectPageFrameCandidate(node));
+  }
+
+  function isDirectPageFrameCandidate(node) {
+    if (!node?.getBoundingClientRect || !isDirectNodeVisible(node)) return false;
+    const rect = node.getBoundingClientRect();
+    return rect.width >= 240 && rect.height >= 160;
+  }
+
+  function directPageFrameNodeFor(node) {
+    let page = node?.closest?.(DIRECT_FIXED_FRAME_SELECTOR);
+    const doc = node?.ownerDocument;
+    while (page && doc && page !== doc.body && page !== doc.documentElement) {
+      if (page !== node && isDirectPageFrameCandidate(page)) return page;
+      page = page.parentElement?.closest?.(DIRECT_FIXED_FRAME_SELECTOR);
+    }
+    return null;
   }
 
   function arrangeDirectSelected(mode) {
@@ -4015,29 +4036,19 @@
     iframe.setAttribute("aria-hidden", "true");
     document.body.appendChild(iframe);
 
-    iframe.srcdoc = withBaseElement(html, baseHref);
-
-    await new Promise((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        setTimeout(resolve, 120);
-      };
-      iframe.addEventListener("load", finish, { once: true });
-      setTimeout(finish, 600);
-    });
+    await writeImportFrameHTML(iframe, withBaseElement(html, baseHref));
+    await waitForImportStability(iframe);
 
     const doc = iframe.contentDocument;
     stabilizeImportDocument(doc);
-    const pages = [...doc.querySelectorAll(".slide, .sheet, [data-slide], [data-page]")];
-    const pageNodes = pages.length ? pages : [...doc.body.children].filter((node) => node.getBoundingClientRect().width > 20);
-    const fallbackPages = pageNodes.length ? pageNodes : [doc.body];
+    const fallbackPages = capturePageNodes(doc);
     const firstRect = roundedRect(fallbackPages[0].getBoundingClientRect(), fallbackPages[0].getBoundingClientRect());
     const firstStyle = doc.defaultView.getComputedStyle(fallbackPages[0]);
 
     const importedDeck = {
       version: 1,
+      irVersion: "layout-ir-v1",
+      sourceKind: "runtime-html-snapshot",
       canvas: {
         width: Math.max(320, firstRect.w),
         height: Math.max(180, firstRect.h),
@@ -4049,6 +4060,102 @@
     iframe.remove();
     loadDeck(importedDeck);
     return importedDeck;
+  }
+
+  function writeImportFrameHTML(frame, html) {
+    return new Promise((resolve) => {
+      let settled = false;
+      let objectURL = "";
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (objectURL) setTimeout(() => URL.revokeObjectURL(objectURL), 1600);
+        setTimeout(resolve, 180);
+      };
+
+      frame.addEventListener("load", finish, { once: true });
+      setTimeout(finish, 900);
+
+      try {
+        objectURL = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+        frame.src = objectURL;
+      } catch {
+        try {
+          const doc = frame.contentDocument;
+          doc.open();
+          doc.write(html);
+          doc.close();
+        } catch {
+          frame.srcdoc = html;
+        }
+      }
+    });
+  }
+
+  async function waitForImportStability(frame) {
+    const doc = frame?.contentDocument;
+    if (!doc) return;
+    const win = doc.defaultView;
+    const start = performance.now();
+    let lastSignature = "";
+    let stableSamples = 0;
+
+    await waitForImportAssets(doc, 900);
+
+    while (performance.now() - start < 1800) {
+      await importAnimationFrame(win);
+      const signature = importStabilitySignature(doc);
+      if (signature === lastSignature) {
+        stableSamples += 1;
+        if (stableSamples >= 3) break;
+      } else {
+        stableSamples = 0;
+        lastSignature = signature;
+      }
+    }
+  }
+
+  function importAnimationFrame(win) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      try {
+        win?.requestAnimationFrame?.(finish);
+      } catch {}
+      setTimeout(finish, 48);
+    });
+  }
+
+  function importStabilitySignature(doc) {
+    const bodyRect = doc.body?.getBoundingClientRect?.() || { width: 0, height: 0 };
+    const visibleNodes = [...doc.body.querySelectorAll("*")]
+      .filter((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 2 && rect.height > 2;
+      })
+      .slice(0, 220)
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        return `${node.tagName}:${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.width)},${Math.round(rect.height)}:${normalizedText(node).slice(0, 18)}`;
+      });
+    return `${Math.round(bodyRect.width)}x${Math.round(bodyRect.height)}:${visibleNodes.length}:${visibleNodes.join("|")}`;
+  }
+
+  function waitForImportAssets(doc, timeout = 900) {
+    const pendingImages = [...doc.images || []].filter((image) => !image.complete);
+    const fontReady = doc.fonts?.ready?.catch?.(() => null) || Promise.resolve();
+    const imageReady = Promise.allSettled(pendingImages.map((image) => new Promise((resolve) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    })));
+    return Promise.race([
+      Promise.allSettled([fontReady, imageReady]),
+      new Promise((resolve) => setTimeout(resolve, timeout))
+    ]);
   }
 
   function stabilizeImportDocument(doc) {
@@ -4117,17 +4224,61 @@
       }
     }
 
+    let fallbackZ = pseudoZ + 100;
+    for (const node of fallbackNodes(page)) {
+      const element = fallbackElementFromNode(doc, node, pageRect, pageIndex + 1, fallbackZ);
+      if (element) {
+        elements.push(element);
+        fallbackZ += 1;
+      }
+    }
+
     return {
       id: `page-${pageIndex + 1}`,
       title: `${doc.title || "Imported HTML"} ${pageIndex + 1}`,
-      elements
+      elements: optimizeCapturedElements(elements)
     };
+  }
+
+  function capturePageNodes(doc) {
+    if (!doc?.body) return [];
+    const candidates = uniqueElements([...doc.querySelectorAll(CAPTURE_PAGE_SELECTOR)])
+      .filter((node) => node !== doc.body && node !== doc.documentElement && isCapturePageCandidate(node));
+    const candidateSet = new Set(candidates);
+    const topLevelPages = candidates.filter((node) => {
+      let parent = node.parentElement;
+      while (parent && parent !== doc.body && parent !== doc.documentElement) {
+        if (candidateSet.has(parent)) return false;
+        parent = parent.parentElement;
+      }
+      return true;
+    });
+    if (topLevelPages.length) return topLevelPages;
+
+    const runtimeRoot = [...doc.querySelectorAll(DIRECT_RUNTIME_ROOT_SELECTOR)]
+      .find((node) => isCapturePageCandidate(node) && node.children.length > 0);
+    if (runtimeRoot) return [runtimeRoot];
+
+    const sections = [...doc.body.querySelectorAll(":scope > main, :scope > article, :scope > section")]
+      .filter(isCapturePageCandidate);
+    if (sections.length >= 2) return sections;
+
+    return [doc.body];
+  }
+
+  function isCapturePageCandidate(node) {
+    if (!node?.getBoundingClientRect) return false;
+    const style = node.ownerDocument.defaultView.getComputedStyle(node);
+    if (!isVisibleStyle(style)) return false;
+    const rect = node.getBoundingClientRect();
+    return rect.width >= 240 && rect.height >= 160;
   }
 
   function visualNodes(page) {
     return [...page.querySelectorAll("*")]
       .filter((node) => {
         if (node.matches?.("img")) return false;
+        if (node.matches?.("iframe,canvas,video,object,embed")) return false;
         if (node.closest("svg")) return false;
         const rect = node.getBoundingClientRect();
         if (rect.width < 8 || rect.height < 8) return false;
@@ -4155,29 +4306,28 @@
 
   function textNodes(page) {
     const selectors = [
-      "h1",
-      "h2",
-      "h3",
-      "p",
-      "li",
-      ".eyebrow",
-      ".band-subtitle",
-      ".role-emphasis",
-      ".section-title",
-      ".stat strong",
-      ".stat span",
-      ".location-text",
-      ".email"
+      "h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,caption,dt,dd,button,a,label,td,th,pre,code",
+      ".eyebrow,.band-subtitle,.role-emphasis,.section-title,.stat strong,.stat span,.location-text,.email",
+      "[class*='title'],[class*='heading'],[class*='subtitle'],[class*='caption'],[class*='label'],[class*='metric'],[class*='value']"
     ];
     const seen = new Set();
     const nodes = [];
 
     for (const selector of selectors) {
       for (const node of page.querySelectorAll(selector)) {
-        if (seen.has(node) || node.closest("svg")) continue;
+        if (seen.has(node) || node.closest("svg,script,style,noscript")) continue;
         seen.add(node);
         nodes.push(node);
       }
+    }
+
+    for (const node of page.querySelectorAll("span,div")) {
+      if (seen.has(node) || node.closest("svg,script,style,noscript")) continue;
+      if (!hasMeaningfulDirectText(node)) continue;
+      const text = normalizedText(node);
+      if (!text || text.length > 220) continue;
+      seen.add(node);
+      nodes.push(node);
     }
 
     return nodes.filter((node) => {
@@ -4210,6 +4360,16 @@
       });
   }
 
+  function fallbackNodes(page) {
+    return [...page.querySelectorAll("iframe,canvas,video,object,embed")]
+      .filter((node) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return false;
+        const style = node.ownerDocument.defaultView.getComputedStyle(node);
+        return style.display !== "none" && style.visibility !== "hidden";
+      });
+  }
+
   function rectElementFromNode(doc, node, pageRect, pageNumber, z) {
     const style = doc.defaultView.getComputedStyle(node);
     const rect = roundedRect(node.getBoundingClientRect(), pageRect);
@@ -4218,6 +4378,14 @@
     return {
       id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-box`, z),
       type: "rect",
+      tagName: node.tagName.toLowerCase(),
+      htmlPath: directNodePath(node),
+      semanticRole: capturedSemanticForNode(node).role,
+      semanticLabel: capturedSemanticForNode(node).label,
+      sourceKind: "computed-style",
+      editability: "style-editable",
+      fidelity: "native",
+      captureNote: "由浏览器计算后的背景、边框或形状生成",
       x: rect.x,
       y: rect.y,
       w: rect.w,
@@ -4242,6 +4410,13 @@
       id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-image`, z),
       type: "image",
       tagName: "img",
+      htmlPath: directNodePath(node),
+      semanticRole: "image",
+      semanticLabel: "图片",
+      sourceKind: "image",
+      editability: "replaceable",
+      fidelity: "native",
+      captureNote: "保留为可替换图片对象",
       imageSource: node.currentSrc || node.src || node.getAttribute("src") || "",
       imageAlt: node.getAttribute("alt") || "",
       x: rect.x,
@@ -4270,6 +4445,14 @@
     return {
       id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-text`, z),
       type: "text",
+      tagName: node.tagName.toLowerCase(),
+      htmlPath: directNodePath(node),
+      semanticRole: capturedSemanticForNode(node).role,
+      semanticLabel: capturedSemanticForNode(node).label,
+      sourceKind: "text",
+      editability: "text-editable",
+      fidelity: "native",
+      captureNote: "保留为可直接修改的文本对象",
       x: rect.x,
       y: rect.y,
       w: rect.w,
@@ -4335,6 +4518,14 @@
       return {
         id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-${pseudo.slice(2)}-text`, z),
         type: "text",
+        tagName: pseudo,
+        htmlPath: `${directNodePath(node)} ${pseudo}`,
+        semanticRole: "text",
+        semanticLabel: "伪元素文本",
+        sourceKind: "pseudo-element",
+        editability: "text-editable",
+        fidelity: "approximated",
+        captureNote: "由 CSS 伪元素内容提取为真实文本对象",
         x: rect.x,
         y: rect.y,
         w: rect.w,
@@ -4356,6 +4547,14 @@
     return {
       id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-${pseudo.slice(2)}-box`, z),
       type: "rect",
+      tagName: pseudo,
+      htmlPath: `${directNodePath(node)} ${pseudo}`,
+      semanticRole: "visual",
+      semanticLabel: "伪元素图形",
+      sourceKind: "pseudo-element",
+      editability: "style-editable",
+      fidelity: "approximated",
+      captureNote: "由 CSS 伪元素视觉效果近似为形状对象",
       x: rect.x,
       y: rect.y,
       w: rect.w,
@@ -4369,6 +4568,129 @@
         radius: parseFloat(style.borderTopLeftRadius) || 0
       }
     };
+  }
+
+  function fallbackElementFromNode(doc, node, pageRect, pageNumber, z) {
+    const style = doc.defaultView.getComputedStyle(node);
+    const rect = roundedRect(node.getBoundingClientRect(), pageRect);
+    if (rect.w < 8 || rect.h < 8) return null;
+
+    const tag = node.tagName.toLowerCase();
+    const imageSource = fallbackImageSource(node);
+    const base = {
+      id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-fallback`, z),
+      type: imageSource ? "image" : "rect",
+      tagName: tag,
+      htmlPath: directNodePath(node),
+      semanticRole: tag === "iframe" ? "embedded-page" : tag === "canvas" ? "canvas" : "media",
+      semanticLabel: tag === "iframe" ? "嵌入页面" : tag === "canvas" ? "画布整体" : "媒体整体",
+      sourceKind: tag,
+      editability: "whole-object",
+      fidelity: imageSource ? "snapshot" : "fallback",
+      captureNote: fallbackCaptureNote(node, imageSource),
+      x: rect.x,
+      y: rect.y,
+      w: rect.w,
+      h: rect.h,
+      rotation: rotationFromTransform(style.transform),
+      z,
+      style: {
+        fill: imageSource ? "transparent" : fallbackFillForNode(tag),
+        stroke: firstBorderColor(style),
+        strokeWidth: firstBorderWidth(style),
+        radius: parseFloat(style.borderTopLeftRadius) || 0
+      }
+    };
+
+    if (imageSource) {
+      base.imageSource = imageSource;
+      base.imageAlt = fallbackAltForNode(node);
+    }
+
+    return base;
+  }
+
+  function fallbackImageSource(node) {
+    if (node.matches?.("canvas")) {
+      try {
+        return node.toDataURL("image/png");
+      } catch {
+        return "";
+      }
+    }
+    if (node.matches?.("video") && node.poster) return node.poster;
+    return "";
+  }
+
+  function fallbackCaptureNote(node, imageSource) {
+    const tag = node.tagName.toLowerCase();
+    if (tag === "canvas") {
+      return imageSource ? "Canvas 已捕获为当前像素图，不能拆成文本或图形对象" : "Canvas 无法读取像素，保留为整体占位对象";
+    }
+    if (tag === "iframe") return "嵌入页面受安全边界限制，保留为整体对象";
+    if (tag === "video") return imageSource ? "视频以封面图保留为整体对象" : "视频保留为整体占位对象";
+    return "复杂嵌入内容保留为整体对象";
+  }
+
+  function fallbackAltForNode(node) {
+    const tag = node.tagName.toLowerCase();
+    if (tag === "canvas") return "Canvas snapshot";
+    if (tag === "video") return node.getAttribute("aria-label") || node.getAttribute("title") || "Video poster";
+    return node.getAttribute("aria-label") || node.getAttribute("title") || tag;
+  }
+
+  function fallbackFillForNode(tag) {
+    if (tag === "iframe") return "rgba(245, 158, 11, 0.18)";
+    if (tag === "canvas") return "rgba(15, 23, 42, 0.10)";
+    return "rgba(59, 130, 246, 0.12)";
+  }
+
+  function capturedSemanticForNode(node) {
+    const semantic = directSemanticForNode(node);
+    if (semantic.role !== "container" || node.tagName.toLowerCase() === "div") return semantic;
+    return semantic;
+  }
+
+  function optimizeCapturedElements(elements) {
+    const sorted = [...elements].sort((a, b) => {
+      if (a.z === b.z) return elementArea(b) - elementArea(a);
+      return a.z - b.z;
+    });
+    const output = [];
+
+    for (const element of sorted) {
+      if (shouldDropCapturedElement(element, output)) continue;
+      output.push(element);
+    }
+
+    return output.sort((a, b) => a.z - b.z).map((element, index) => ({
+      ...element,
+      z: index + 1
+    }));
+  }
+
+  function shouldDropCapturedElement(element, accepted) {
+    if (element.type !== "rect") return false;
+    if (element.sourceKind === "pseudo-element") return false;
+    const fill = String(element.style?.fill || "").toLowerCase();
+    const strokeWidth = Number(element.style?.strokeWidth || 0);
+    if ((fill === "transparent" || isTransparentColor(fill)) && strokeWidth <= 0) return true;
+
+    return accepted.some((other) => {
+      if (other.type !== "rect") return false;
+      if (other.sourceKind === "pseudo-element") return false;
+      if (Math.abs(element.x - other.x) > 2 || Math.abs(element.y - other.y) > 2) return false;
+      if (Math.abs(element.w - other.w) > 2 || Math.abs(element.h - other.h) > 2) return false;
+      return cssEquivalent(element.style?.fill, other.style?.fill) && cssEquivalent(element.style?.stroke, other.style?.stroke);
+    });
+  }
+
+  function elementArea(element) {
+    return Math.max(1, Number(element.w || 0) * Number(element.h || 0));
+  }
+
+  function cssEquivalent(left, right) {
+    return String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
   }
 
   function roundedRect(rect, parentRect) {
@@ -4990,9 +5312,7 @@ ${htmlSlides}
   }
 
   function fixedPageFrameNodeFor(node) {
-    const page = node.closest?.(DIRECT_FIXED_FRAME_SELECTOR);
-    if (!page || page === node || page === node.ownerDocument.body || page === node.ownerDocument.documentElement) return null;
-    return page;
+    return directPageFrameNodeFor(node);
   }
 
   function clippingFrameNodeFor(node) {

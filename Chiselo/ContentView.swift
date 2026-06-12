@@ -374,11 +374,11 @@ private struct AppToolbar: View {
 
             MaterialDivider()
 
-            ToolbarActionButton(title: "冻结版式", icon: "viewfinder") {
+            ToolbarActionButton(title: "转为可编辑版", icon: "viewfinder") {
                 model.freezeCurrentHTMLLayout()
             }
             .disabled(!model.hasOpenDocument)
-            .help("将当前 HTML 渲染结果转为固定画布，便于精准调整复杂页面")
+            .help("捕获当前渲染结果，生成可拖拽、可改字、可替换图片的稳定编辑版")
 
             MaterialDivider()
 
@@ -911,7 +911,7 @@ private struct PreflightRecommendationCard: View {
         }
 
         if diagnostics.runtimeCompatibilityRiskCount > 0 {
-            items.append(("wand.and.rays", "脚本生成、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先使用冻结版式再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("viewfinder", "脚本生成、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先转为可编辑版再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         }
         return items
     }
@@ -2293,6 +2293,27 @@ private struct InspectorPanel: View {
         GroupBox("对象") {
             VStack(alignment: .leading, spacing: 8) {
                 LabeledContent("对象", value: element.chiseloTypeLabel)
+                if let status = element.chiseloEditabilityStatus {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: status.icon)
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundStyle(status.color)
+                            .frame(width: 18, height: 18)
+                            .background(status.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(status.title)
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(MaterialTheme.ink)
+                            Text(status.detail)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(MaterialTheme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(9)
+                    .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+                }
                 LabeledContent("ID", value: element.id)
                 if let tagName = element.tagName {
                     LabeledContent("原始标签", value: tagName)
@@ -2925,6 +2946,29 @@ private struct LayerStackRow: View, Equatable {
 }
 
 private extension EditorElement {
+    typealias EditabilityStatus = (title: String, detail: String, icon: String, color: Color)
+
+    var chiseloEditabilityStatus: EditabilityStatus? {
+        guard editability != nil || fidelity != nil || captureNote != nil else { return nil }
+
+        let note = captureNote?.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch editability ?? "" {
+        case "text-editable":
+            return ("可编辑文本", note?.isEmpty == false ? note! : "文字可直接修改，并保留当前字体、颜色和位置。", "textformat", Color(red: 0.06, green: 0.52, blue: 0.26))
+        case "replaceable":
+            return ("可替换图片", note?.isEmpty == false ? note! : "图片保持为独立对象，可继续替换和调整。", "photo", Color(red: 0.06, green: 0.52, blue: 0.26))
+        case "style-editable":
+            return ("可调样式对象", note?.isEmpty == false ? note! : "形状、背景或边框已转为可调整对象。", "square.on.square", MaterialTheme.primary)
+        case "whole-object":
+            return ("整体保真对象", note?.isEmpty == false ? note! : "该区域不能可靠拆分，已作为整体对象保留。", "rectangle.dashed", Color(red: 0.78, green: 0.47, blue: 0.06))
+        default:
+            if fidelity == "approximated" {
+                return ("近似还原", note?.isEmpty == false ? note! : "复杂视觉效果已转成可编辑近似对象。", "wand.and.rays", Color(red: 0.78, green: 0.47, blue: 0.06))
+            }
+            return ("捕获对象", note?.isEmpty == false ? note! : "由运行后的页面捕获生成。", "viewfinder", MaterialTheme.primary)
+        }
+    }
+
     var chiseloDisplayTitle: String {
         if let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
             return text

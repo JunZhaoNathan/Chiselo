@@ -23,7 +23,7 @@ Existing or generated HTML
 - Direct HTML editor: loads arbitrary HTML into an iframe, edits rendered objects, and serializes the modified document.
 - Structured layout schema: optional internal mode for fixed-canvas precision editing.
 - Exporters: HTML remains the editable source document; PDF/PNG/PPTX are delivery targets.
-- AI-assisted workflows: generated HTML is one useful source that Chiselo can polish, inspect, and export.
+- Generated HTML workflows: generated HTML is one useful source that Chiselo can polish, inspect, and export.
 
 ## Design Principles
 

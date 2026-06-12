@@ -34,7 +34,7 @@ The core idea:
 
 ## Long Term
 
-- AI-assisted repair actions for overflow, overlap, spacing, alignment, and consistency.
+- Rule-based repair actions for overflow, overlap, spacing, alignment, and consistency.
 - Plugin system for import repair, export QA, table tools, and PPTX compilation.
 - Higher-fidelity object-editable PPTX compiler.
 - Safer sandboxing for untrusted HTML.

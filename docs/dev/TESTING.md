@@ -24,6 +24,7 @@ swift scripts/import-smoke-test.swift
 swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
 swift scripts/generated-runtime-compatibility-test.swift
+swift scripts/editable-layout-ir-test.swift
 swift scripts/precision-adjustment-test.swift
 swift scripts/five-slide-acceptance-test.swift
 swift scripts/generated-fixtures-editing-test.swift

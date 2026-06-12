@@ -2,6 +2,8 @@ import Foundation
 
 struct EditorDeck: Codable, Equatable {
     var version: Int
+    var irVersion: String?
+    var sourceKind: String?
     var canvas: EditorCanvas
     var slides: [EditorSlide]
 }
@@ -25,6 +27,10 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var htmlPath: String?
     var semanticRole: String?
     var semanticLabel: String?
+    var sourceKind: String?
+    var editability: String?
+    var fidelity: String?
+    var captureNote: String?
     var layoutMode: String?
     var imageSource: String?
     var imageAlt: String?
