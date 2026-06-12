@@ -27,7 +27,7 @@ The target visual language is a light Material-inspired system:
 
 ## Product Fit
 
-This direction is appropriate for Chiselo because the app is a finishing surface for existing or generated HTML pages and visual documents, not a blank-project authoring environment. The UI should emphasize:
+This direction is appropriate for Chiselo because the app is a finishing surface for existing HTML pages and visual documents, not a blank-project authoring environment. The UI should emphasize:
 
 - Selecting visible page objects.
 - Adjusting layout precisely.

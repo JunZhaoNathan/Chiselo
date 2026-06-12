@@ -1139,7 +1139,7 @@ final class EditorModel: ObservableObject {
             return
         }
 
-        status = "正在生成可编辑版..."
+        status = "正在转换可编辑版..."
 
         exportCurrentHTML { [weak self] html in
             guard let self else { return }
@@ -1152,14 +1152,14 @@ final class EditorModel: ObservableObject {
             }
 
             guard let data = html.data(using: .utf8) else {
-                self.status = "生成可编辑版失败：无法编码 HTML"
+                self.status = "转换可编辑版失败：无法编码 HTML"
                 return
             }
 
             let base64 = data.base64EncodedString()
             let baseHref = self.openedURL?.deletingLastPathComponent().absoluteString ?? ""
             guard let baseLiteral = self.jsStringLiteral(baseHref) else {
-                self.status = "生成可编辑版失败：无法生成资源路径"
+                self.status = "转换可编辑版失败：无法解析资源路径"
                 return
             }
 
@@ -1173,12 +1173,12 @@ final class EditorModel: ObservableObject {
                     guard let self else { return }
 
                     if let error {
-                        self.status = "生成可编辑版失败：\(error.localizedDescription)"
+                        self.status = "转换可编辑版失败：\(error.localizedDescription)"
                         return
                     }
 
                     guard let json = result as? String, !json.isEmpty else {
-                        self.status = "生成可编辑版失败：没有生成对象结构"
+                        self.status = "转换可编辑版失败：没有可编辑对象结构"
                         return
                     }
 
@@ -1188,7 +1188,7 @@ final class EditorModel: ObservableObject {
                     self.activeTabID = id
                     self.openedURL = nil
                     self.loadDeckJSON(json)
-                    self.status = "已生成可编辑版：\(title)"
+                    self.status = "已转换为可编辑版：\(title)"
                 }
             }
         }

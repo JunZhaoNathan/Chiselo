@@ -1,14 +1,12 @@
 # Chiselo 0.1.6 Preview
 
-Chiselo is a native macOS app for refining and delivering HTML pages and visual documents.
+Chiselo is a native macOS app for high-fidelity refinement and delivery of existing HTML files.
 
-中文：Chiselo 是一款 HTML 精修与交付工具。打开现有或生成的 HTML 页面/文档，调整文字、图片、表格、模块和版式，交付前预检问题，然后导出干净 HTML、高保真 PDF 或尽量可编辑的 PPTX。
-
-Creator note: Chiselo was built through vibe coding by a humanities-background creator who does not come from a programming background. Thanks to Codex and GPT for making this kind of software exploration possible.
+中文：Chiselo 是一款 HTML 精修与交付工具。打开已有 HTML 页面/文档，精修文字、图片、表格、模块和版式，交付前预检问题，然后导出干净 HTML、高保真 PDF 或尽量可编辑的 PPTX。
 
 ## What Changed In 0.1.6
 
-- Added generator compatibility diagnostics for Dify-like and script-rendered HTML.
+- Added dynamic-content compatibility diagnostics for script-rendered and complex HTML.
 - Added `转为可编辑版` Layout IR v1 for turning rendered HTML into deterministic editable text, image, shape, pseudo-element, and whole-object fallback elements.
 - Shows a quality summary for editable versions, including editable text, replaceable images, adjustable shapes, whole-object fallbacks, and PPTX editability.
 - Adds deterministic module grouping metadata so captured card, section, table, and visual-module objects can be recognized together.
@@ -18,15 +16,15 @@ Creator note: Chiselo was built through vibe coding by a humanities-background c
 - Detects runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
 - Makes dynamically inserted titles, images, tables, and modules join the editing and delivery-check pipeline after import.
 - Temporarily lets empty transparent hit layers pass through clicks inside the editor so the real visible object underneath can be selected.
-- Adds generator compatibility rows, issue icons, export scoring penalties, and guidance for when `转为可编辑版` is the safer precision-editing path.
+- Adds dynamic-content risk rows, issue icons, export scoring penalties, and guidance for when `转为可编辑版` is the safer precision-editing path.
 - Keeps exported HTML clean by stripping Chiselo editing markers before delivery.
 - Updates packaging to `0.1.6`.
 
 ## Who This Preview Is For
 
 - People who already have an HTML page, document, report, dashboard, poster, or presentation-like file.
-- People who receive generated HTML and need a precise second-pass editing and delivery tool.
-- People testing Dify-like generated HTML that may rely on scripts, embedded content, canvas, or runtime resources.
+- People who already have HTML files and need precise second-pass editing and delivery.
+- People testing dynamic HTML that may rely on scripts, embedded content, canvas, or runtime resources.
 - People who want delivery checks before exporting HTML, PDF, or PPTX.
 - Personal, educational, research, evaluation, and non-commercial hobby users.
 
@@ -42,7 +40,7 @@ Commercial use is not allowed under the included license.
 - Replace images with embedded PNG/JPG/GIF/SVG/WebP data URLs.
 - Edit tables, including safer handling for `rowspan` and `colspan`.
 - Show page/canvas boundaries, center lines, ruler ticks, snapping guides, and distribution controls.
-- Run delivery checks for broken resources, SVG usage, clean HTML export, text overflow, out-of-bounds elements, overlaps, and generator compatibility risks.
+- Run delivery checks for broken resources, SVG usage, clean HTML export, text overflow, out-of-bounds elements, overlaps, and dynamic-content risks.
 - Restore save snapshots from `.chiselo-history/`.
 - Export clean standalone HTML.
 - Export high-fidelity PDF.
@@ -71,7 +69,7 @@ Chiselo is an early preview. The following areas are still active research:
 - canvas pixels, closed components, and cross-origin embedded pages that cannot be decomposed into normal editable objects;
 - perfect PPTX mapping for every CSS effect.
 
-For important files, keep the generated `.chiselo-backup` and `.chiselo-history/` files until you have reviewed the final output.
+For important files, keep the `.chiselo-backup` and `.chiselo-history/` files until you have reviewed the final output.
 
 ## License
 

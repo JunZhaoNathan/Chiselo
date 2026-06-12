@@ -10,11 +10,11 @@ All notable changes to Chiselo will be documented here.
 - Added module-group selection and movement for editable versions: grouped cards/modules can be selected as one unit, nudged, aligned, snapped, duplicated, deleted, locked, and moved together.
 - Added editability metadata for captured objects so the Inspector can distinguish directly editable text, replaceable images, adjustable shapes, approximated pseudo-elements, and whole-object iframe/canvas fallbacks.
 - Reused the same page/slide boundary selectors across editable capture and export so `.slide`, `.page`, `[data-page]`, and similar document frames map more consistently.
-- Added generator compatibility diagnostics for Dify-like/script-rendered HTML, including runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
+- Added dynamic-content diagnostics for script-rendered HTML, including runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
 - Made dynamically inserted HTML elements, images, media, and tables join the editing and delivery-check pipeline after import.
 - Added editing-only transparent overlay pass-through so empty full-page hit layers no longer block selecting the real title, image, card, table, or module underneath.
-- Added generator compatibility rows, issue icons, scoring penalties, and export guidance to make runtime-generated HTML limitations visible before HTML/PDF/PPTX delivery.
-- Added a generated-runtime compatibility regression test.
+- Added dynamic-content risk rows, issue icons, scoring penalties, and export guidance to make script-rendered HTML limitations visible before HTML/PDF/PPTX delivery.
+- Added a script-rendered HTML compatibility regression test.
 - Bumped the packaging version to `0.1.6` for the next preview build.
 
 ## 0.1.5 - 2026-06-12

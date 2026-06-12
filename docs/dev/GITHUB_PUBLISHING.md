@@ -53,7 +53,7 @@ HTML finishing and delivery tool for visually refining pages and documents, then
 Alternative shorter description:
 
 ```text
-A macOS app for refining existing or generated HTML pages, documents, dashboards, posters, and presentations.
+A macOS app for high-fidelity visual refinement of existing HTML pages, documents, dashboards, posters, and presentations.
 ```
 
 Search-optimized description:
@@ -65,13 +65,13 @@ Visual HTML finishing tool: adjust text, images, tables, modules, layout, prefli
 About text:
 
 ```text
-Chiselo helps you refine existing or generated HTML pages and visual documents, run delivery checks, and export HTML, PDF, or editable PPTX. Built through vibe coding by a humanities-background creator, with thanks to Codex and GPT.
+Chiselo helps you refine existing HTML pages and visual documents, run delivery checks, and export clean HTML, high-fidelity PDF, or editable PPTX.
 ```
 
 Topics:
 
 ```text
-macos swiftui wkwebview html-editor visual-editor wysiwyg layout-editor html-layout-editor editable-html html-finishing delivery-check html-to-pdf html-to-pptx html2ppt html2pptx pdf-export pptx-export vibe-coding non-commercial source-available
+macos swiftui wkwebview html-editor visual-editor wysiwyg layout-editor html-layout-editor editable-html html-finishing delivery-check html-to-pdf html-to-pptx html2ppt html2pptx pdf-export pptx-export non-commercial source-available
 ```
 
 Star reminder for README or pinned issue:

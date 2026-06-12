@@ -10,10 +10,12 @@ The core idea:
 - Browser rendering is used as the truth for what the user sees.
 - Chiselo builds object-level controls on top of that rendered result.
 - Export checks and compiler targets focus on delivery quality: HTML, PDF, PPTX, and future formats.
+- Chiselo should not drift toward Dreamweaver, website building, template authoring, AI content generation, or code-first editing.
 
 ## Near Term
 
 - Improve hover actions for images, text, tables, cards, and grouped objects.
+- Add group-internal alignment, equal spacing, and size matching for captured modules.
 - Add visual save preview and diff before overwriting original HTML.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
@@ -24,6 +26,7 @@ The core idea:
 - More reliable object grouping and ungrouping.
 - Layer panel with drag-to-reorder.
 - Export QA report explaining what could and could not map to editable PPTX.
+- More precise style controls for typography, color, spacing, borders, radius, and shadows.
 
 ## Recently Landed
 
@@ -31,6 +34,8 @@ The core idea:
 - Visible page boundaries, center references, ruler ticks, snapping guides, and distribution controls.
 - Export preflight with HTML/PDF readiness and PPTX editability scoring.
 - Visual history browser for `.chiselo-history/` snapshots.
+- Deterministic Layout IR conversion for stable precision editing.
+- Module grouping and module-group movement for converted editable versions.
 
 ## Long Term
 

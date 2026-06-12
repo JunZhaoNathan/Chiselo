@@ -4775,7 +4775,7 @@
       sourceKind: "computed-style",
       editability: "style-editable",
       fidelity: "native",
-      captureNote: "由浏览器计算后的背景、边框或形状生成",
+      captureNote: "由浏览器计算后的背景、边框或形状转换",
       x: rect.x,
       y: rect.y,
       w: rect.w,
@@ -5378,7 +5378,7 @@ ${htmlSlides}
     const svgNodes = [...doc.querySelectorAll("svg")];
     const exported = exportDirectHTML();
     const issues = [];
-    const generatorDiagnostics = collectGeneratorCompatibilityDiagnostics(doc, issues);
+    const runtimeDiagnostics = collectRuntimeCompatibilityDiagnostics(doc, issues);
     const brokenImageNodes = images.filter((image) => image.dataset.chiseloResourceState === "broken");
     const brokenMediaNodes = media.filter((node) => node.dataset.chiseloResourceState === "broken");
     const spanTables = tables.filter((table) => table.querySelector("[rowspan], [colspan]"));
@@ -5434,14 +5434,14 @@ ${htmlSlides}
       svgCount: doc.querySelectorAll("svg").length + images.filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")).length,
       tableCount: tables.length,
       spanTableCount: spanTables.length,
-      scriptCount: generatorDiagnostics.scriptCount,
-      iframeCount: generatorDiagnostics.iframeCount,
-      canvasCount: generatorDiagnostics.canvasCount,
-      shadowRootCount: generatorDiagnostics.shadowRootCount,
-      runtimeRootCount: generatorDiagnostics.runtimeRootCount,
-      externalResourceCount: generatorDiagnostics.externalResourceCount,
-      overlayBlockerCount: generatorDiagnostics.overlayBlockerCount,
-      runtimeRiskCount: generatorDiagnostics.runtimeRiskCount,
+      scriptCount: runtimeDiagnostics.scriptCount,
+      iframeCount: runtimeDiagnostics.iframeCount,
+      canvasCount: runtimeDiagnostics.canvasCount,
+      shadowRootCount: runtimeDiagnostics.shadowRootCount,
+      runtimeRootCount: runtimeDiagnostics.runtimeRootCount,
+      externalResourceCount: runtimeDiagnostics.externalResourceCount,
+      overlayBlockerCount: runtimeDiagnostics.overlayBlockerCount,
+      runtimeRiskCount: runtimeDiagnostics.runtimeRiskCount,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
@@ -5452,12 +5452,12 @@ ${htmlSlides}
       textOverflowElementId: layoutDiagnostics.textOverflowElementId,
       outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
       overlapElementId: layoutDiagnostics.overlapElementId,
-      runtimeRiskElementId: generatorDiagnostics.runtimeRiskElementId,
+      runtimeRiskElementId: runtimeDiagnostics.runtimeRiskElementId,
       issues
     };
   }
 
-  function collectGeneratorCompatibilityDiagnostics(doc, issues) {
+  function collectRuntimeCompatibilityDiagnostics(doc, issues) {
     const scripts = [...doc.querySelectorAll("script")].filter((node) => !node.hasAttribute("data-chiselo-style"));
     const iframes = [...doc.querySelectorAll("iframe")];
     const canvases = [...doc.querySelectorAll("canvas")];
@@ -5477,8 +5477,8 @@ ${htmlSlides}
       addDiagnosticIssue(issues, {
         kind: "runtime-rendered",
         severity: "warning",
-        title: "脚本生成页面",
-        detail: "内容可能由脚本实时生成，部分模块会在导入后替换或重绘",
+        title: "脚本渲染页面",
+        detail: "内容可能由脚本实时渲染，部分模块会在导入后替换或重绘",
         elementId: optionalDirectId(element)
       });
     }

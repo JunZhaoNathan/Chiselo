@@ -378,7 +378,7 @@ private struct AppToolbar: View {
                 model.freezeCurrentHTMLLayout()
             }
             .disabled(!model.hasOpenDocument)
-            .help("捕获当前渲染结果，生成可拖拽、可改字、可替换图片的稳定编辑版")
+            .help("捕获当前渲染结果，转换为可拖拽、可改字、可替换图片的稳定编辑版")
 
             MaterialDivider()
 
@@ -917,7 +917,7 @@ private struct PreflightRecommendationCard: View {
         }
 
         if diagnostics.runtimeCompatibilityRiskCount > 0 {
-            items.append(("viewfinder", "脚本生成、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先转为可编辑版再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("viewfinder", "脚本渲染、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先转为可编辑版再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         }
         return items
     }
@@ -1203,7 +1203,7 @@ private extension HTMLDiagnostics {
 
         var parts: [String] = []
         if (scriptCount ?? 0) > 0 || (runtimeRootCount ?? 0) > 0 {
-            parts.append("脚本生成")
+            parts.append("脚本渲染")
         }
         if (iframeCount ?? 0) > 0 {
             parts.append("\(iframeCount ?? 0) 个嵌入页面")
@@ -1220,7 +1220,7 @@ private extension HTMLDiagnostics {
         if (externalResourceCount ?? 0) > 0 {
             parts.append("\(externalResourceCount ?? 0) 个外部资源")
         }
-        return parts.isEmpty ? "\(risks) 项生成器兼容风险" : parts.joined(separator: "，")
+        return parts.isEmpty ? "\(risks) 项动态内容风险" : parts.joined(separator: "，")
     }
 
     var htmlReadinessScore: Int {
@@ -1269,9 +1269,9 @@ private extension HTMLDiagnostics {
             return "PPTX 可编辑性较好，导出后抽查文本框和图片即可。"
         }
         if pptxEditabilityScore >= 65 {
-            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、生成组件和层级。"
+            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、动态组件和层级。"
         }
-        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核脚本生成、嵌入页面和复杂对象。"
+        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核脚本渲染、嵌入页面和复杂对象。"
     }
 
     private func boundedScore(_ value: Int) -> Int {
@@ -1716,7 +1716,7 @@ private struct HTMLDeliveryCheckCard: View {
                 if diagnostics.runtimeCompatibilityRiskCount > 0 {
                     DeliveryCheckRow(
                         icon: "wand.and.rays",
-                        title: "生成器兼容",
+                        title: "动态内容风险",
                         detail: diagnostics.runtimeCompatibilityDetail,
                         color: warningColor,
                         isClickable: diagnostics.runtimeRiskElementId != nil
@@ -3216,7 +3216,7 @@ private extension EditorElement {
             if fidelity == "approximated" {
                 return ("近似还原", note?.isEmpty == false ? note! : "复杂视觉效果已转成可编辑近似对象。", "wand.and.rays", Color(red: 0.78, green: 0.47, blue: 0.06))
             }
-            return ("捕获对象", note?.isEmpty == false ? note! : "由运行后的页面捕获生成。", "viewfinder", MaterialTheme.primary)
+            return ("捕获对象", note?.isEmpty == false ? note! : "由当前渲染页面捕获。", "viewfinder", MaterialTheme.primary)
         }
     }
 

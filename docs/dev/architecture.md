@@ -9,7 +9,7 @@ Positioning: **HTML finishing and delivery + object-level visual refinement + mu
 ## Product Shape
 
 ```text
-Existing or generated HTML
+Existing HTML
   -> SwiftUI macOS editor
   -> WKWebView precise canvas
   -> Object-level visual refinement
@@ -23,7 +23,7 @@ Existing or generated HTML
 - Direct HTML editor: loads arbitrary HTML into an iframe, edits rendered objects, and serializes the modified document.
 - Structured layout schema: optional internal mode for fixed-canvas precision editing.
 - Exporters: HTML remains the editable source document; PDF/PNG/PPTX are delivery targets.
-- Generated HTML workflows: generated HTML is one useful source that Chiselo can polish, inspect, and export.
+- Runtime conversion workflow: complex or script-rendered HTML can be converted to a fixed-canvas precision-editing version when direct editing is not stable enough.
 
 ## Design Principles
 

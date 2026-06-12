@@ -7,9 +7,9 @@
 
 **Chisel your HTML.**
 
-Chiselo is a native macOS app for refining and delivering HTML pages and visual documents.
+Chiselo is a native macOS app for high-fidelity refinement and delivery of existing HTML files.
 
-中文定位：Chiselo 是一款 HTML 精修与交付工具。打开现有或生成的 HTML 页面/文档，像整理交付稿一样调整文字、图片、表格、模块和版式，然后导出干净 HTML、高保真 PDF 或尽量可编辑的 PPTX。
+中文定位：Chiselo 是一款 HTML 精修与交付工具。打开已有 HTML 页面/文档，像整理交付稿一样精修文字、图片、表格、模块和版式，然后导出干净 HTML、高保真 PDF 或尽量可编辑的 PPTX。
 
 Chiselo starts from an existing HTML document. It is a finishing and delivery workflow, not a project authoring environment. The core promise is simple:
 
@@ -35,7 +35,7 @@ The preview build is ad-hoc signed and not notarized. If macOS blocks the first 
 - The browser-rendered page stays the source of truth.
 - Chiselo adds object-level visual finishing controls on top of the rendered document.
 - Delivery checks and exports focus on HTML/PDF/PPTX quality.
-- Generated HTML is supported as one source, not the product identity.
+- Dynamic and script-rendered HTML is handled as a compatibility case, not the product identity.
 
 ## What You Can Do
 
@@ -48,14 +48,14 @@ The preview build is ad-hoc signed and not notarized. If macOS blocks the first 
 - Replace images with embedded PNG/JPG/GIF/SVG/WebP data URLs.
 - Edit tables, including safer handling for `rowspan` and `colspan`.
 - Run a delivery check for broken resources, SVG usage, clean HTML export, text overflow, out-of-bounds elements, and overlaps.
-- Identify script-generated HTML, embedded pages, canvas regions, external runtime resources, and transparent selection blockers before export.
-- Freeze a live HTML rendering into a structured precision-editing tab.
+- Identify script-rendered HTML, embedded pages, canvas regions, external runtime resources, and transparent selection blockers before export.
+- Convert a live HTML rendering into a structured precision-editing tab.
 - Export clean standalone HTML, high-fidelity PDF, and best-effort editable PPTX.
 
 ## Typical Workflow
 
 1. Open Chiselo.
-2. Drag in an existing or generated HTML file.
+2. Drag in an existing HTML file.
 3. Click a visible element on the page.
 4. Edit text, move layout, adjust objects, replace images, and fix tables.
 5. Run the delivery check.
@@ -74,9 +74,7 @@ PDF remains the recommended final format when maximum fidelity matters.
 
 ## Creator Note
 
-Chiselo is intentionally transparent about how it was made. The project was started by a humanities-background creator using vibe coding with AI assistance, especially Codex and GPT.
-
-That history matters, but Chiselo's product scope is deliberately clear: make HTML pages and visual documents easier to refine, inspect, export, and hand off.
+Chiselo's product scope is deliberately clear: make existing HTML pages and visual documents easier to refine, inspect, export, and hand off.
 
 If Chiselo helps you or you are interested in precise HTML editing and visual delivery workflows, please star the repository so more people can find the project.
 
