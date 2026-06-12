@@ -19,12 +19,12 @@ Chiselo starts from an existing HTML document. It is a finishing and delivery wo
 
 ## Download
 
-Current source and package version: `0.1.5`.
+Current source and package version: `0.1.6`.
 
 The latest published DMG is still `Chiselo-0.1.4.dmg` until the next GitHub Release asset is uploaded.
 
 - [Latest Release](https://github.com/JunZhaoNathan/Chiselo/releases/latest)
-- [0.1.5 Preview Notes](docs/releases/RELEASE_NOTES_0.1.5_PREVIEW.md)
+- [0.1.6 Preview Notes](docs/releases/RELEASE_NOTES_0.1.6_PREVIEW.md)
 - [Latest Published Release Notes](docs/releases/RELEASE_NOTES_0.1.4_PREVIEW.md)
 
 The preview build is ad-hoc signed and not notarized. If macOS blocks the first launch, the DMG includes `首次打开帮助.txt` with step-by-step fixes for `Open Anyway`, Finder right-click `Open`, and quarantine removal.
@@ -48,6 +48,7 @@ The preview build is ad-hoc signed and not notarized. If macOS blocks the first 
 - Replace images with embedded PNG/JPG/GIF/SVG/WebP data URLs.
 - Edit tables, including safer handling for `rowspan` and `colspan`.
 - Run a delivery check for broken resources, SVG usage, clean HTML export, text overflow, out-of-bounds elements, and overlaps.
+- Identify script-generated HTML, embedded pages, canvas regions, external runtime resources, and transparent selection blockers before export.
 - Freeze a live HTML rendering into a structured precision-editing tab.
 - Export clean standalone HTML, high-fidelity PDF, and best-effort editable PPTX.
 

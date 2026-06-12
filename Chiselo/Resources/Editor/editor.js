@@ -19,6 +19,7 @@
   const MAX_HTML_DIAGNOSTIC_NODES = 520;
   const MAX_HTML_DIAGNOSTIC_ISSUES = 12;
   const DIRECT_FIXED_FRAME_SELECTOR = ".slide,.sheet,.page,[data-slide],[data-page]";
+  const DIRECT_RUNTIME_ROOT_SELECTOR = "#app,#root,#__next,#__nuxt,[data-reactroot],[data-v-app],[ng-version]";
   const handles = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
   const DIRECT_TEXT_BLOCK_SELECTOR = "p,h1,h2,h3,h4,h5,h6,li,figcaption,caption,td,th,button,a,label,pre";
   const DIRECT_SAFE_INLINE_SELECTOR = "span";
@@ -1692,8 +1693,7 @@
     surface.innerHTML = "";
     surface.appendChild(directFrame);
 
-    directFrame.srcdoc = withBaseElement(normalized.html, directBaseHref);
-    await waitForFrame(directFrame);
+    await writeDirectFrameHTML(directFrame, withBaseElement(normalized.html, directBaseHref));
     setupDirectDocument();
     renderDirectHTML({ preserveScale: options.resetView === false });
     postHTMLTreeChanged();
@@ -1738,6 +1738,31 @@
     });
   }
 
+  function writeDirectFrameHTML(frame, html) {
+    return new Promise((resolve) => {
+      let settled = false;
+      let objectURL = "";
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (objectURL) {
+          setTimeout(() => URL.revokeObjectURL(objectURL), 1200);
+        }
+        setTimeout(resolve, 220);
+      };
+
+      frame.addEventListener("load", finish, { once: true });
+      setTimeout(finish, 1400);
+
+      try {
+        objectURL = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+        frame.src = objectURL;
+      } catch {
+        frame.srcdoc = html;
+      }
+    });
+  }
+
   function setupDirectDocument() {
     const doc = directFrame.contentDocument;
     if (!doc) return;
@@ -1749,6 +1774,7 @@
       [data-chiselo-id] { cursor: grab; }
       [data-chiselo-id]:active { cursor: grabbing; }
       img[data-chiselo-id], [data-chiselo-id] img { cursor: grab; }
+      [data-chiselo-selection-pass-through="true"] { pointer-events: none !important; }
       [contenteditable="true"] {
         outline: 2px solid #1769ff !important;
         outline-offset: 2px !important;
@@ -1781,11 +1807,7 @@
     `;
     doc.head?.appendChild(style);
 
-    for (const node of doc.querySelectorAll("*")) {
-      ensureDirectId(node);
-    }
-    setupDirectResourceTracking(doc);
-    normalizeDirectTablesForEditing(doc);
+    prepareDirectSubtree(doc.body);
 
     doc.addEventListener("paste", handleDirectPlainTextPaste, true);
 
@@ -1862,6 +1884,17 @@
     });
 
     const observer = new MutationObserver((mutations) => {
+      let sawAddedEditableNodes = false;
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.target?.nodeType === Node.ELEMENT_NODE) {
+          applyDirectEditingAssist(mutation.target);
+        }
+        for (const node of mutation.addedNodes || []) {
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          prepareDirectSubtree(node);
+          sawAddedEditableNodes = true;
+        }
+      }
       const affectsTree = mutationsAffectHTMLTree(mutations);
       if (activeGesture?.mode === "html") {
         directMutationRefreshPending = true;
@@ -1875,6 +1908,7 @@
       }
       scheduleDirectLayoutRefresh();
       if (affectsTree) scheduleHTMLTreeChanged();
+      if (sawAddedEditableNodes) scheduleHTMLDiagnosticsChanged();
     });
     observer.observe(doc.body, {
       attributes: true,
@@ -1889,6 +1923,26 @@
     const doc = target.ownerDocument;
     if (target === doc.documentElement) return doc.body;
     return target.closest("body *") || doc.body;
+  }
+
+  function prepareDirectSubtree(root) {
+    if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
+    const nodes = [root, ...(root.querySelectorAll?.("*") || [])];
+    for (const node of nodes) {
+      ensureDirectId(node);
+      applyDirectEditingAssist(node);
+    }
+    setupDirectResourceTracking(root);
+    normalizeDirectTablesForEditing(root);
+  }
+
+  function applyDirectEditingAssist(node) {
+    if (!node || node.matches?.("html,body")) return;
+    if (isLikelySelectionBlockingOverlay(node)) {
+      node.dataset.chiseloSelectionPassThrough = "true";
+    } else if (node.dataset.chiseloSelectionPassThrough === "true") {
+      delete node.dataset.chiseloSelectionPassThrough;
+    }
   }
 
   function directSelectionTargetFromEvent(event) {
@@ -1913,19 +1967,70 @@
     return coversMostCanvas && !normalizedText(node);
   }
 
+  function isLikelySelectionBlockingOverlay(node) {
+    if (!node || !node.matches || node.matches("html,body,dialog,iframe,canvas,video,audio,svg,img,picture,button,a,input,textarea,select,table")) {
+      return false;
+    }
+    if (node.closest?.("[contenteditable='true']")) return false;
+    if (normalizedText(node)) return false;
+    if (node.querySelector?.("img,svg,canvas,video,audio,iframe,table,button,a,input,textarea,select,[role='button'],[role='dialog']")) return false;
+
+    const doc = node.ownerDocument;
+    const win = doc.defaultView;
+    const style = win.getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    if (style.pointerEvents === "none" && node.dataset.chiseloSelectionPassThrough !== "true") return false;
+    const overlayName = `${node.id || ""} ${typeof node.className === "string" ? node.className : ""} ${node.getAttribute("role") || ""}`.toLowerCase();
+    const namedOverlay = /overlay|backdrop|scrim|mask|hit-layer|hitlayer|blocker|shield/.test(overlayName);
+    const hiddenOverlay = node.getAttribute("aria-hidden") === "true";
+    if (style.position !== "fixed" && style.position !== "absolute" && style.position !== "sticky" && !namedOverlay) return false;
+
+    const rect = overlayDiagnosticRect(node, style, win);
+    const viewportArea = Math.max(1, win.innerWidth * win.innerHeight);
+    const overlayRatio = (rect.width * rect.height) / viewportArea;
+    if (!namedOverlay && !hiddenOverlay && (rect.width < win.innerWidth * 0.35 || rect.height < win.innerHeight * 0.25 || overlayRatio < 0.28)) return false;
+
+    const visualOpacity = Number(style.opacity || 1);
+    const emptyBackground = !style.backgroundImage || style.backgroundImage === "none";
+    const transparentFill = isTransparentColor(style.backgroundColor);
+    const borderWidth = firstBorderWidth(style);
+    const hasVisiblePaint = !emptyBackground || !transparentFill || borderWidth > 0 || !isTransparentColor(firstBorderColor(style));
+
+    return visualOpacity <= 0.18 || !hasVisiblePaint;
+  }
+
+  function overlayDiagnosticRect(node, style, win) {
+    const rect = node.getBoundingClientRect();
+    let width = rect.width;
+    let height = rect.height;
+    const fillsHorizontal = style.left === "0px" && style.right === "0px";
+    const fillsVertical = style.top === "0px" && style.bottom === "0px";
+    if (style.position === "fixed" && fillsHorizontal && width < win.innerWidth * 0.35) {
+      width = win.innerWidth;
+    }
+    if (style.position === "fixed" && fillsVertical && height < win.innerHeight * 0.25) {
+      height = win.innerHeight;
+    }
+    return { width, height };
+  }
+
   function directSelectableElementAtPoint(event, fallbackNode = null) {
     const doc = event.target?.ownerDocument || directFrame?.contentDocument;
     if (!doc) return null;
 
     const elements = doc.elementsFromPoint?.(event.clientX, event.clientY) || [];
     const candidates = uniqueElements(elements.map((node) => directEditableTarget(node)));
-    const fallback = fallbackNode && fallbackNode !== doc.body ? fallbackNode : null;
+    const fallback = fallbackNode && fallbackNode !== doc.body && !isSelectionPassThroughCandidate(fallbackNode) ? fallbackNode : null;
 
     const meaningful = candidates
-      .filter((node) => node && node !== doc.body && isDirectNodeVisible(node) && !isDecorativeDirectNode(node))
+      .filter((node) => node && node !== doc.body && isDirectNodeVisible(node) && !isDecorativeDirectNode(node) && !isSelectionPassThroughCandidate(node))
       .sort((a, b) => directSelectionScore(a) - directSelectionScore(b));
 
     return meaningful[0] || fallback;
+  }
+
+  function isSelectionPassThroughCandidate(node) {
+    return Boolean(node?.dataset?.chiseloSelectionPassThrough === "true" || isLikelySelectionBlockingOverlay(node));
   }
 
   function directSelectionScore(node) {
@@ -2660,16 +2765,23 @@
   }
 
   function setupDirectResourceTracking(doc) {
-    for (const image of doc.querySelectorAll("img")) {
+    for (const image of directSubtreeMatches(doc, "img")) {
       trackDirectImageResource(image);
     }
 
-    for (const media of doc.querySelectorAll("video, audio")) {
+    for (const media of directSubtreeMatches(doc, "video, audio")) {
       trackDirectMediaResource(media);
     }
   }
 
   function trackDirectImageResource(image) {
+    if (image.dataset.chiseloResourceTracked === "true") {
+      const state = image.dataset.chiseloResourceState || "";
+      if (!state || state === "loading") setDirectResourceState(image, image.complete ? (image.naturalWidth > 0 ? "ok" : "broken") : "loading", image.getAttribute("src") || "");
+      return;
+    }
+    image.dataset.chiseloResourceTracked = "true";
+
     const update = () => {
       const src = image.currentSrc || image.getAttribute("src") || "";
       if (!src.trim()) {
@@ -2690,6 +2802,8 @@
   }
 
   function trackDirectMediaResource(media) {
+    if (media.dataset.chiseloResourceTracked === "true") return;
+    media.dataset.chiseloResourceTracked = "true";
     const src = media.currentSrc || media.getAttribute("src") || media.querySelector("source")?.getAttribute("src") || "";
     setDirectResourceState(media, src ? "ok" : "broken", src || "empty media source");
   }
@@ -2714,7 +2828,7 @@
   }
 
   function normalizeDirectTablesForEditing(doc) {
-    for (const table of doc.querySelectorAll("table")) {
+    for (const table of directSubtreeMatches(doc, "table")) {
       if (!table.style.borderCollapse && table.getAttribute("border")) {
         table.style.borderCollapse = "collapse";
       }
@@ -2725,6 +2839,14 @@
         }
       }
     }
+  }
+
+  function directSubtreeMatches(root, selector) {
+    if (!root?.querySelectorAll) return [];
+    return uniqueElements([
+      root.matches?.(selector) ? root : null,
+      ...root.querySelectorAll(selector)
+    ]);
   }
 
   function selectDirectRelative(kind) {
@@ -4268,7 +4390,17 @@
   }
 
   function isTransparent(color) {
-    return !color || color === "transparent" || color === "rgba(0, 0, 0, 0)";
+    return isTransparentColor(color);
+  }
+
+  function isTransparentColor(color) {
+    const value = String(color || "").trim().toLowerCase();
+    if (!value || value === "transparent") return true;
+    const rgba = value.match(/^rgba?\(([^)]+)\)$/);
+    if (!rgba) return false;
+    const parts = rgba[1].split(",").map((part) => part.trim());
+    if (parts.length < 4) return false;
+    return Number(parts[3]) <= 0.01;
   }
 
   function firstBorderWidth(style) {
@@ -4438,6 +4570,14 @@ ${htmlSlides}
         svgCount: 0,
         tableCount: 0,
         spanTableCount: 0,
+        scriptCount: 0,
+        iframeCount: 0,
+        canvasCount: 0,
+        shadowRootCount: 0,
+        runtimeRootCount: 0,
+        externalResourceCount: 0,
+        overlayBlockerCount: 0,
+        runtimeRiskCount: 0,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -4448,6 +4588,7 @@ ${htmlSlides}
         textOverflowElementId: null,
         outOfBoundsElementId: null,
         overlapElementId: null,
+        runtimeRiskElementId: null,
         issues: []
       };
     }
@@ -4458,6 +4599,7 @@ ${htmlSlides}
     const svgNodes = [...doc.querySelectorAll("svg")];
     const exported = exportDirectHTML();
     const issues = [];
+    const generatorDiagnostics = collectGeneratorCompatibilityDiagnostics(doc, issues);
     const brokenImageNodes = images.filter((image) => image.dataset.chiseloResourceState === "broken");
     const brokenMediaNodes = media.filter((node) => node.dataset.chiseloResourceState === "broken");
     const spanTables = tables.filter((table) => table.querySelector("[rowspan], [colspan]"));
@@ -4513,6 +4655,14 @@ ${htmlSlides}
       svgCount: doc.querySelectorAll("svg").length + images.filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")).length,
       tableCount: tables.length,
       spanTableCount: spanTables.length,
+      scriptCount: generatorDiagnostics.scriptCount,
+      iframeCount: generatorDiagnostics.iframeCount,
+      canvasCount: generatorDiagnostics.canvasCount,
+      shadowRootCount: generatorDiagnostics.shadowRootCount,
+      runtimeRootCount: generatorDiagnostics.runtimeRootCount,
+      externalResourceCount: generatorDiagnostics.externalResourceCount,
+      overlayBlockerCount: generatorDiagnostics.overlayBlockerCount,
+      runtimeRiskCount: generatorDiagnostics.runtimeRiskCount,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
@@ -4523,8 +4673,150 @@ ${htmlSlides}
       textOverflowElementId: layoutDiagnostics.textOverflowElementId,
       outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
       overlapElementId: layoutDiagnostics.overlapElementId,
+      runtimeRiskElementId: generatorDiagnostics.runtimeRiskElementId,
       issues
     };
+  }
+
+  function collectGeneratorCompatibilityDiagnostics(doc, issues) {
+    const scripts = [...doc.querySelectorAll("script")].filter((node) => !node.hasAttribute("data-chiselo-style"));
+    const iframes = [...doc.querySelectorAll("iframe")];
+    const canvases = [...doc.querySelectorAll("canvas")];
+    const runtimeRoots = [...doc.querySelectorAll(DIRECT_RUNTIME_ROOT_SELECTOR)].filter((node) => node !== doc.body && node !== doc.documentElement);
+    const shadowHosts = collectShadowRootHosts(doc);
+    const externalResources = collectExternalRuntimeResources(doc);
+    const overlayBlockers = collectSelectionBlockingOverlays(doc);
+    const staticBodyNodes = visibleBodyObjectCount(doc);
+    const scriptHeavyRuntime = scripts.length > 0 && (runtimeRoots.length > 0 || staticBodyNodes <= Math.max(4, scripts.length));
+    let runtimeRiskCount = 0;
+    let runtimeRiskElementId = null;
+
+    if (scriptHeavyRuntime) {
+      runtimeRiskCount += 1;
+      const element = runtimeRoots[0] || doc.body;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(element);
+      addDiagnosticIssue(issues, {
+        kind: "runtime-rendered",
+        severity: "warning",
+        title: "脚本生成页面",
+        detail: "内容可能由脚本实时生成，部分模块会在导入后替换或重绘",
+        elementId: optionalDirectId(element)
+      });
+    }
+
+    if (iframes.length > 0) {
+      runtimeRiskCount += iframes.length;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(iframes[0]);
+      addDiagnosticIssue(issues, {
+        kind: "iframe-content",
+        severity: "warning",
+        title: "嵌入页面",
+        detail: `${iframes.length} 个嵌入页面无法像普通模块一样直接精修`,
+        elementId: optionalDirectId(iframes[0])
+      });
+    }
+
+    if (canvases.length > 0) {
+      runtimeRiskCount += canvases.length;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(canvases[0]);
+      addDiagnosticIssue(issues, {
+        kind: "canvas-content",
+        severity: "warning",
+        title: "画布内容",
+        detail: `${canvases.length} 个画布区域通常只能按整体对象处理`,
+        elementId: optionalDirectId(canvases[0])
+      });
+    }
+
+    if (shadowHosts.length > 0) {
+      runtimeRiskCount += shadowHosts.length;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(shadowHosts[0]);
+      addDiagnosticIssue(issues, {
+        kind: "shadow-content",
+        severity: "warning",
+        title: "封装组件",
+        detail: `${shadowHosts.length} 个封装组件可能无法完整展开为可编辑对象`,
+        elementId: optionalDirectId(shadowHosts[0])
+      });
+    }
+
+    if (overlayBlockers.length > 0) {
+      runtimeRiskCount += overlayBlockers.length;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(overlayBlockers[0]);
+      addDiagnosticIssue(issues, {
+        kind: "selection-overlay",
+        severity: "warning",
+        title: "遮罩挡住选择",
+        detail: `${overlayBlockers.length} 个透明遮罩已在编辑中临时穿透，导出前建议复核`,
+        elementId: optionalDirectId(overlayBlockers[0])
+      });
+    }
+
+    if (externalResources.length > 0) {
+      runtimeRiskCount += externalResources.length;
+      runtimeRiskElementId = runtimeRiskElementId || optionalDirectId(externalResources[0]);
+      addDiagnosticIssue(issues, {
+        kind: "external-runtime-resource",
+        severity: "warning",
+        title: "外部运行资源",
+        detail: `${externalResources.length} 个外部脚本/样式/框架资源可能影响离线编辑和导出`,
+        elementId: optionalDirectId(externalResources[0])
+      });
+    }
+
+    return {
+      scriptCount: scripts.length,
+      iframeCount: iframes.length,
+      canvasCount: canvases.length,
+      shadowRootCount: shadowHosts.length,
+      runtimeRootCount: runtimeRoots.length,
+      externalResourceCount: externalResources.length,
+      overlayBlockerCount: overlayBlockers.length,
+      runtimeRiskCount,
+      runtimeRiskElementId
+    };
+  }
+
+  function collectShadowRootHosts(doc) {
+    const hosts = [];
+    for (const node of doc.querySelectorAll("*")) {
+      if (node.shadowRoot) hosts.push(node);
+    }
+    return hosts;
+  }
+
+  function collectExternalRuntimeResources(doc) {
+    const resources = [
+      ...doc.querySelectorAll("script[src]"),
+      ...doc.querySelectorAll("link[rel~='stylesheet'][href]"),
+      ...doc.querySelectorAll("iframe[src]")
+    ];
+    return resources.filter((node) => {
+      const value = node.getAttribute("src") || node.getAttribute("href") || "";
+      if (!value || value.startsWith("data:") || value.startsWith("blob:")) return false;
+      try {
+        const url = new URL(value, directBaseHref || doc.baseURI);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  function collectSelectionBlockingOverlays(doc) {
+    return [...doc.querySelectorAll("[data-chiselo-selection-pass-through='true']")]
+      .filter((node) => node.isConnected);
+  }
+
+  function visibleBodyObjectCount(doc) {
+    return [...doc.body.querySelectorAll("body *")]
+      .slice(0, 80)
+      .filter((node) => {
+        if (node.matches?.("script,style,meta,link,title")) return false;
+        if (!isDirectNodeVisible(node)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width >= 4 && rect.height >= 4;
+      }).length;
   }
 
   function collectLayoutDiagnostics(doc, issues) {

@@ -2,6 +2,15 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.6 - 2026-06-12
+
+- Added generator compatibility diagnostics for Dify-like/script-rendered HTML, including runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
+- Made dynamically inserted HTML elements, images, media, and tables join the editing and delivery-check pipeline after import.
+- Added editing-only transparent overlay pass-through so empty full-page hit layers no longer block selecting the real title, image, card, table, or module underneath.
+- Added generator compatibility rows, issue icons, scoring penalties, and export guidance to make runtime-generated HTML limitations visible before HTML/PDF/PPTX delivery.
+- Added a generated-runtime compatibility regression test.
+- Bumped the packaging version to `0.1.6` for the next preview build.
+
 ## 0.1.5 - 2026-06-12
 
 - Added geometry review metrics in the Inspector: selected objects now show page/canvas margins, center offset, and a copyable geometry summary.

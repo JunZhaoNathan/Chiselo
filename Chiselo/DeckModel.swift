@@ -105,6 +105,14 @@ struct HTMLDiagnostics: Codable, Equatable {
     var svgCount: Int
     var tableCount: Int
     var spanTableCount: Int
+    var scriptCount: Int?
+    var iframeCount: Int?
+    var canvasCount: Int?
+    var shadowRootCount: Int?
+    var runtimeRootCount: Int?
+    var externalResourceCount: Int?
+    var overlayBlockerCount: Int?
+    var runtimeRiskCount: Int?
     var cleanExport: Bool
     var textOverflowCount: Int?
     var outOfBoundsCount: Int?
@@ -115,6 +123,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var textOverflowElementId: String?
     var outOfBoundsElementId: String?
     var overlapElementId: String?
+    var runtimeRiskElementId: String?
     var issues: [HTMLDiagnosticIssue]?
 
     static let empty = HTMLDiagnostics(
@@ -127,6 +136,14 @@ struct HTMLDiagnostics: Codable, Equatable {
         svgCount: 0,
         tableCount: 0,
         spanTableCount: 0,
+        scriptCount: 0,
+        iframeCount: 0,
+        canvasCount: 0,
+        shadowRootCount: 0,
+        runtimeRootCount: 0,
+        externalResourceCount: 0,
+        overlayBlockerCount: 0,
+        runtimeRiskCount: 0,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -137,6 +154,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         textOverflowElementId: nil,
         outOfBoundsElementId: nil,
         overlapElementId: nil,
+        runtimeRiskElementId: nil,
         issues: []
     )
 
@@ -156,6 +174,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         var count = 0
         if svgCount > 0 { count += 1 }
         if tableCount > 0 { count += 1 }
+        if (runtimeRiskCount ?? 0) > 0 { count += 1 }
         return count
     }
 }

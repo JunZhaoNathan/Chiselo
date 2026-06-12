@@ -48,6 +48,8 @@ Select a table, row, or cell to reveal row/column actions. Chiselo handles simpl
 
 The left sidebar flags delivery risks such as broken resources, temporary editor markers, complex tables, SVG usage, text overflow, out-of-bounds elements, and obvious overlaps. When a risk points to a real HTML element, click it to select that element on the canvas.
 
+Generated pages from tools such as Dify may be script-rendered rather than plain static HTML. Chiselo flags these as generator compatibility risks when it sees script-built content, embedded pages, canvas regions, external runtime files, or transparent layers that block selection. If the page is difficult to edit as separate objects, use Freeze Layout to turn the current rendering into a stable visual canvas before final adjustment.
+
 Use `导出` > `导出预检` before final delivery. The preflight panel scores HTML readiness, PDF fidelity, and PPTX editability, then lists the issues that should be fixed before export or reviewed after PPTX export.
 
 ## Freeze Layout

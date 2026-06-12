@@ -909,6 +909,10 @@ private struct PreflightRecommendationCard: View {
         } else {
             items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", Color(red: 0.06, green: 0.52, blue: 0.26)))
         }
+
+        if diagnostics.runtimeCompatibilityRiskCount > 0 {
+            items.append(("wand.and.rays", "脚本生成、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先使用冻结版式再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+        }
         return items
     }
 }
@@ -966,6 +970,7 @@ private extension HTMLDiagnostics {
         if !cleanExport { count += 1 }
         count += textOverflowCount ?? 0
         count += outOfBoundsCount ?? 0
+        count += overlayBlockerCount ?? 0
         return count
     }
 
@@ -975,7 +980,40 @@ private extension HTMLDiagnostics {
         if spanTableCount > 0 { count += 1 }
         if svgCount > 0 { count += 1 }
         if (overlapCount ?? 0) > 0 { count += 1 }
+        if runtimeCompatibilityRiskCount > 0 { count += 1 }
         return count
+    }
+
+    var runtimeCompatibilityRiskCount: Int {
+        runtimeRiskCount ?? 0
+    }
+
+    var runtimeCompatibilityDetail: String {
+        let risks = runtimeCompatibilityRiskCount
+        if risks == 0 {
+            return "普通 HTML 对象，可直接精修"
+        }
+
+        var parts: [String] = []
+        if (scriptCount ?? 0) > 0 || (runtimeRootCount ?? 0) > 0 {
+            parts.append("脚本生成")
+        }
+        if (iframeCount ?? 0) > 0 {
+            parts.append("\(iframeCount ?? 0) 个嵌入页面")
+        }
+        if (canvasCount ?? 0) > 0 {
+            parts.append("\(canvasCount ?? 0) 个画布")
+        }
+        if (shadowRootCount ?? 0) > 0 {
+            parts.append("\(shadowRootCount ?? 0) 个封装组件")
+        }
+        if (overlayBlockerCount ?? 0) > 0 {
+            parts.append("\(overlayBlockerCount ?? 0) 个遮罩")
+        }
+        if (externalResourceCount ?? 0) > 0 {
+            parts.append("\(externalResourceCount ?? 0) 个外部资源")
+        }
+        return parts.isEmpty ? "\(risks) 项生成器兼容风险" : parts.joined(separator: "，")
     }
 
     var htmlReadinessScore: Int {
@@ -985,6 +1023,7 @@ private extension HTMLDiagnostics {
             - (cleanExport ? 0 : 30)
             - (textOverflowCount ?? 0) * 10
             - (outOfBoundsCount ?? 0) * 10
+            - min(12, (overlayBlockerCount ?? 0) * 6)
             - min(18, (overlapCount ?? 0) * 3)
         )
     }
@@ -995,6 +1034,7 @@ private extension HTMLDiagnostics {
             - (brokenImages + brokenMedia) * 22
             - (textOverflowCount ?? 0) * 12
             - (outOfBoundsCount ?? 0) * 12
+            - min(10, (overlayBlockerCount ?? 0) * 5)
             - min(20, (overlapCount ?? 0) * 4)
         )
     }
@@ -1009,6 +1049,7 @@ private extension HTMLDiagnostics {
             - min(16, tableCount * 4)
             - (spanTableCount > 0 ? 18 : 0)
             - min(20, svgCount * 6)
+            - min(28, runtimeCompatibilityRiskCount * 4)
         )
     }
 
@@ -1021,9 +1062,9 @@ private extension HTMLDiagnostics {
             return "PPTX 可编辑性较好，导出后抽查文本框和图片即可。"
         }
         if pptxEditabilityScore >= 65 {
-            return "PPTX 可编辑性中等，导出后重点检查表格、SVG 和层级。"
+            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、生成组件和层级。"
         }
-        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核复杂对象。"
+        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核脚本生成、嵌入页面和复杂对象。"
     }
 
     private func boundedScore(_ value: Int) -> Int {
@@ -1461,6 +1502,20 @@ private struct HTMLDeliveryCheckCard: View {
                     isClickable: false
                 )
 
+                if diagnostics.runtimeCompatibilityRiskCount > 0 {
+                    DeliveryCheckRow(
+                        icon: "wand.and.rays",
+                        title: "生成器兼容",
+                        detail: diagnostics.runtimeCompatibilityDetail,
+                        color: warningColor,
+                        isClickable: diagnostics.runtimeRiskElementId != nil
+                    ) {
+                        if let elementId = diagnostics.runtimeRiskElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
+                }
+
                 if diagnostics.tableCount > 0 {
                     DeliveryCheckRow(
                         icon: diagnostics.spanTableCount > 0 ? "tablecells.badge.ellipsis" : "tablecells",
@@ -1721,6 +1776,16 @@ private struct DeliveryIssueRow: View {
             return "square.stack.3d.up"
         case "span-table":
             return "tablecells.badge.ellipsis"
+        case "runtime-rendered", "external-runtime-resource":
+            return "wand.and.rays"
+        case "iframe-content":
+            return "rectangle.inset.filled"
+        case "canvas-content":
+            return "square.dashed"
+        case "shadow-content":
+            return "shippingbox"
+        case "selection-overlay":
+            return "rectangle.stack.badge.minus"
         default:
             return issue.severity == "error" ? "exclamationmark.triangle" : "info.circle"
         }
