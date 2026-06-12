@@ -76,12 +76,14 @@ final class EditableLayoutIRTest: NSObject, WKNavigationDelegate, WKScriptMessag
           const iframe = elements.find(element => element.tagName === 'iframe');
           const canvas = elements.find(element => element.tagName === 'canvas');
           const pseudo = elements.find(element => element.sourceKind === 'pseudo-element' && element.text === 'AUTO');
+          const groupedCardObjects = elements.filter(element => element.groupId && element.groupId === text?.groupId);
           const exportHTML = editor.exportHTML();
 
           const assertions = {
             deckMarkedAsIR: deck.irVersion === 'layout-ir-v1' && deck.sourceKind === 'runtime-html-snapshot',
             dynamicTextCaptured: Boolean(text && text.type === 'text' && text.editability === 'text-editable' && text.fidelity === 'native'),
             visualObjectCaptured: Boolean(card && card.editability === 'style-editable'),
+            cardObjectsGrouped: Boolean(text?.groupId && groupedCardObjects.length >= 4 && groupedCardObjects.some(element => element.type === 'rect') && groupedCardObjects.some(element => element.text === '96%')),
             iframeFallbackCaptured: Boolean(iframe && iframe.editability === 'whole-object' && iframe.fidelity === 'fallback'),
             canvasFallbackCaptured: Boolean(canvas && canvas.editability === 'whole-object' && ['snapshot', 'fallback'].includes(canvas.fidelity)),
             pseudoExtracted: Boolean(pseudo && pseudo.fidelity === 'approximated'),
@@ -101,7 +103,8 @@ final class EditableLayoutIRTest: NSObject, WKNavigationDelegate, WKScriptMessag
               elements: elements.length,
               text: elements.filter(element => element.type === 'text').length,
               images: elements.filter(element => element.type === 'image').length,
-              wholeObjects: elements.filter(element => element.editability === 'whole-object').length
+              wholeObjects: elements.filter(element => element.editability === 'whole-object').length,
+              groups: new Set(elements.map(element => element.groupId).filter(Boolean)).size
             }
           });
         })().catch(error => {

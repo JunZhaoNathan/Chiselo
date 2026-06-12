@@ -56,7 +56,7 @@ Use `导出` > `导出预检` before final delivery. The preflight panel scores 
 
 `转为可编辑版` converts the current rendered HTML into a fixed-canvas Chiselo tab backed by a deterministic Layout IR. Text becomes editable text objects, images become replaceable image objects, and computed visual boxes become adjustable shapes. Embedded pages, canvas regions, and other content that cannot be safely decomposed are kept as whole-object fallbacks with clear editability notes.
 
-After conversion, the left sidebar and export preflight show an editable-version quality summary with direct-editable object counts, fallback counts, and PPTX editability.
+After conversion, the left sidebar and export preflight show an editable-version quality summary with direct-editable object counts, fallback counts, and PPTX editability. Captured cards, sections, tables, and visual modules also keep module membership metadata so related objects can be reviewed together.
 
 ## Export
 

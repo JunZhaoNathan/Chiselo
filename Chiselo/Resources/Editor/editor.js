@@ -4382,6 +4382,7 @@
       htmlPath: directNodePath(node),
       semanticRole: capturedSemanticForNode(node).role,
       semanticLabel: capturedSemanticForNode(node).label,
+      ...capturedGroupForNode(node),
       sourceKind: "computed-style",
       editability: "style-editable",
       fidelity: "native",
@@ -4413,6 +4414,7 @@
       htmlPath: directNodePath(node),
       semanticRole: "image",
       semanticLabel: "图片",
+      ...capturedGroupForNode(node),
       sourceKind: "image",
       editability: "replaceable",
       fidelity: "native",
@@ -4449,6 +4451,7 @@
       htmlPath: directNodePath(node),
       semanticRole: capturedSemanticForNode(node).role,
       semanticLabel: capturedSemanticForNode(node).label,
+      ...capturedGroupForNode(node),
       sourceKind: "text",
       editability: "text-editable",
       fidelity: "native",
@@ -4522,6 +4525,7 @@
         htmlPath: `${directNodePath(node)} ${pseudo}`,
         semanticRole: "text",
         semanticLabel: "伪元素文本",
+        ...capturedGroupForNode(node),
         sourceKind: "pseudo-element",
         editability: "text-editable",
         fidelity: "approximated",
@@ -4551,6 +4555,7 @@
       htmlPath: `${directNodePath(node)} ${pseudo}`,
       semanticRole: "visual",
       semanticLabel: "伪元素图形",
+      ...capturedGroupForNode(node),
       sourceKind: "pseudo-element",
       editability: "style-editable",
       fidelity: "approximated",
@@ -4584,6 +4589,7 @@
       htmlPath: directNodePath(node),
       semanticRole: tag === "iframe" ? "embedded-page" : tag === "canvas" ? "canvas" : "media",
       semanticLabel: tag === "iframe" ? "嵌入页面" : tag === "canvas" ? "画布整体" : "媒体整体",
+      ...capturedGroupForNode(node),
       sourceKind: tag,
       editability: "whole-object",
       fidelity: imageSource ? "snapshot" : "fallback",
@@ -4649,6 +4655,68 @@
     const semantic = directSemanticForNode(node);
     if (semantic.role !== "container" || node.tagName.toLowerCase() === "div") return semantic;
     return semantic;
+  }
+
+  function capturedGroupForNode(node) {
+    const groupNode = capturedGroupNodeFor(node);
+    if (!groupNode) return {};
+
+    const semantic = directSemanticForNode(groupNode);
+    return {
+      groupId: stableGroupId(groupNode),
+      groupRole: semantic.role === "container" ? "module" : semantic.role,
+      groupLabel: semantic.label === "容器" ? "模块" : semantic.label
+    };
+  }
+
+  function capturedGroupNodeFor(node) {
+    if (!node?.parentElement) return null;
+    let current = node;
+    const doc = node.ownerDocument;
+
+    while (current && current !== doc.body && current !== doc.documentElement) {
+      if (isCapturedGroupCandidate(current) && (current !== node || canUseNodeAsOwnGroup(current))) return current;
+      current = current.parentElement;
+    }
+
+    return null;
+  }
+
+  function canUseNodeAsOwnGroup(node) {
+    if (!node) return false;
+    if (node.children.length > 0) return true;
+    const tag = node.tagName.toLowerCase();
+    return ["section", "article", "figure", "table", "header", "footer", "aside", "nav"].includes(tag);
+  }
+
+  function isCapturedGroupCandidate(node) {
+    if (!node || node.matches?.("html,body,script,style,noscript,svg")) return false;
+    if (node.matches?.(CAPTURE_PAGE_SELECTOR)) return false;
+
+    const rect = node.getBoundingClientRect();
+    if (rect.width < 48 || rect.height < 36) return false;
+
+    const semantic = directSemanticForNode(node);
+    if (["card", "module", "figure", "table", "table-like", "header", "sidebar", "navigation"].includes(semantic.role)) return true;
+
+    const tag = node.tagName.toLowerCase();
+    if (["section", "article", "figure", "table", "header", "footer", "aside", "nav"].includes(tag)) return true;
+
+    const name = `${node.id || ""} ${[...node.classList || []].join(" ")}`.toLowerCase();
+    return /(card|panel|module|section|block|tile|item|feature|hero|banner|stat|metric|table|chart|figure|visual)/.test(name);
+  }
+
+  function stableGroupId(node) {
+    return `group-${hashString(directNodePath(node))}`;
+  }
+
+  function hashString(value) {
+    let hash = 5381;
+    const text = String(value || "");
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) + hash) ^ text.charCodeAt(index);
+    }
+    return (hash >>> 0).toString(36);
   }
 
   function optimizeCapturedElements(elements) {

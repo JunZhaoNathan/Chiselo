@@ -27,6 +27,9 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var htmlPath: String?
     var semanticRole: String?
     var semanticLabel: String?
+    var groupId: String?
+    var groupRole: String?
+    var groupLabel: String?
     var sourceKind: String?
     var editability: String?
     var fidelity: String?

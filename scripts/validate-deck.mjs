@@ -65,7 +65,7 @@ for (const [slideIndex, slide] of (deck.slides || []).entries()) {
       );
     }
 
-    for (const key of ["tagName", "htmlPath", "semanticRole", "semanticLabel", "sourceKind", "editability", "fidelity", "captureNote", "layoutMode", "imageSource", "imageAlt"]) {
+    for (const key of ["tagName", "htmlPath", "semanticRole", "semanticLabel", "groupId", "groupRole", "groupLabel", "sourceKind", "editability", "fidelity", "captureNote", "layoutMode", "imageSource", "imageAlt"]) {
       if (element[key] !== undefined) check(typeof element[key] === "string", `${prefix}: ${key} must be a string.`);
     }
 

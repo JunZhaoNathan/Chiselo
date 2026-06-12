@@ -2525,6 +2525,9 @@ private struct InspectorPanel: View {
                     .padding(9)
                     .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
                 }
+                if element.groupLabel != nil || element.groupId != nil {
+                    GroupMembershipBadge(element: element, compact: false)
+                }
                 LabeledContent("ID", value: element.id)
                 if let tagName = element.tagName {
                     LabeledContent("原始标签", value: tagName)
@@ -3063,6 +3066,35 @@ private struct LayerStackList: View {
     }
 }
 
+private struct GroupMembershipBadge: View {
+    var element: EditorElement
+    var compact: Bool
+    var isSelected: Bool = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "square.3.layers.3d")
+                .font(.system(size: compact ? 8 : 10, weight: .heavy))
+            Text(compact ? element.chiseloGroupDisplayLabel : "所属模块：\(element.chiseloGroupDisplayLabel)")
+                .font(.system(size: compact ? 9 : 10, weight: .heavy))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .foregroundStyle(foreground)
+        .padding(.horizontal, compact ? 6 : 8)
+        .padding(.vertical, compact ? 3 : 6)
+        .background(background, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+
+    private var foreground: Color {
+        isSelected ? Color.white.opacity(0.90) : MaterialTheme.primaryDark
+    }
+
+    private var background: Color {
+        isSelected ? Color.white.opacity(0.16) : MaterialTheme.primary.opacity(0.10)
+    }
+}
+
 private struct LayerStackRow: View, Equatable {
     @EnvironmentObject private var model: EditorModel
 
@@ -3101,6 +3133,10 @@ private struct LayerStackRow: View, Equatable {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(isSelected ? Color.white.opacity(0.78) : MaterialTheme.muted)
                         .lineLimit(1)
+
+                    if element.groupLabel != nil || element.groupId != nil {
+                        GroupMembershipBadge(element: element, compact: true, isSelected: isSelected)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -3190,6 +3226,18 @@ private extension EditorElement {
         }
 
         return chiseloTypeLabel
+    }
+
+    var chiseloGroupDisplayLabel: String {
+        if let groupLabel = groupLabel?.trimmingCharacters(in: .whitespacesAndNewlines), !groupLabel.isEmpty {
+            return groupLabel
+        }
+
+        if let groupRole = groupRole?.trimmingCharacters(in: .whitespacesAndNewlines), !groupRole.isEmpty {
+            return groupRole
+        }
+
+        return "模块"
     }
 
     var chiseloTypeLabel: String {

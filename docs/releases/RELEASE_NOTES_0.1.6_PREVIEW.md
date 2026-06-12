@@ -11,6 +11,7 @@ Creator note: Chiselo was built through vibe coding by a humanities-background c
 - Added generator compatibility diagnostics for Dify-like and script-rendered HTML.
 - Added `转为可编辑版` Layout IR v1 for turning rendered HTML into deterministic editable text, image, shape, pseudo-element, and whole-object fallback elements.
 - Shows a quality summary for editable versions, including editable text, replaceable images, adjustable shapes, whole-object fallbacks, and PPTX editability.
+- Adds deterministic module grouping metadata so captured card, section, table, and visual-module objects can be recognized together.
 - Shows editability metadata for captured objects, including directly editable text, replaceable images, adjustable shapes, approximated pseudo-elements, and iframe/canvas whole-object fallbacks.
 - Uses consistent page/slide boundary detection for editable capture and export.
 - Detects runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.
