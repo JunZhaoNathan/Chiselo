@@ -34,11 +34,11 @@ Strongly aligned:
 - Delivery preflight for broken resources, overflow, out-of-bounds objects, overlap, clean HTML, PDF, and PPTX risks.
 - Safe backups and history restore.
 - `转为可编辑版` for converting the current rendering into stable editable objects.
-- Deterministic module grouping and module-group movement.
+- Deterministic module grouping, module-group movement, and module-internal size/spacing cleanup.
 
 Needs continued polishing:
 
-- More precise group-internal alignment and spacing tools.
+- More advanced group-internal alignment rules for mixed text/image/button modules.
 - More predictable resizing and layout preservation for responsive pages.
 - Better style controls for non-technical users: color, typography, spacing, borders, shadows.
 - Higher-fidelity editable PPTX mapping and clearer export risk previews.
@@ -70,8 +70,8 @@ Generated or script-rendered files may be supported as input, but they are not t
 
 ## Next Product Priorities
 
-1. Group-internal alignment, equal spacing, and size matching for captured modules.
-2. More robust visual style controls for typography, color, border, radius, and shadow.
+1. More robust visual style controls for typography, color, border, radius, and shadow.
+2. More advanced group-internal alignment rules for mixed text/image/button modules.
 3. Export preflight improvements with object-level risk navigation and before/after review.
 4. PPTX editability improvements with clearer object mapping and fallback explanations.
 5. Snapshot diff and visual comparison before save/export.

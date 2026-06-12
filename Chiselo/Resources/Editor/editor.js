@@ -849,8 +849,9 @@
     if (editorMode !== "deck") return null;
     const elements = deckGroupElements(groupId);
     if (!groupId || !elements.length) return null;
+    const previousSelected = elements.find((element) => element.id === selectedId);
     selectedDeckGroupId = groupId;
-    selectedId = elements[0].id;
+    selectedId = previousSelected?.id || elements[0].id;
     updateSelectionBox();
     postSelectionChanged({ immediate: true });
     return selectedElement();
@@ -1123,6 +1124,71 @@
     else updateSelectionBox();
     postSelectionChanged();
     if (!options.render && options.postDeck !== false) postDeckChanged();
+    return true;
+  }
+
+  function deckGroupAnchorElement(groupId = selectedDeckGroupId) {
+    const elements = deckGroupElements(groupId);
+    return elements.find((element) => element.id === selectedId) || elements[0] || null;
+  }
+
+  function finishDeckGroupInternalEdit(elements, options = {}) {
+    if (options.render) {
+      render();
+    } else {
+      for (const element of elements) updateDeckElementNode(element);
+      updateSelectionBox();
+    }
+    postSelectionChanged();
+    if (!options.render && options.postDeck !== false) postDeckChanged();
+  }
+
+  function matchDeckGroupInternalSize(mode) {
+    if (!isDeckGroupSelection()) return false;
+    const groupId = selectedDeckGroupId;
+    const elements = deckGroupElements(groupId).filter((element) => !element.locked);
+    if (elements.length < 2 || deckGroupHasLocked(groupId)) return false;
+
+    const anchor = deckGroupAnchorElement(groupId);
+    if (!anchor) return false;
+
+    pushHistory();
+    for (const element of elements) {
+      if (mode === "width") element.w = Math.max(1, Math.round(anchor.w));
+      if (mode === "height") element.h = Math.max(1, Math.round(anchor.h));
+    }
+    finishDeckGroupInternalEdit(elements);
+    return true;
+  }
+
+  function distributeDeckGroupInternal(axis) {
+    if (!isDeckGroupSelection()) return false;
+    const groupId = selectedDeckGroupId;
+    const elements = deckGroupElements(groupId);
+    if (elements.length < 3 || deckGroupHasLocked(groupId)) return false;
+
+    const horizontal = axis === "horizontal";
+    const sorted = [...elements].sort((left, right) => {
+      const leftPrimary = horizontal ? left.x : left.y;
+      const rightPrimary = horizontal ? right.x : right.y;
+      if (leftPrimary === rightPrimary) return (left.z || 0) - (right.z || 0);
+      return leftPrimary - rightPrimary;
+    });
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const start = horizontal ? first.x : first.y;
+    const end = horizontal ? last.x + last.w : last.y + last.h;
+    const totalSize = sorted.reduce((sum, element) => sum + (horizontal ? element.w : element.h), 0);
+    const gap = (end - start - totalSize) / (sorted.length - 1);
+
+    pushHistory();
+    let cursor = start;
+    for (const element of sorted) {
+      if (horizontal) element.x = Math.round(cursor);
+      else element.y = Math.round(cursor);
+      cursor += (horizontal ? element.w : element.h) + gap;
+    }
+    finishDeckGroupInternalEdit(sorted);
     return true;
   }
 
@@ -1830,13 +1896,19 @@
   function matchSelectedSize(mode) {
     if (editorMode === "html") {
       matchDirectSelectedSize(mode);
+      return;
     }
+
+    matchDeckGroupInternalSize(mode);
   }
 
   function distributeSelected(axis) {
     if (editorMode === "html") {
       distributeDirectSelected(axis);
+      return;
     }
+
+    distributeDeckGroupInternal(axis);
   }
 
   function snapSelectedToGrid(grid = 8) {

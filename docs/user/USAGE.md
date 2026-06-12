@@ -60,6 +60,8 @@ After conversion, the left sidebar and export preflight show an editable-version
 
 When you select an object that belongs to a captured module, use `选择模块` in the Inspector to select the whole module. The module can then be moved, nudged with arrow keys, aligned, snapped, duplicated, deleted, or locked as one unit while its internal text, image, and shape objects remain editable.
 
+With the module selected, use `同宽`, `同高`, `横等距`, and `纵等距` to clean up internal card, metric, button, or image spacing without editing code.
+
 ## Export
 
 - HTML: clean edited document with Chiselo temporary attributes removed.

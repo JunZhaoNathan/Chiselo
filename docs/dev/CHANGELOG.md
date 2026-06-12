@@ -7,7 +7,7 @@ All notable changes to Chiselo will be documented here.
 - Added `转为可编辑版` Layout IR v1: runtime HTML is captured after rendering into deterministic text, image, shape, pseudo-element, and whole-object fallback elements.
 - Added an editable-version quality summary that reports directly editable text, replaceable images, adjustable shapes, approximated objects, whole-object fallbacks, and PPTX editability.
 - Added deterministic module grouping metadata for captured cards, sections, tables, and visual modules so related text, shapes, and pseudo-elements can be identified together.
-- Added module-group selection and movement for editable versions: grouped cards/modules can be selected as one unit, nudged, aligned, snapped, duplicated, deleted, locked, and moved together.
+- Added module-group selection and refinement for editable versions: grouped cards/modules can be selected as one unit, nudged, aligned, snapped, duplicated, deleted, locked, moved together, and refined internally with same-width, same-height, and equal-spacing commands.
 - Added editability metadata for captured objects so the Inspector can distinguish directly editable text, replaceable images, adjustable shapes, approximated pseudo-elements, and whole-object iframe/canvas fallbacks.
 - Reused the same page/slide boundary selectors across editable capture and export so `.slide`, `.page`, `[data-page]`, and similar document frames map more consistently.
 - Added dynamic-content diagnostics for script-rendered HTML, including runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.

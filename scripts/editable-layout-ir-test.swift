@@ -88,6 +88,39 @@ final class EditableLayoutIRTest: NSObject, WKNavigationDelegate, WKScriptMessag
           const afterMoveGroup = afterMoveElements.filter(element => element.groupId && element.groupId === text?.groupId);
           const afterMoveOutside = afterMoveElements.find(element => element.id === beforeMoveOutside?.id);
           const movedGroupSelection = editor.getSelection();
+          const moduleDeck = {
+            version: 1,
+            irVersion: 'layout-ir-v1',
+            sourceKind: 'runtime-html-snapshot',
+            canvas: { width: 640, height: 360, background: '#ffffff' },
+            slides: [{
+              id: 'module-slide',
+              title: 'Module Internal Alignment',
+              elements: [
+                { id: 'metric-a', type: 'rect', groupId: 'metrics', groupRole: 'module', groupLabel: '指标模块', x: 40, y: 60, w: 70, h: 42, rotation: 0, z: 1, style: { fill: '#dbeafe', radius: 8 } },
+                { id: 'metric-b', type: 'rect', groupId: 'metrics', groupRole: 'module', groupLabel: '指标模块', x: 170, y: 80, w: 92, h: 50, rotation: 0, z: 2, style: { fill: '#dcfce7', radius: 8 } },
+                { id: 'metric-c', type: 'rect', groupId: 'metrics', groupRole: 'module', groupLabel: '指标模块', x: 345, y: 108, w: 56, h: 36, rotation: 0, z: 3, style: { fill: '#fee2e2', radius: 8 } },
+                { id: 'outside', type: 'rect', x: 510, y: 60, w: 46, h: 40, rotation: 0, z: 4, style: { fill: '#f8fafc', radius: 6 } }
+              ]
+            }]
+          };
+          editor.loadDeck(moduleDeck);
+          editor.selectElementById('metric-b');
+          const internalSelection = editor.selectGroupById('metrics');
+          editor.command('matchWidth');
+          editor.command('matchHeight');
+          editor.command('distributeHorizontal');
+          editor.command('distributeVertical');
+          const internalDeck = editor.getDeck();
+          const internalElements = internalDeck.slides[0].elements;
+          const metricA = internalElements.find(element => element.id === 'metric-a');
+          const metricB = internalElements.find(element => element.id === 'metric-b');
+          const metricC = internalElements.find(element => element.id === 'metric-c');
+          const outside = internalElements.find(element => element.id === 'outside');
+          const horizontalGapAB = metricB.x - (metricA.x + metricA.w);
+          const horizontalGapBC = metricC.x - (metricB.x + metricB.w);
+          const verticalGapAB = metricB.y - (metricA.y + metricA.h);
+          const verticalGapBC = metricC.y - (metricB.y + metricB.h);
           const exportHTML = editor.exportHTML();
 
           const assertions = {
@@ -102,10 +135,13 @@ final class EditableLayoutIRTest: NSObject, WKNavigationDelegate, WKScriptMessag
             })),
             moduleGroupSelectionPersists: Boolean(movedGroupSelection && movedGroupSelection.type === 'deck-group' && movedGroupSelection.x === moduleSelection.x + 10),
             moduleGroupNudgeKeepsOutsideObjectsStable: Boolean(beforeMoveOutside && afterMoveOutside && afterMoveOutside.x === beforeMoveOutside.x && afterMoveOutside.y === beforeMoveOutside.y),
+            moduleGroupInternalSizeMatch: Boolean(internalSelection && [metricA, metricB, metricC].every(element => element.w === metricB.w && element.h === metricB.h)),
+            moduleGroupInternalDistribute: Boolean(Math.abs(horizontalGapAB - horizontalGapBC) <= 1 && Math.abs(verticalGapAB - verticalGapBC) <= 1),
+            moduleGroupInternalKeepsOutsideStable: Boolean(outside.x === 510 && outside.y === 60 && outside.w === 46 && outside.h === 40),
             iframeFallbackCaptured: Boolean(iframe && iframe.editability === 'whole-object' && iframe.fidelity === 'fallback'),
             canvasFallbackCaptured: Boolean(canvas && canvas.editability === 'whole-object' && ['snapshot', 'fallback'].includes(canvas.fidelity)),
             pseudoExtracted: Boolean(pseudo && pseudo.fidelity === 'approximated'),
-            cleanStaticExport: exportHTML.includes('Runtime Editable Title') && !exportHTML.includes('data-chiselo')
+            cleanStaticExport: exportHTML.includes('Module Internal Alignment') && !exportHTML.includes('data-chiselo')
           };
 
           const failed = Object.entries(assertions).filter(([, value]) => !value);

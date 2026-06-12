@@ -2827,7 +2827,7 @@ private struct InspectorPanel: View {
                     }
                 }
 
-                if element.type == "html-group" {
+                if element.type == "html-group" || element.type == "deck-group" {
                     Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                         GridRow {
                             CommandButton(title: "同宽", icon: "arrow.left.and.right.square", command: "matchWidth")
