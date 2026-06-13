@@ -2,6 +2,13 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.7 - 2026-06-13
+
+- Added click-through targeting to the PPTX editable-object report so non-zero text, image, shape, review, and whole-object fallback counts can jump to the first matching object before export.
+- Added PPTX report target IDs to HTML diagnostics and regression coverage for review-object and whole-object fallback selection.
+- Reworded visible PPTX review guidance away from implementation language and toward export review actions.
+- Bumped the packaging version to `0.1.7` for the next preview build.
+
 ## 0.1.6 - 2026-06-12
 
 - Added `转为可编辑版` Layout IR v1: runtime HTML is captured after rendering into deterministic text, image, shape, pseudo-element, and whole-object fallback elements.

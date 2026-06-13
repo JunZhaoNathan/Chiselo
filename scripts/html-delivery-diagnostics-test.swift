@@ -98,6 +98,10 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
             (bridgeInt(diagnostics["pptxImageObjectCount"]) ?? 0) >= 1 &&
             (bridgeInt(diagnostics["pptxReviewObjectCount"]) ?? 0) >= 1 &&
             bridgeInt(diagnostics["pptxFallbackObjectCount"]) == 0 &&
+            hasBridgeString(diagnostics["pptxTextElementId"]) &&
+            hasBridgeString(diagnostics["pptxImageElementId"]) &&
+            hasBridgeString(diagnostics["pptxReviewElementId"]) &&
+            bridgeString(diagnostics["pptxFallbackElementId"]) == nil &&
             issueKinds.isSuperset(of: ["broken-image", "text-overflow", "out-of-bounds", "overlap", "pptx-effect-risk"]) &&
             hasElementTarget
     }
@@ -111,6 +115,20 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
         default:
             return nil
         }
+    }
+
+    private func bridgeString(_ value: Any?) -> String? {
+        switch value {
+        case let string as String:
+            return string
+        default:
+            return nil
+        }
+    }
+
+    private func hasBridgeString(_ value: Any?) -> Bool {
+        guard let string = bridgeString(value) else { return false }
+        return !string.isEmpty
     }
 
     private func bridgeBool(_ value: Any?) -> Bool? {

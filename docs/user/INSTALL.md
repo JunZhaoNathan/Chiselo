@@ -36,7 +36,7 @@ Outputs:
 
 ```text
 outputs/Chiselo.app
-outputs/Chiselo-0.1.6.dmg
+outputs/Chiselo-0.1.7.dmg
 ```
 
 Custom output directory:

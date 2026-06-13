@@ -19,7 +19,7 @@ The core idea:
 - Add pixel-level visual save preview and screenshot diff before overwriting original HTML.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
-- Improve PPTX editable-object report actions, especially jump-to-object review for tables, vectors, effects, and whole-object fallbacks.
+- Add batch review actions for PPTX editable-object reports, especially next/previous navigation across tables, vectors, effects, and whole-object fallbacks.
 
 ## Medium Term
 
@@ -40,7 +40,7 @@ The core idea:
 - Non-technical style controls for typography, color, alignment, borders, radius, shadows, and image display modes.
 - PPTX effect-risk preflight for complex CSS visuals before export.
 - Object-level visual diff v1 against the opened HTML.
-- PPTX editable-object report v1 before export.
+- PPTX editable-object report v1 before export, including first-object click-through targeting.
 
 ## Long Term
 

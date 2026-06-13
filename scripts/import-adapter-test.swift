@@ -60,6 +60,7 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
           await editor.openHTMLFromBase64('\(base64)', '');
           await new Promise(resolve => setTimeout(resolve, 350));
           const before = editor.getImportDiagnostics();
+          const selectedPPTXReviewTarget = editor.selectHTMLById(before.pptxReviewElementId || '');
           editor.setBackdropStyle('grid');
           const gridBackdropApplied = document.documentElement.dataset.backdrop === 'grid';
           editor.setBackdropStyle('dots');
@@ -139,6 +140,8 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             stylePanelImageFitWriteback: imageAfterStyle.style.objectFit === 'contain',
             stylePanelImageFitExported: /object-fit:\\s*contain/i.test(imageStyledExport),
             pptxMappingCountsDetected: before.pptxTextObjectCount >= 1 && before.pptxImageObjectCount === 1 && before.pptxReviewObjectCount >= 1,
+            pptxMappingTargetsDetected: [before.pptxTextElementId, before.pptxImageElementId, before.pptxReviewElementId].every(value => typeof value === 'string' && value.length > 0),
+            pptxMappingReviewTargetSelectable: Boolean(selectedPPTXReviewTarget && selectedPPTXReviewTarget.id === before.pptxReviewElementId),
             spanTableDetected: before.spanTableCount === 1,
             mergedColumnExpanded: afterAdd.includes('colspan="3"'),
             mergedColumnRestored: afterDelete.includes('colspan="2"'),
@@ -154,7 +157,8 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             deckLayerSelectionWorks: Boolean(firstFrozenElement && selectedFrozenElement && selectedFrozenElement.id === firstFrozenElement.id),
             minimalDiagnosticsNoResourceTarget: minimalDiagnostics.imageCount === 0 && minimalDiagnostics.mediaCount === 0 && minimalDiagnostics.resourceElementId === null,
             minimalDiagnosticsNoTableTarget: minimalDiagnostics.tableCount === 0 && minimalDiagnostics.tableElementId === null,
-            minimalDiagnosticsNoSvgTarget: minimalDiagnostics.svgCount === 0 && minimalDiagnostics.svgElementId === null
+            minimalDiagnosticsNoSvgTarget: minimalDiagnostics.svgCount === 0 && minimalDiagnostics.svgElementId === null,
+            minimalDiagnosticsOnlyTextPPTXTarget: minimalDiagnostics.pptxTextElementId !== null && minimalDiagnostics.pptxImageElementId === null && minimalDiagnostics.pptxReviewElementId === null && minimalDiagnostics.pptxFallbackElementId === null
           };
 
           const failed = Object.entries(assertions).filter(([, value]) => !value);

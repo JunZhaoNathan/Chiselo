@@ -711,7 +711,10 @@ private struct ExportPreflightPanel: View {
             }
 
             PreflightRecommendationCard(diagnostics: diagnostics)
-            PPTXMappingReportCard(diagnostics: diagnostics)
+            PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
+                dismiss()
+                model.selectHTMLNode(id: elementId)
+            }
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("问题定位")
@@ -914,7 +917,7 @@ private struct PreflightRecommendationCard: View {
         }
 
         if diagnostics.pptxReviewRiskCount > 0 {
-            items.append(("rectangle.on.rectangle.angled", "PPTX 属于可编辑映射，表格、SVG、复杂视觉效果、重叠对象和合并单元格导出后需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("rectangle.on.rectangle.angled", "导出可编辑 PPTX 时，表格、SVG、复杂视觉效果、重叠对象和合并单元格需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         } else {
             items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", Color(red: 0.06, green: 0.52, blue: 0.26)))
         }
@@ -932,6 +935,7 @@ private struct PreflightRecommendationCard: View {
 
 private struct PPTXMappingReportCard: View {
     var diagnostics: HTMLDiagnostics
+    var onSelectTarget: ((String) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -953,11 +957,11 @@ private struct PPTXMappingReportCard: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                MappingMetric(value: "\(diagnostics.pptxTextObjectCount ?? 0)", label: "文字", icon: "textformat")
-                MappingMetric(value: "\(diagnostics.pptxImageObjectCount ?? 0)", label: "图片", icon: "photo")
-                MappingMetric(value: "\(diagnostics.pptxShapeObjectCount ?? 0)", label: "形状", icon: "square.on.circle")
-                MappingMetric(value: "\(diagnostics.pptxReviewObjectCount ?? 0)", label: "需复核", icon: "checklist")
-                MappingMetric(value: "\(diagnostics.pptxFallbackObjectCount ?? 0)", label: "整体对象", icon: "rectangle.dashed")
+                MappingMetric(value: "\(diagnostics.pptxTextObjectCount ?? 0)", label: "文字", icon: "textformat", elementId: diagnostics.pptxTextElementId, action: onSelectTarget)
+                MappingMetric(value: "\(diagnostics.pptxImageObjectCount ?? 0)", label: "图片", icon: "photo", elementId: diagnostics.pptxImageElementId, action: onSelectTarget)
+                MappingMetric(value: "\(diagnostics.pptxShapeObjectCount ?? 0)", label: "形状", icon: "square.on.circle", elementId: diagnostics.pptxShapeElementId, action: onSelectTarget)
+                MappingMetric(value: "\(diagnostics.pptxReviewObjectCount ?? 0)", label: "需复核", icon: "checklist", elementId: diagnostics.pptxReviewElementId, action: onSelectTarget)
+                MappingMetric(value: "\(diagnostics.pptxFallbackObjectCount ?? 0)", label: "整体对象", icon: "rectangle.dashed", elementId: diagnostics.pptxFallbackElementId, action: onSelectTarget)
                 MappingMetric(value: "\(diagnostics.pptxMappingTotalObjectCount)", label: "合计", icon: "square.grid.2x2")
             }
 
@@ -985,8 +989,37 @@ private struct MappingMetric: View {
     var value: String
     var label: String
     var icon: String
+    var elementId: String?
+    var action: ((String) -> Void)?
 
     var body: some View {
+        Group {
+            if let elementId, let action {
+                Button {
+                    action(elementId)
+                } label: {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
+        .foregroundStyle(MaterialTheme.primaryDark)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(backgroundColor, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(isActionable ? MaterialTheme.primary.opacity(0.18) : Color.clear, lineWidth: 1)
+        )
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+        .help(isActionable ? "点击定位第一处\(label)" : "\(label)统计")
+    }
+
+    private var content: some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
                 .font(.system(size: 9, weight: .heavy))
@@ -996,13 +1029,14 @@ private struct MappingMetric: View {
             Text(label)
                 .font(.system(size: 9, weight: .bold))
         }
-        .foregroundStyle(MaterialTheme.primaryDark)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity)
-        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
-        .lineLimit(1)
-        .minimumScaleFactor(0.72)
+    }
+
+    private var isActionable: Bool {
+        elementId != nil && action != nil
+    }
+
+    private var backgroundColor: Color {
+        isActionable ? MaterialTheme.primary.opacity(0.10) : MaterialTheme.surfaceTint
     }
 }
 

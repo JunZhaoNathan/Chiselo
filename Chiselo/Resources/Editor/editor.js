@@ -5544,6 +5544,11 @@ ${htmlSlides}
         pptxShapeObjectCount: 0,
         pptxReviewObjectCount: 0,
         pptxFallbackObjectCount: 0,
+        pptxTextElementId: null,
+        pptxImageElementId: null,
+        pptxShapeElementId: null,
+        pptxReviewElementId: null,
+        pptxFallbackElementId: null,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -5565,13 +5570,16 @@ ${htmlSlides}
     const media = [...doc.querySelectorAll("video, audio")];
     const tables = [...doc.querySelectorAll("table")];
     const svgNodes = [...doc.querySelectorAll("svg")];
-    const svgCount = svgNodes.length + images.filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")).length;
+    const svgImageNodes = images.filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg"));
+    const svgCount = svgNodes.length + svgImageNodes.length;
     const exported = exportDirectHTML();
     const issues = [];
     const runtimeDiagnostics = collectRuntimeCompatibilityDiagnostics(doc, issues);
     const brokenImageNodes = images.filter((image) => image.dataset.chiseloResourceState === "broken");
     const brokenMediaNodes = media.filter((node) => node.dataset.chiseloResourceState === "broken");
     const spanTables = tables.filter((table) => table.querySelector("[rowspan], [colspan]"));
+    const tableTargetElementId = optionalDirectId(spanTables[0] || tables[0] || null);
+    const svgTargetElementId = optionalDirectId(svgNodes[0] || svgImageNodes[0] || null);
     const cleanExport = !exported.includes("data-chiselo");
 
     for (const image of brokenImageNodes) {
@@ -5599,7 +5607,7 @@ ${htmlSlides}
         kind: "span-table",
         severity: "warning",
         title: "合并单元格",
-        detail: `${spanTables.length} 个表格含 rowspan/colspan，PPTX 映射可能需要复核`,
+        detail: `${spanTables.length} 个表格含合并单元格，导出到 PPTX 后需要复核`,
         elementId: ensureDirectId(spanTables[0])
       });
     }
@@ -5619,6 +5627,8 @@ ${htmlSlides}
     const pptxMappingDiagnostics = collectPPTXMappingDiagnostics(doc, {
       tableCount: tables.length,
       svgCount,
+      tableElementId: tableTargetElementId,
+      svgElementId: svgTargetElementId,
       runtimeDiagnostics,
       pptxEffectDiagnostics,
       layoutDiagnostics
@@ -5648,13 +5658,18 @@ ${htmlSlides}
       pptxShapeObjectCount: pptxMappingDiagnostics.pptxShapeObjectCount,
       pptxReviewObjectCount: pptxMappingDiagnostics.pptxReviewObjectCount,
       pptxFallbackObjectCount: pptxMappingDiagnostics.pptxFallbackObjectCount,
+      pptxTextElementId: pptxMappingDiagnostics.pptxTextElementId,
+      pptxImageElementId: pptxMappingDiagnostics.pptxImageElementId,
+      pptxShapeElementId: pptxMappingDiagnostics.pptxShapeElementId,
+      pptxReviewElementId: pptxMappingDiagnostics.pptxReviewElementId,
+      pptxFallbackElementId: pptxMappingDiagnostics.pptxFallbackElementId,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
       overlapCount: layoutDiagnostics.overlapCount,
       resourceElementId: optionalDirectId(brokenImageNodes[0] || brokenMediaNodes[0] || images[0] || media[0] || null),
-      tableElementId: optionalDirectId(spanTables[0] || tables[0] || null),
-      svgElementId: optionalDirectId(svgNodes[0] || images.find((image) => (image.getAttribute("src") || "").startsWith("data:image/svg")) || null),
+      tableElementId: tableTargetElementId,
+      svgElementId: svgTargetElementId,
       textOverflowElementId: layoutDiagnostics.textOverflowElementId,
       outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
       overlapElementId: layoutDiagnostics.overlapElementId,
@@ -5851,6 +5866,9 @@ ${htmlSlides}
     let textCount = 0;
     let imageCount = 0;
     let shapeCount = 0;
+    let textElementId = null;
+    let imageElementId = null;
+    let shapeElementId = null;
 
     for (const node of nodes) {
       if (node.matches?.("script,style,meta,link,title,defs")) continue;
@@ -5858,16 +5876,19 @@ ${htmlSlides}
 
       if (node.matches?.("img")) {
         imageCount += 1;
+        if (!imageElementId) imageElementId = ensureDirectId(node);
         continue;
       }
 
       if (isPPTXTextObject(node)) {
         textCount += 1;
+        if (!textElementId) textElementId = ensureDirectId(node);
         continue;
       }
 
       if (isPPTXShapeObject(node)) {
         shapeCount += 1;
+        if (!shapeElementId) shapeElementId = ensureDirectId(node);
       }
     }
 
@@ -5884,14 +5905,34 @@ ${htmlSlides}
       + Number(runtime.shadowRootCount || 0)
       + Number(runtime.runtimeRootCount || 0)
     );
+    const reviewElementId = context.tableElementId
+      || context.svgElementId
+      || context.pptxEffectDiagnostics?.pptxEffectRiskElementId
+      || context.layoutDiagnostics?.overlapElementId
+      || null;
+    const fallbackElementId = fallbackCount > 0 ? firstPPTXFallbackElementId(doc) : null;
 
     return {
       pptxTextObjectCount: textCount,
       pptxImageObjectCount: imageCount,
       pptxShapeObjectCount: shapeCount,
       pptxReviewObjectCount: reviewCount,
-      pptxFallbackObjectCount: fallbackCount
+      pptxFallbackObjectCount: fallbackCount,
+      pptxTextElementId: textElementId,
+      pptxImageElementId: imageElementId,
+      pptxShapeElementId: shapeElementId,
+      pptxReviewElementId: reviewElementId,
+      pptxFallbackElementId: fallbackElementId
     };
+  }
+
+  function firstPPTXFallbackElementId(doc) {
+    const iframe = doc.querySelector("iframe");
+    const canvas = doc.querySelector("canvas");
+    const shadowHost = collectShadowRootHosts(doc)[0] || null;
+    const runtimeRoot = [...doc.querySelectorAll(DIRECT_RUNTIME_ROOT_SELECTOR)]
+      .find((node) => node !== doc.body && node !== doc.documentElement) || null;
+    return optionalDirectId(iframe || canvas || shadowHost || runtimeRoot);
   }
 
   function isPPTXTextObject(node) {
