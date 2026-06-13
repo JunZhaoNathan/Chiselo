@@ -60,6 +60,8 @@ Some HTML pages are script-rendered rather than plain static documents. Chiselo 
 
 Use `导出` > `导出预检` before final delivery. The preflight panel scores HTML readiness, PDF fidelity, and PPTX editability, then lists the issues that should be fixed before export or reviewed after PPTX export.
 
+Chiselo also shows an object-level visual diff against the file as it looked when opened. It tracks changed text, images, position, size, and key visual styles so you can review what actually changed before delivery.
+
 For PPTX, Chiselo also flags complex visual effects such as background images, radial or repeating gradients, filters, masks, clipping paths, blend modes, and 3D transforms. These effects can still look correct in HTML/PDF, but they need extra review when the goal is an editable PowerPoint file.
 
 ## Editable Version

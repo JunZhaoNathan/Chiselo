@@ -14,6 +14,7 @@ Chiselo is a native macOS app for high-fidelity refinement and delivery of exist
 - Adds a simpler style panel for precise finishing: color swatches, exact values, text alignment, border/radius controls, shadow presets, and image display modes.
 - Keeps shadow and image display choices through direct HTML edits, editable-version conversion, clean HTML export, and Chiselo project validation.
 - Adds PPTX effect-risk preflight for complex CSS visuals that often require export review, including background images, radial/repeating gradients, filters, masks, clipping paths, blend modes, and 3D transforms.
+- Adds object-level visual diff v1 against the originally opened HTML so changed text, images, geometry, and key styles can be reviewed before delivery.
 - Shows editability metadata for captured objects, including directly editable text, replaceable images, adjustable shapes, approximated pseudo-elements, and iframe/canvas whole-object fallbacks.
 - Uses consistent page/slide boundary detection for editable capture and export.
 - Detects runtime roots, scripts, embedded pages, canvas regions, shadow components, external runtime resources, and transparent selection blockers.

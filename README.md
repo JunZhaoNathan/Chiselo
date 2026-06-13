@@ -49,6 +49,7 @@ The preview build is ad-hoc signed and not notarized. If macOS blocks the first 
 - Replace images with embedded PNG/JPG/GIF/SVG/WebP data URLs.
 - Edit tables, including safer handling for `rowspan` and `colspan`.
 - Run a delivery check for broken resources, SVG usage, clean HTML export, text overflow, out-of-bounds elements, and overlaps.
+- Review object-level visual changes against the originally opened HTML before delivery.
 - Identify script-rendered HTML, embedded pages, canvas regions, external runtime resources, and transparent selection blockers before export.
 - Convert a live HTML rendering into a structured precision-editing tab.
 - Export clean standalone HTML, high-fidelity PDF, and best-effort editable PPTX.

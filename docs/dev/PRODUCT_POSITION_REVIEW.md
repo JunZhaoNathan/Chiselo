@@ -34,6 +34,7 @@ Strongly aligned:
 - Non-technical visual style controls for color, typography, alignment, borders, radius, shadows, and image display modes.
 - Delivery preflight for broken resources, overflow, out-of-bounds objects, overlap, clean HTML, PDF, and PPTX risks.
 - PPTX effect-risk detection for complex CSS visuals that need post-export review.
+- Object-level visual diff against the opened HTML for reviewing changed text, images, geometry, and key styles before delivery.
 - Safe backups and history restore.
 - `转为可编辑版` for converting the current rendering into stable editable objects.
 - Deterministic module grouping, module-group movement, and module-internal size/spacing cleanup.
@@ -44,7 +45,7 @@ Needs continued polishing:
 - More predictable resizing and layout preservation for responsive pages.
 - Broader spacing and style consistency controls across mixed modules and repeated cards.
 - Higher-fidelity editable PPTX mapping and clearer export risk previews.
-- Better before/after diff and visual review before overwriting files.
+- Pixel-level screenshot diff and richer before/after review before overwriting files.
 
 ## Language Guardrails
 

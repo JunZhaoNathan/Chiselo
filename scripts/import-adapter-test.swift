@@ -108,6 +108,7 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
           editor.command('tableAddColumnAfter');
           const afterAdd = editor.exportHTML();
           const afterAddDiagnostics = editor.getImportDiagnostics();
+          const afterAddIssueKinds = new Set((afterAddDiagnostics.issues || []).map(issue => issue.kind));
 
           editor.command('tableDeleteColumn');
           const afterDelete = editor.exportHTML();
@@ -141,6 +142,8 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             mergedColumnExpanded: afterAdd.includes('colspan="3"'),
             mergedColumnRestored: afterDelete.includes('colspan="2"'),
             diagnosticsRemainClean: afterAddDiagnostics.cleanExport === true,
+            visualDiffDetected: afterAddDiagnostics.visualChangeCount >= 1 && afterAddIssueKinds.has('visual-change'),
+            visualDiffTargetClickable: typeof afterAddDiagnostics.visualChangeElementId === 'string' && afterAddDiagnostics.visualChangeElementId.length > 0,
             cleanExport: !afterDelete.includes('data-chiselo'),
             pseudoElementFrozen: frozenJSON.includes('AUTO'),
             gradientFillFrozen: frozenJSON.includes('linear-gradient'),

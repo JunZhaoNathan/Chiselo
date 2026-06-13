@@ -16,7 +16,7 @@ The core idea:
 
 - Improve hover actions for images, text, tables, cards, and grouped objects.
 - Add group-internal alignment, equal spacing, and size matching for captured modules.
-- Add visual save preview and diff before overwriting original HTML.
+- Add pixel-level visual save preview and screenshot diff before overwriting original HTML.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
 
@@ -38,6 +38,7 @@ The core idea:
 - Module grouping and module-group movement for converted editable versions.
 - Non-technical style controls for typography, color, alignment, borders, radius, shadows, and image display modes.
 - PPTX effect-risk preflight for complex CSS visuals before export.
+- Object-level visual diff v1 against the opened HTML.
 
 ## Long Term
 

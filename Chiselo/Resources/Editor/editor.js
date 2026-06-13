@@ -51,6 +51,8 @@
   let pendingDirectHoverNode = null;
   let lastHTMLTreeSignature = "";
   let lastHTMLDiagnosticsSignature = "";
+  let directVisualBaseline = null;
+  let directVisualBaselineTimer = null;
   let htmlTreeTextCache = null;
   let selectionBridgeTimer = null;
   let selectionBoxFrame = 0;
@@ -530,7 +532,7 @@
     const parsed = JSON.parse(snapshot);
 
     if (parsed.mode === "html") {
-      await loadDirectHTML(parsed.html, parsed.baseHref || directBaseHref, { resetView: false, preserveDirty: true });
+      await loadDirectHTML(parsed.html, parsed.baseHref || directBaseHref, { resetView: false, preserveDirty: true, preserveBaseline: true });
     } else {
       deck = parsed.deck || parsed;
       editorMode = "deck";
@@ -2147,6 +2149,9 @@
     activeDirectTextEditNode = null;
     pendingDirectTextEditNode = null;
     if (!options.preserveDirty) clearDirty();
+    if (!options.preserveBaseline) {
+      directVisualBaseline = null;
+    }
     resetHistoryCoalescing();
     directSelectedNode = null;
     directSelectedNodes = [];
@@ -2166,8 +2171,70 @@
     await writeDirectFrameHTML(directFrame, withBaseElement(normalized.html, directBaseHref));
     setupDirectDocument();
     renderDirectHTML({ preserveScale: options.resetView === false });
+    if (!options.preserveBaseline) {
+      scheduleDirectVisualBaselineCapture();
+    }
     postHTMLTreeChanged();
     postSelectionChanged();
+  }
+
+  function scheduleDirectVisualBaselineCapture(delay = 250) {
+    if (directVisualBaselineTimer) clearTimeout(directVisualBaselineTimer);
+    directVisualBaselineTimer = setTimeout(() => {
+      directVisualBaselineTimer = null;
+      const doc = directFrame?.contentDocument;
+      if (editorMode !== "html" || !doc?.body) return;
+      directVisualBaseline = captureDirectVisualSnapshot(doc);
+      scheduleHTMLDiagnosticsChanged();
+    }, delay);
+  }
+
+  function captureDirectVisualSnapshot(doc) {
+    const entries = new Map();
+    for (const node of diagnosticLayoutNodes(doc)) {
+      const key = directVisualSnapshotKey(node);
+      if (!key || entries.has(key)) continue;
+      entries.set(key, directVisualSnapshotEntry(node));
+    }
+    return {
+      capturedAt: Date.now(),
+      entries
+    };
+  }
+
+  function directVisualSnapshotKey(node) {
+    return directNodePath(node);
+  }
+
+  function directVisualSnapshotEntry(node) {
+    const style = node.ownerDocument.defaultView.getComputedStyle(node);
+    const rect = directNodeRect(node);
+    const image = node.matches?.("img") ? node : null;
+    return {
+      elementId: optionalDirectId(node),
+      label: diagnosticNodeLabel(node),
+      text: normalizedText(node).slice(0, 180),
+      imageSource: image ? (image.currentSrc || image.getAttribute("src") || "") : "",
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        w: Math.round(rect.w),
+        h: Math.round(rect.h)
+      },
+      style: {
+        color: style.color || "",
+        background: cssBackground(style),
+        borderColor: firstBorderColor(style),
+        borderWidth: Math.round(firstBorderWidth(style) * 10) / 10,
+        radius: Math.round((parseFloat(style.borderTopLeftRadius) || 0) * 10) / 10,
+        fontSize: Math.round((parseFloat(style.fontSize) || 0) * 10) / 10,
+        fontWeight: `${fontWeightNumber(style.fontWeight)}`,
+        textAlign: textAlignValue(style.textAlign),
+        objectFit: image ? objectFitValue(style.objectFit, "fill") : "",
+        opacity: Math.round((parseFloat(style.opacity) || 1) * 100) / 100,
+        shadow: shadowValue(style.boxShadow)
+      }
+    };
   }
 
   function normalizeDirectHTMLSource(input) {
@@ -3735,6 +3802,7 @@
       node.removeEventListener("blur", finish);
       node.removeEventListener("keydown", handleEditingKeydown);
       scheduleHTMLTreeChanged();
+      scheduleHTMLDiagnosticsChanged();
       postSelectionChanged();
     };
 
@@ -3785,6 +3853,7 @@
     applyDirectStyle(directSelectedNode, nextElement.style || {});
     applyDirectImageMetadata(directSelectedNode, nextElement);
     updateSelectionBox();
+    scheduleHTMLDiagnosticsChanged();
     postSelectionChanged();
   }
 
@@ -3809,6 +3878,7 @@
     }
 
     updateSelectionBox();
+    scheduleHTMLDiagnosticsChanged();
     postSelectionChanged();
   }
 
@@ -5468,6 +5538,7 @@ ${htmlSlides}
         overlayBlockerCount: 0,
         runtimeRiskCount: 0,
         pptxEffectRiskCount: 0,
+        visualChangeCount: 0,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -5480,6 +5551,7 @@ ${htmlSlides}
         overlapElementId: null,
         runtimeRiskElementId: null,
         pptxEffectRiskElementId: null,
+        visualChangeElementId: null,
         issues: []
       };
     }
@@ -5536,6 +5608,7 @@ ${htmlSlides}
     }
 
     const pptxEffectDiagnostics = collectPPTXEffectDiagnostics(doc, issues);
+    const visualDiffDiagnostics = collectVisualDiffDiagnostics(doc, issues);
     const layoutDiagnostics = collectLayoutDiagnostics(doc, issues);
     return {
       mode: editorMode,
@@ -5556,6 +5629,7 @@ ${htmlSlides}
       overlayBlockerCount: runtimeDiagnostics.overlayBlockerCount,
       runtimeRiskCount: runtimeDiagnostics.runtimeRiskCount,
       pptxEffectRiskCount: pptxEffectDiagnostics.pptxEffectRiskCount,
+      visualChangeCount: visualDiffDiagnostics.visualChangeCount,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
@@ -5568,6 +5642,7 @@ ${htmlSlides}
       overlapElementId: layoutDiagnostics.overlapElementId,
       runtimeRiskElementId: runtimeDiagnostics.runtimeRiskElementId,
       pptxEffectRiskElementId: pptxEffectDiagnostics.pptxEffectRiskElementId,
+      visualChangeElementId: visualDiffDiagnostics.visualChangeElementId,
       issues
     };
   }
@@ -5711,6 +5786,62 @@ ${htmlSlides}
         const rect = node.getBoundingClientRect();
         return rect.width >= 4 && rect.height >= 4;
       }).length;
+  }
+
+  function collectVisualDiffDiagnostics(doc, issues) {
+    if (!directVisualBaseline?.entries) {
+      return { visualChangeCount: 0, visualChangeElementId: null };
+    }
+
+    const current = captureDirectVisualSnapshot(doc);
+    const changedKinds = new Set();
+    let count = 0;
+    let firstElementId = null;
+
+    for (const [key, currentEntry] of current.entries) {
+      const baselineEntry = directVisualBaseline.entries.get(key);
+      const changeKind = baselineEntry ? visualEntryChangeKind(baselineEntry, currentEntry) : "新增对象";
+      if (!changeKind) continue;
+
+      count += 1;
+      changedKinds.add(changeKind);
+      if (!firstElementId) firstElementId = currentEntry.elementId;
+    }
+
+    for (const key of directVisualBaseline.entries.keys()) {
+      if (current.entries.has(key)) continue;
+      count += 1;
+      changedKinds.add("删除对象");
+    }
+
+    if (count > 0) {
+      const detail = [...changedKinds].slice(0, 4).join("、");
+      addDiagnosticIssue(issues, {
+        kind: "visual-change",
+        severity: "warning",
+        title: "视觉变更",
+        detail: `${count} 个对象相对打开时发生变化：${detail}`,
+        elementId: firstElementId
+      });
+    }
+
+    return { visualChangeCount: count, visualChangeElementId: firstElementId };
+  }
+
+  function visualEntryChangeKind(before, after) {
+    if (rectDiffers(before.rect, after.rect)) return "位置/尺寸";
+    if (before.text !== after.text) return "文字";
+    if (before.imageSource !== after.imageSource) return "图片";
+    if (JSON.stringify(before.style) !== JSON.stringify(after.style)) return "样式";
+    return null;
+  }
+
+  function rectDiffers(before, after) {
+    if (!before || !after) return true;
+    return Math.abs(before.x - after.x) > 2
+      || Math.abs(before.y - after.y) > 2
+      || Math.abs(before.w - after.w) > 2
+      || Math.abs(before.h - after.h) > 2;
   }
 
   function collectPPTXEffectDiagnostics(doc, issues) {

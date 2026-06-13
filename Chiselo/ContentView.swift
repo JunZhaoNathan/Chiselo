@@ -744,6 +744,7 @@ private struct ExportPreflightPanel: View {
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundStyle(MaterialTheme.ink)
 
+                PreflightNoteRow(icon: "rectangle.2.swap", title: "视觉变更", detail: (diagnostics.visualChangeCount ?? 0) > 0 ? "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时发生变化，导出前建议逐项复核。" : "当前画面与打开时未检测到明显对象级变化。")
                 PreflightNoteRow(icon: "tablecells", title: "表格", detail: diagnostics.spanTableCount > 0 ? "合并单元格会降低 PPTX 对象映射稳定性。" : "普通表格仍建议导出后抽查行列和文字框。")
                 PreflightNoteRow(icon: "scribble.variable", title: "矢量/SVG", detail: diagnostics.svgCount > 0 ? "SVG 或复杂矢量可能会转成形状或图片，需要复核可编辑程度。" : "未检测到明显 SVG 风险。")
                 PreflightNoteRow(icon: "camera.filters", title: "视觉效果", detail: (diagnostics.pptxEffectRiskCount ?? 0) > 0 ? "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂 CSS 效果导出 PPTX 后需要复核。" : "未检测到明显复杂 CSS 效果风险。")
@@ -915,6 +916,10 @@ private struct PreflightRecommendationCard: View {
             items.append(("rectangle.on.rectangle.angled", "PPTX 属于可编辑映射，表格、SVG、复杂视觉效果、重叠对象和合并单元格导出后需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         } else {
             items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", Color(red: 0.06, green: 0.52, blue: 0.26)))
+        }
+
+        if (diagnostics.visualChangeCount ?? 0) > 0 {
+            items.append(("rectangle.2.swap", "已检测到相对打开时的对象级视觉变化，导出前建议逐项确认改动范围是否符合预期。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         }
 
         if diagnostics.runtimeCompatibilityRiskCount > 0 {
@@ -1162,12 +1167,16 @@ private extension HTMLDiagnostics {
         if pptxReviewRiskCount > 0 {
             return "\(pptxReviewRiskCount) 项导出后需复核"
         }
+        if (visualChangeCount ?? 0) > 0 {
+            return "\(visualChangeCount ?? 0) 处视觉变更待复核"
+        }
         return "HTML、PDF、PPTX 可进入导出复核"
     }
 
     var preflightIcon: String {
         if blockingExportRiskCount > 0 { return "exclamationmark.triangle.fill" }
         if pptxReviewRiskCount > 0 { return "checklist" }
+        if (visualChangeCount ?? 0) > 0 { return "rectangle.2.swap" }
         return "checkmark.seal.fill"
     }
 
@@ -1716,6 +1725,20 @@ private struct HTMLDeliveryCheckCard: View {
                     isClickable: false
                 )
 
+                if (diagnostics.visualChangeCount ?? 0) > 0 {
+                    DeliveryCheckRow(
+                        icon: "rectangle.2.swap",
+                        title: "视觉变更",
+                        detail: "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时变化",
+                        color: warningColor,
+                        isClickable: diagnostics.visualChangeElementId != nil
+                    ) {
+                        if let elementId = diagnostics.visualChangeElementId {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
+                }
+
                 if diagnostics.runtimeCompatibilityRiskCount > 0 {
                     DeliveryCheckRow(
                         icon: "wand.and.rays",
@@ -1992,6 +2015,8 @@ private struct DeliveryIssueRow: View {
             return "tablecells.badge.ellipsis"
         case "pptx-effect-risk":
             return "camera.filters"
+        case "visual-change":
+            return "rectangle.2.swap"
         case "runtime-rendered", "external-runtime-resource":
             return "wand.and.rays"
         case "iframe-content":
