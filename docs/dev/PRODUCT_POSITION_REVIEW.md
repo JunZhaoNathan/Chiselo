@@ -33,6 +33,7 @@ Strongly aligned:
 - Geometry controls, page/canvas boundaries, guides, snapping, and nudging.
 - Non-technical visual style controls for color, typography, alignment, borders, radius, shadows, and image display modes.
 - Delivery preflight for broken resources, overflow, out-of-bounds objects, overlap, clean HTML, PDF, and PPTX risks.
+- PPTX effect-risk detection for complex CSS visuals that need post-export review.
 - Safe backups and history restore.
 - `转为可编辑版` for converting the current rendering into stable editable objects.
 - Deterministic module grouping, module-group movement, and module-internal size/spacing cleanup.

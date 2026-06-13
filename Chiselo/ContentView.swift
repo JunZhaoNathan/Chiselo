@@ -746,6 +746,7 @@ private struct ExportPreflightPanel: View {
 
                 PreflightNoteRow(icon: "tablecells", title: "表格", detail: diagnostics.spanTableCount > 0 ? "合并单元格会降低 PPTX 对象映射稳定性。" : "普通表格仍建议导出后抽查行列和文字框。")
                 PreflightNoteRow(icon: "scribble.variable", title: "矢量/SVG", detail: diagnostics.svgCount > 0 ? "SVG 或复杂矢量可能会转成形状或图片，需要复核可编辑程度。" : "未检测到明显 SVG 风险。")
+                PreflightNoteRow(icon: "camera.filters", title: "视觉效果", detail: (diagnostics.pptxEffectRiskCount ?? 0) > 0 ? "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂 CSS 效果导出 PPTX 后需要复核。" : "未检测到明显复杂 CSS 效果风险。")
                 PreflightNoteRow(icon: "square.stack.3d.up", title: "层叠", detail: (diagnostics.overlapCount ?? 0) > 0 ? "重叠对象导出 PPTX 后要检查层级顺序。" : "未检测到明显重叠风险。")
             }
         }
@@ -911,7 +912,7 @@ private struct PreflightRecommendationCard: View {
         }
 
         if diagnostics.pptxReviewRiskCount > 0 {
-            items.append(("rectangle.on.rectangle.angled", "PPTX 属于可编辑映射，表格、SVG、重叠对象和合并单元格导出后需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("rectangle.on.rectangle.angled", "PPTX 属于可编辑映射，表格、SVG、复杂视觉效果、重叠对象和合并单元格导出后需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
         } else {
             items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", Color(red: 0.06, green: 0.52, blue: 0.26)))
         }
@@ -1186,6 +1187,7 @@ private extension HTMLDiagnostics {
         if tableCount > 0 { count += 1 }
         if spanTableCount > 0 { count += 1 }
         if svgCount > 0 { count += 1 }
+        if (pptxEffectRiskCount ?? 0) > 0 { count += 1 }
         if (overlapCount ?? 0) > 0 { count += 1 }
         if runtimeCompatibilityRiskCount > 0 { count += 1 }
         return count
@@ -1256,6 +1258,7 @@ private extension HTMLDiagnostics {
             - min(16, tableCount * 4)
             - (spanTableCount > 0 ? 18 : 0)
             - min(20, svgCount * 6)
+            - min(22, (pptxEffectRiskCount ?? 0) * 4)
             - min(28, runtimeCompatibilityRiskCount * 4)
         )
     }
@@ -1269,9 +1272,9 @@ private extension HTMLDiagnostics {
             return "PPTX 可编辑性较好，导出后抽查文本框和图片即可。"
         }
         if pptxEditabilityScore >= 65 {
-            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、动态组件和层级。"
+            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、复杂效果、动态组件和层级。"
         }
-        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核脚本渲染、嵌入页面和复杂对象。"
+        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核复杂效果、脚本渲染、嵌入页面和整体对象。"
     }
 
     private func boundedScore(_ value: Int) -> Int {
@@ -1987,6 +1990,8 @@ private struct DeliveryIssueRow: View {
             return "square.stack.3d.up"
         case "span-table":
             return "tablecells.badge.ellipsis"
+        case "pptx-effect-risk":
+            return "camera.filters"
         case "runtime-rendered", "external-runtime-resource":
             return "wand.and.rays"
         case "iframe-content":

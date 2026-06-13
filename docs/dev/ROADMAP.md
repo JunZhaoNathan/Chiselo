@@ -37,6 +37,7 @@ The core idea:
 - Deterministic Layout IR conversion for stable precision editing.
 - Module grouping and module-group movement for converted editable versions.
 - Non-technical style controls for typography, color, alignment, borders, radius, shadows, and image display modes.
+- PPTX effect-risk preflight for complex CSS visuals before export.
 
 ## Long Term
 

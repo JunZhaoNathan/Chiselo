@@ -60,6 +60,8 @@ Some HTML pages are script-rendered rather than plain static documents. Chiselo 
 
 Use `导出` > `导出预检` before final delivery. The preflight panel scores HTML readiness, PDF fidelity, and PPTX editability, then lists the issues that should be fixed before export or reviewed after PPTX export.
 
+For PPTX, Chiselo also flags complex visual effects such as background images, radial or repeating gradients, filters, masks, clipping paths, blend modes, and 3D transforms. These effects can still look correct in HTML/PDF, but they need extra review when the goal is an editable PowerPoint file.
+
 ## Editable Version
 
 `转为可编辑版` converts the current rendered HTML into a fixed-canvas Chiselo tab backed by a deterministic Layout IR. Text becomes editable text objects, images become replaceable image objects, and computed visual boxes become adjustable shapes. Embedded pages, canvas regions, and other content that cannot be safely decomposed are kept as whole-object fallbacks with clear editability notes.

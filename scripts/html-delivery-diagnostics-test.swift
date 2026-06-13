@@ -93,7 +93,8 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
             (bridgeInt(diagnostics["textOverflowCount"]) ?? 0) >= 1 &&
             (bridgeInt(diagnostics["outOfBoundsCount"]) ?? 0) >= 1 &&
             (bridgeInt(diagnostics["overlapCount"]) ?? 0) >= 1 &&
-            issueKinds.isSuperset(of: ["broken-image", "text-overflow", "out-of-bounds", "overlap"]) &&
+            (bridgeInt(diagnostics["pptxEffectRiskCount"]) ?? 0) >= 1 &&
+            issueKinds.isSuperset(of: ["broken-image", "text-overflow", "out-of-bounds", "overlap", "pptx-effect-risk"]) &&
             hasElementTarget
     }
 
@@ -140,6 +141,7 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
         .overlap-a, .overlap-b { position: absolute; left: 300px; top: 300px; width: 190px; height: 72px; padding: 12px; color: white; box-sizing: border-box; }
         .overlap-a { background: #0f766e; }
         .overlap-b { left: 336px; top: 318px; background: #7c3aed; }
+        .pptx-effect-risk { position: absolute; left: 650px; top: 96px; width: 150px; height: 72px; background: radial-gradient(circle, #60a5fa, #1e3a8a); filter: saturate(1.4); clip-path: polygon(0 0, 100% 12%, 92% 100%, 8% 88%); color: white; padding: 14px; box-sizing: border-box; }
       </style>
     </head>
     <body>
@@ -154,6 +156,7 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
         </table>
         <div class="overlap-a">Overlap block A</div>
         <div class="overlap-b">Overlap block B</div>
+        <div class="pptx-effect-risk">Complex CSS effect</div>
         <div class="out-of-bounds">Outside page</div>
       </main>
     </body>

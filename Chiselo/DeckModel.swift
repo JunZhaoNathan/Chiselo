@@ -124,6 +124,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var externalResourceCount: Int?
     var overlayBlockerCount: Int?
     var runtimeRiskCount: Int?
+    var pptxEffectRiskCount: Int?
     var cleanExport: Bool
     var textOverflowCount: Int?
     var outOfBoundsCount: Int?
@@ -135,6 +136,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var outOfBoundsElementId: String?
     var overlapElementId: String?
     var runtimeRiskElementId: String?
+    var pptxEffectRiskElementId: String?
     var issues: [HTMLDiagnosticIssue]?
 
     static let empty = HTMLDiagnostics(
@@ -155,6 +157,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         externalResourceCount: 0,
         overlayBlockerCount: 0,
         runtimeRiskCount: 0,
+        pptxEffectRiskCount: 0,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -166,6 +169,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         outOfBoundsElementId: nil,
         overlapElementId: nil,
         runtimeRiskElementId: nil,
+        pptxEffectRiskElementId: nil,
         issues: []
     )
 
@@ -186,6 +190,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         if svgCount > 0 { count += 1 }
         if tableCount > 0 { count += 1 }
         if (runtimeRiskCount ?? 0) > 0 { count += 1 }
+        if (pptxEffectRiskCount ?? 0) > 0 { count += 1 }
         return count
     }
 }

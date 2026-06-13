@@ -5467,6 +5467,7 @@ ${htmlSlides}
         externalResourceCount: 0,
         overlayBlockerCount: 0,
         runtimeRiskCount: 0,
+        pptxEffectRiskCount: 0,
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -5478,6 +5479,7 @@ ${htmlSlides}
         outOfBoundsElementId: null,
         overlapElementId: null,
         runtimeRiskElementId: null,
+        pptxEffectRiskElementId: null,
         issues: []
       };
     }
@@ -5533,6 +5535,7 @@ ${htmlSlides}
       });
     }
 
+    const pptxEffectDiagnostics = collectPPTXEffectDiagnostics(doc, issues);
     const layoutDiagnostics = collectLayoutDiagnostics(doc, issues);
     return {
       mode: editorMode,
@@ -5552,6 +5555,7 @@ ${htmlSlides}
       externalResourceCount: runtimeDiagnostics.externalResourceCount,
       overlayBlockerCount: runtimeDiagnostics.overlayBlockerCount,
       runtimeRiskCount: runtimeDiagnostics.runtimeRiskCount,
+      pptxEffectRiskCount: pptxEffectDiagnostics.pptxEffectRiskCount,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
@@ -5563,6 +5567,7 @@ ${htmlSlides}
       outOfBoundsElementId: layoutDiagnostics.outOfBoundsElementId,
       overlapElementId: layoutDiagnostics.overlapElementId,
       runtimeRiskElementId: runtimeDiagnostics.runtimeRiskElementId,
+      pptxEffectRiskElementId: pptxEffectDiagnostics.pptxEffectRiskElementId,
       issues
     };
   }
@@ -5706,6 +5711,59 @@ ${htmlSlides}
         const rect = node.getBoundingClientRect();
         return rect.width >= 4 && rect.height >= 4;
       }).length;
+  }
+
+  function collectPPTXEffectDiagnostics(doc, issues) {
+    const nodes = diagnosticLayoutNodes(doc).slice(0, MAX_HTML_DIAGNOSTIC_NODES);
+    const reasons = new Set();
+    let count = 0;
+    let firstElementId = null;
+
+    for (const node of nodes) {
+      const style = node.ownerDocument.defaultView.getComputedStyle(node);
+      const reason = pptxEffectRiskReason(style);
+      if (!reason) continue;
+
+      count += 1;
+      reasons.add(reason);
+      const elementId = ensureDirectId(node);
+      if (!firstElementId) firstElementId = elementId;
+    }
+
+    if (count > 0) {
+      const reasonList = [...reasons].slice(0, 4).join("、");
+      addDiagnosticIssue(issues, {
+        kind: "pptx-effect-risk",
+        severity: "warning",
+        title: "PPTX 效果复核",
+        detail: `${count} 个对象含${reasonList}，导出 PPTX 后需复核高保真和可编辑程度`,
+        elementId: firstElementId
+      });
+    }
+
+    return { pptxEffectRiskCount: count, pptxEffectRiskElementId: firstElementId };
+  }
+
+  function pptxEffectRiskReason(style) {
+    if (!style) return null;
+    const backgroundImage = String(style.backgroundImage || "").toLowerCase();
+    if (backgroundImage && backgroundImage !== "none") {
+      if (backgroundImage.includes("url(")) return "背景图片";
+      if (/(radial|conic|repeating)-gradient\(/.test(backgroundImage)) return "复杂渐变";
+    }
+
+    if (hasNonNoneStyleValue(style.filter)) return "滤镜";
+    if (hasNonNoneStyleValue(style.backdropFilter) || hasNonNoneStyleValue(style.webkitBackdropFilter)) return "背景滤镜";
+    if (hasNonNoneStyleValue(style.clipPath)) return "裁切路径";
+    if (hasNonNoneStyleValue(style.maskImage) || hasNonNoneStyleValue(style.webkitMaskImage)) return "蒙版";
+    if (style.mixBlendMode && style.mixBlendMode !== "normal") return "混合模式";
+    if (style.transform && style.transform.toLowerCase().startsWith("matrix3d(")) return "3D 变换";
+    return null;
+  }
+
+  function hasNonNoneStyleValue(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return normalized && normalized !== "none";
   }
 
   function collectLayoutDiagnostics(doc, issues) {
