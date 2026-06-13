@@ -61,6 +61,7 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
           await new Promise(resolve => setTimeout(resolve, 350));
           const before = editor.getImportDiagnostics();
           const selectedPPTXReviewTarget = editor.selectHTMLById(before.pptxReviewElementId || '');
+          const selectedSecondPPTXReviewTarget = editor.selectHTMLById(before.pptxReviewElementIds?.[1] || before.pptxReviewElementId || '');
           editor.setBackdropStyle('grid');
           const gridBackdropApplied = document.documentElement.dataset.backdrop === 'grid';
           editor.setBackdropStyle('dots');
@@ -141,7 +142,9 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             stylePanelImageFitExported: /object-fit:\\s*contain/i.test(imageStyledExport),
             pptxMappingCountsDetected: before.pptxTextObjectCount >= 1 && before.pptxImageObjectCount === 1 && before.pptxReviewObjectCount >= 1,
             pptxMappingTargetsDetected: [before.pptxTextElementId, before.pptxImageElementId, before.pptxReviewElementId].every(value => typeof value === 'string' && value.length > 0),
+            pptxMappingTargetListsDetected: Array.isArray(before.pptxReviewElementIds) && before.pptxReviewElementIds.length >= 2 && Array.isArray(before.pptxTextElementIds) && before.pptxTextElementIds.length >= 1,
             pptxMappingReviewTargetSelectable: Boolean(selectedPPTXReviewTarget && selectedPPTXReviewTarget.id === before.pptxReviewElementId),
+            pptxMappingSecondReviewTargetSelectable: Boolean(selectedSecondPPTXReviewTarget && before.pptxReviewElementIds.includes(selectedSecondPPTXReviewTarget.id)),
             spanTableDetected: before.spanTableCount === 1,
             mergedColumnExpanded: afterAdd.includes('colspan="3"'),
             mergedColumnRestored: afterDelete.includes('colspan="2"'),
@@ -158,7 +161,7 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             minimalDiagnosticsNoResourceTarget: minimalDiagnostics.imageCount === 0 && minimalDiagnostics.mediaCount === 0 && minimalDiagnostics.resourceElementId === null,
             minimalDiagnosticsNoTableTarget: minimalDiagnostics.tableCount === 0 && minimalDiagnostics.tableElementId === null,
             minimalDiagnosticsNoSvgTarget: minimalDiagnostics.svgCount === 0 && minimalDiagnostics.svgElementId === null,
-            minimalDiagnosticsOnlyTextPPTXTarget: minimalDiagnostics.pptxTextElementId !== null && minimalDiagnostics.pptxImageElementId === null && minimalDiagnostics.pptxReviewElementId === null && minimalDiagnostics.pptxFallbackElementId === null
+            minimalDiagnosticsOnlyTextPPTXTarget: minimalDiagnostics.pptxTextElementId !== null && minimalDiagnostics.pptxImageElementId === null && minimalDiagnostics.pptxReviewElementId === null && minimalDiagnostics.pptxFallbackElementId === null && Array.isArray(minimalDiagnostics.pptxTextElementIds) && minimalDiagnostics.pptxTextElementIds.length >= 1
           };
 
           const failed = Object.entries(assertions).filter(([, value]) => !value);

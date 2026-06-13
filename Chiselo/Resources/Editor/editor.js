@@ -5549,6 +5549,11 @@ ${htmlSlides}
         pptxShapeElementId: null,
         pptxReviewElementId: null,
         pptxFallbackElementId: null,
+        pptxTextElementIds: [],
+        pptxImageElementIds: [],
+        pptxShapeElementIds: [],
+        pptxReviewElementIds: [],
+        pptxFallbackElementIds: [],
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
@@ -5663,6 +5668,11 @@ ${htmlSlides}
       pptxShapeElementId: pptxMappingDiagnostics.pptxShapeElementId,
       pptxReviewElementId: pptxMappingDiagnostics.pptxReviewElementId,
       pptxFallbackElementId: pptxMappingDiagnostics.pptxFallbackElementId,
+      pptxTextElementIds: pptxMappingDiagnostics.pptxTextElementIds,
+      pptxImageElementIds: pptxMappingDiagnostics.pptxImageElementIds,
+      pptxShapeElementIds: pptxMappingDiagnostics.pptxShapeElementIds,
+      pptxReviewElementIds: pptxMappingDiagnostics.pptxReviewElementIds,
+      pptxFallbackElementIds: pptxMappingDiagnostics.pptxFallbackElementIds,
       cleanExport,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
@@ -5869,6 +5879,9 @@ ${htmlSlides}
     let textElementId = null;
     let imageElementId = null;
     let shapeElementId = null;
+    const textElementIds = [];
+    const imageElementIds = [];
+    const shapeElementIds = [];
 
     for (const node of nodes) {
       if (node.matches?.("script,style,meta,link,title,defs")) continue;
@@ -5876,19 +5889,25 @@ ${htmlSlides}
 
       if (node.matches?.("img")) {
         imageCount += 1;
-        if (!imageElementId) imageElementId = ensureDirectId(node);
+        const elementId = ensureDirectId(node);
+        if (!imageElementId) imageElementId = elementId;
+        imageElementIds.push(elementId);
         continue;
       }
 
       if (isPPTXTextObject(node)) {
         textCount += 1;
-        if (!textElementId) textElementId = ensureDirectId(node);
+        const elementId = ensureDirectId(node);
+        if (!textElementId) textElementId = elementId;
+        textElementIds.push(elementId);
         continue;
       }
 
       if (isPPTXShapeObject(node)) {
         shapeCount += 1;
-        if (!shapeElementId) shapeElementId = ensureDirectId(node);
+        const elementId = ensureDirectId(node);
+        if (!shapeElementId) shapeElementId = elementId;
+        shapeElementIds.push(elementId);
       }
     }
 
@@ -5905,12 +5924,10 @@ ${htmlSlides}
       + Number(runtime.shadowRootCount || 0)
       + Number(runtime.runtimeRootCount || 0)
     );
-    const reviewElementId = context.tableElementId
-      || context.svgElementId
-      || context.pptxEffectDiagnostics?.pptxEffectRiskElementId
-      || context.layoutDiagnostics?.overlapElementId
-      || null;
-    const fallbackElementId = fallbackCount > 0 ? firstPPTXFallbackElementId(doc) : null;
+    const reviewElementIds = pptxReviewElementIds(doc, context);
+    const fallbackElementIds = fallbackCount > 0 ? pptxFallbackElementIds(doc) : [];
+    const reviewElementId = reviewElementIds[0] || null;
+    const fallbackElementId = fallbackElementIds[0] || null;
 
     return {
       pptxTextObjectCount: textCount,
@@ -5922,17 +5939,43 @@ ${htmlSlides}
       pptxImageElementId: imageElementId,
       pptxShapeElementId: shapeElementId,
       pptxReviewElementId: reviewElementId,
-      pptxFallbackElementId: fallbackElementId
+      pptxFallbackElementId: fallbackElementId,
+      pptxTextElementIds: uniqueIds(textElementIds),
+      pptxImageElementIds: uniqueIds(imageElementIds),
+      pptxShapeElementIds: uniqueIds(shapeElementIds),
+      pptxReviewElementIds: reviewElementIds,
+      pptxFallbackElementIds: fallbackElementIds
     };
   }
 
-  function firstPPTXFallbackElementId(doc) {
-    const iframe = doc.querySelector("iframe");
-    const canvas = doc.querySelector("canvas");
-    const shadowHost = collectShadowRootHosts(doc)[0] || null;
-    const runtimeRoot = [...doc.querySelectorAll(DIRECT_RUNTIME_ROOT_SELECTOR)]
-      .find((node) => node !== doc.body && node !== doc.documentElement) || null;
-    return optionalDirectId(iframe || canvas || shadowHost || runtimeRoot);
+  function pptxReviewElementIds(doc, context) {
+    const tables = [...doc.querySelectorAll("table")].map(ensureDirectId);
+    const svgNodes = [...doc.querySelectorAll("svg")].map(ensureDirectId);
+    const svgImages = [...doc.querySelectorAll("img")]
+      .filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg"))
+      .map(ensureDirectId);
+    return uniqueIds([
+      ...tables,
+      ...svgNodes,
+      ...svgImages,
+      ...(context.pptxEffectDiagnostics?.pptxEffectRiskElementIds || []),
+      ...(context.layoutDiagnostics?.overlapElementIds || [])
+    ]);
+  }
+
+  function pptxFallbackElementIds(doc) {
+    const runtimeRoots = [...doc.querySelectorAll(DIRECT_RUNTIME_ROOT_SELECTOR)]
+      .filter((node) => node !== doc.body && node !== doc.documentElement);
+    return uniqueIds([
+      ...[...doc.querySelectorAll("iframe")].map(ensureDirectId),
+      ...[...doc.querySelectorAll("canvas")].map(ensureDirectId),
+      ...collectShadowRootHosts(doc).map(ensureDirectId),
+      ...runtimeRoots.map(ensureDirectId)
+    ]);
+  }
+
+  function uniqueIds(ids) {
+    return [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
   }
 
   function isPPTXTextObject(node) {
@@ -5976,6 +6019,7 @@ ${htmlSlides}
     const reasons = new Set();
     let count = 0;
     let firstElementId = null;
+    const elementIds = [];
 
     for (const node of nodes) {
       const style = node.ownerDocument.defaultView.getComputedStyle(node);
@@ -5986,6 +6030,7 @@ ${htmlSlides}
       reasons.add(reason);
       const elementId = ensureDirectId(node);
       if (!firstElementId) firstElementId = elementId;
+      elementIds.push(elementId);
     }
 
     if (count > 0) {
@@ -5999,7 +6044,7 @@ ${htmlSlides}
       });
     }
 
-    return { pptxEffectRiskCount: count, pptxEffectRiskElementId: firstElementId };
+    return { pptxEffectRiskCount: count, pptxEffectRiskElementId: firstElementId, pptxEffectRiskElementIds: uniqueIds(elementIds) };
   }
 
   function pptxEffectRiskReason(style) {
@@ -6090,6 +6135,7 @@ ${htmlSlides}
       .slice(0, 90);
     let count = 0;
     let firstElementId = null;
+    const elementIds = [];
     const reported = new Set();
 
     for (let index = 0; index < nodes.length; index += 1) {
@@ -6111,6 +6157,7 @@ ${htmlSlides}
         count += 1;
         const elementId = first.dataset.chiseloId || ensureDirectId(first);
         if (!firstElementId) firstElementId = elementId;
+        elementIds.push(elementId);
         const key = `${ensureDirectId(first)}:${ensureDirectId(second)}`;
         if (reported.has(key)) continue;
         reported.add(key);
@@ -6124,7 +6171,7 @@ ${htmlSlides}
       }
     }
 
-    return { overlapCount: count, overlapElementId: firstElementId };
+    return { overlapCount: count, overlapElementId: firstElementId, overlapElementIds: uniqueIds(elementIds) };
   }
 
   function addDiagnosticIssue(issues, issue) {

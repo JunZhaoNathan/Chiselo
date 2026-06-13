@@ -62,7 +62,7 @@ Use `导出` > `导出预检` before final delivery. The preflight panel scores 
 
 Chiselo also shows an object-level visual diff against the file as it looked when opened. It tracks changed text, images, position, size, and key visual styles so you can review what actually changed before delivery.
 
-For PPTX, the preflight panel shows a `PPTX 可编辑对象` report. It estimates how many visible objects can remain as editable text, images, and simple shapes, and separates objects that need manual review or may have to stay as whole-object fallbacks. Click a non-zero count to jump to the first matching object before export.
+For PPTX, the preflight panel shows a `PPTX 可编辑对象` report. It estimates how many visible objects can remain as editable text, images, and simple shapes, and separates objects that need manual review or may have to stay as whole-object fallbacks. Click a non-zero count to jump to the first matching object before export, then use `上一处` / `下一处` in `逐项定位` to review matching objects one by one.
 
 For PPTX, Chiselo also flags complex visual effects such as background images, radial or repeating gradients, filters, masks, clipping paths, blend modes, and 3D transforms. These effects can still look correct in HTML/PDF, but they need extra review when the goal is an editable PowerPoint file.
 

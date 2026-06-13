@@ -136,6 +136,11 @@ struct HTMLDiagnostics: Codable, Equatable {
     var pptxShapeElementId: String?
     var pptxReviewElementId: String?
     var pptxFallbackElementId: String?
+    var pptxTextElementIds: [String]?
+    var pptxImageElementIds: [String]?
+    var pptxShapeElementIds: [String]?
+    var pptxReviewElementIds: [String]?
+    var pptxFallbackElementIds: [String]?
     var cleanExport: Bool
     var textOverflowCount: Int?
     var outOfBoundsCount: Int?
@@ -181,6 +186,11 @@ struct HTMLDiagnostics: Codable, Equatable {
         pptxShapeElementId: nil,
         pptxReviewElementId: nil,
         pptxFallbackElementId: nil,
+        pptxTextElementIds: [],
+        pptxImageElementIds: [],
+        pptxShapeElementIds: [],
+        pptxReviewElementIds: [],
+        pptxFallbackElementIds: [],
         cleanExport: true,
         textOverflowCount: 0,
         outOfBoundsCount: 0,

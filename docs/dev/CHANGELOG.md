@@ -2,6 +2,13 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.8 - 2026-06-13
+
+- Added target lists for PPTX editable-object diagnostics so text, image, shape, review, and whole-object fallback groups can be reviewed beyond the first matching object.
+- Added `逐项定位` controls in the PPTX preflight report for next/previous navigation across editable objects and export-risk objects before delivery.
+- Added regression coverage for multi-target PPTX review navigation and dynamic HTML whole-object fallback lists.
+- Bumped the packaging version to `0.1.8` for the next preview build.
+
 ## 0.1.7 - 2026-06-13
 
 - Added click-through targeting to the PPTX editable-object report so non-zero text, image, shape, review, and whole-object fallback counts can jump to the first matching object before export.

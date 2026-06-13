@@ -67,6 +67,7 @@ final class GeneratedRuntimeCompatibilityTest: NSObject, WKNavigationDelegate, W
           const issueKinds = new Set(issues.map(issue => issue.kind));
           const exportHTML = editor.exportHTML();
           const selectedFallback = editor.selectHTMLById(diagnostics.pptxFallbackElementId || '');
+          const selectedSecondFallback = editor.selectHTMLById(diagnostics.pptxFallbackElementIds?.[1] || diagnostics.pptxFallbackElementId || '');
           const selectedTitle = editor.selectHTML('#generated-title');
           const overlay = editor.selectHTML('.transparent-hit-layer');
           const overlayNode = document.querySelector('iframe.html-frame')?.contentDocument?.querySelector('.transparent-hit-layer');
@@ -80,7 +81,9 @@ final class GeneratedRuntimeCompatibilityTest: NSObject, WKNavigationDelegate, W
             overlayDetected: diagnostics.overlayBlockerCount >= 1,
             externalResourceDetected: diagnostics.externalResourceCount >= 1,
             pptxFallbackMappingDetected: diagnostics.pptxFallbackObjectCount >= 3 && typeof diagnostics.pptxFallbackElementId === 'string' && diagnostics.pptxFallbackElementId.length > 0,
+            pptxFallbackTargetListDetected: Array.isArray(diagnostics.pptxFallbackElementIds) && diagnostics.pptxFallbackElementIds.length >= 3,
             pptxFallbackTargetSelectable: Boolean(selectedFallback && selectedFallback.id === diagnostics.pptxFallbackElementId),
+            pptxSecondFallbackTargetSelectable: Boolean(selectedSecondFallback && diagnostics.pptxFallbackElementIds.includes(selectedSecondFallback.id)),
             issueKindsDetected: ['runtime-rendered', 'iframe-content', 'canvas-content', 'selection-overlay', 'external-runtime-resource'].every(kind => issueKinds.has(kind)),
             runtimeTargetClickable: typeof diagnostics.runtimeRiskElementId === 'string' && diagnostics.runtimeRiskElementId.length > 0,
             dynamicTitleSelectable: Boolean(selectedTitle && selectedTitle.text.includes('Runtime Generated Title')),

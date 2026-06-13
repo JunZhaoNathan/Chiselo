@@ -102,6 +102,10 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
             hasBridgeString(diagnostics["pptxImageElementId"]) &&
             hasBridgeString(diagnostics["pptxReviewElementId"]) &&
             bridgeString(diagnostics["pptxFallbackElementId"]) == nil &&
+            (bridgeStringArray(diagnostics["pptxTextElementIds"])?.count ?? 0) >= 1 &&
+            (bridgeStringArray(diagnostics["pptxImageElementIds"])?.count ?? 0) >= 1 &&
+            (bridgeStringArray(diagnostics["pptxReviewElementIds"])?.count ?? 0) >= 3 &&
+            (bridgeStringArray(diagnostics["pptxFallbackElementIds"])?.count ?? 0) == 0 &&
             issueKinds.isSuperset(of: ["broken-image", "text-overflow", "out-of-bounds", "overlap", "pptx-effect-risk"]) &&
             hasElementTarget
     }
@@ -129,6 +133,16 @@ final class HTMLDeliveryDiagnosticsTest: NSObject, WKNavigationDelegate, WKScrip
     private func hasBridgeString(_ value: Any?) -> Bool {
         guard let string = bridgeString(value) else { return false }
         return !string.isEmpty
+    }
+
+    private func bridgeStringArray(_ value: Any?) -> [String]? {
+        if let strings = value as? [String] {
+            return strings
+        }
+        if let values = value as? [Any] {
+            return values.compactMap { $0 as? String }
+        }
+        return nil
     }
 
     private func bridgeBool(_ value: Any?) -> Bool? {

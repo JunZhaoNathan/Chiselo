@@ -937,6 +937,12 @@ private struct PPTXMappingReportCard: View {
     var diagnostics: HTMLDiagnostics
     var onSelectTarget: ((String) -> Void)?
 
+    @State private var textTargetIndex = 0
+    @State private var imageTargetIndex = 0
+    @State private var shapeTargetIndex = 0
+    @State private var reviewTargetIndex = 0
+    @State private var fallbackTargetIndex = 0
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -965,6 +971,76 @@ private struct PPTXMappingReportCard: View {
                 MappingMetric(value: "\(diagnostics.pptxMappingTotalObjectCount)", label: "合计", icon: "square.grid.2x2")
             }
 
+            if let onSelectTarget, hasTargetNavigation {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("逐项定位")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+
+                    if diagnostics.pptxTextTargetIds.count > 1 {
+                        PPTXTargetNavigator(
+                            title: "文字",
+                            icon: "textformat",
+                            count: diagnostics.pptxTextObjectCount ?? 0,
+                            targetIds: diagnostics.pptxTextTargetIds,
+                            color: MaterialTheme.primary,
+                            index: $textTargetIndex,
+                            onSelectTarget: onSelectTarget
+                        )
+                    }
+
+                    if diagnostics.pptxImageTargetIds.count > 1 {
+                        PPTXTargetNavigator(
+                            title: "图片",
+                            icon: "photo",
+                            count: diagnostics.pptxImageObjectCount ?? 0,
+                            targetIds: diagnostics.pptxImageTargetIds,
+                            color: MaterialTheme.primary,
+                            index: $imageTargetIndex,
+                            onSelectTarget: onSelectTarget
+                        )
+                    }
+
+                    if diagnostics.pptxShapeTargetIds.count > 1 {
+                        PPTXTargetNavigator(
+                            title: "形状",
+                            icon: "square.on.circle",
+                            count: diagnostics.pptxShapeObjectCount ?? 0,
+                            targetIds: diagnostics.pptxShapeTargetIds,
+                            color: MaterialTheme.primary,
+                            index: $shapeTargetIndex,
+                            onSelectTarget: onSelectTarget
+                        )
+                    }
+
+                    if !diagnostics.pptxReviewTargetIds.isEmpty {
+                        PPTXTargetNavigator(
+                            title: "需复核",
+                            icon: "checklist",
+                            count: diagnostics.pptxReviewObjectCount ?? 0,
+                            targetIds: diagnostics.pptxReviewTargetIds,
+                            color: Color(red: 0.78, green: 0.47, blue: 0.06),
+                            index: $reviewTargetIndex,
+                            onSelectTarget: onSelectTarget
+                        )
+                    }
+
+                    if !diagnostics.pptxFallbackTargetIds.isEmpty {
+                        PPTXTargetNavigator(
+                            title: "整体对象",
+                            icon: "rectangle.dashed",
+                            count: diagnostics.pptxFallbackObjectCount ?? 0,
+                            targetIds: diagnostics.pptxFallbackTargetIds,
+                            color: MaterialTheme.accentDanger,
+                            index: $fallbackTargetIndex,
+                            onSelectTarget: onSelectTarget
+                        )
+                    }
+                }
+                .padding(10)
+                .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+            }
+
             Text(diagnostics.pptxMappingRecommendation)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(MaterialTheme.muted)
@@ -982,6 +1058,14 @@ private struct PPTXMappingReportCard: View {
         if diagnostics.pptxFallbackObjectCount ?? 0 > 0 { return MaterialTheme.accentDanger }
         if diagnostics.pptxReviewObjectCount ?? 0 > 0 { return Color(red: 0.78, green: 0.47, blue: 0.06) }
         return Color(red: 0.06, green: 0.52, blue: 0.26)
+    }
+
+    private var hasTargetNavigation: Bool {
+        diagnostics.pptxTextTargetIds.count > 1
+            || diagnostics.pptxImageTargetIds.count > 1
+            || diagnostics.pptxShapeTargetIds.count > 1
+            || !diagnostics.pptxReviewTargetIds.isEmpty
+            || !diagnostics.pptxFallbackTargetIds.isEmpty
     }
 }
 
@@ -1037,6 +1121,94 @@ private struct MappingMetric: View {
 
     private var backgroundColor: Color {
         isActionable ? MaterialTheme.primary.opacity(0.10) : MaterialTheme.surfaceTint
+    }
+}
+
+private struct PPTXTargetNavigator: View {
+    var title: String
+    var icon: String
+    var count: Int
+    var targetIds: [String]
+    var color: Color
+    @Binding var index: Int
+    var onSelectTarget: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(color)
+                .frame(width: 18, height: 18)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text("\(currentIndex + 1)/\(max(targetIds.count, 1)) 可定位，合计 \(count)")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                move(-1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 10, weight: .heavy))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .disabled(targetIds.count <= 1)
+            .help("上一处\(title)")
+
+            Button {
+                onSelectTarget(targetIds[currentIndex])
+            } label: {
+                Label("定位", systemImage: "scope")
+                    .font(.system(size: 10, weight: .heavy))
+                    .padding(.horizontal, 8)
+                    .frame(height: 24)
+            }
+            .buttonStyle(.plain)
+            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            .help("定位当前\(title)")
+
+            Button {
+                move(1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .heavy))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.plain)
+            .disabled(targetIds.count <= 1)
+            .help("下一处\(title)")
+        }
+        .foregroundStyle(MaterialTheme.primaryDark)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(color.opacity(0.16), lineWidth: 1)
+        )
+        .onChange(of: targetIds) { _ in
+            index = currentIndex
+        }
+    }
+
+    private var currentIndex: Int {
+        guard !targetIds.isEmpty else { return 0 }
+        return min(max(index, 0), targetIds.count - 1)
+    }
+
+    private func move(_ delta: Int) {
+        guard !targetIds.isEmpty else { return }
+        let nextIndex = (currentIndex + delta + targetIds.count) % targetIds.count
+        index = nextIndex
+        onSelectTarget(targetIds[nextIndex])
     }
 }
 
@@ -1341,6 +1513,26 @@ private extension HTMLDiagnostics {
         return "主要由文字、图片和简单形状组成，适合导出可编辑 PPTX，仍建议抽查文本框和图片。"
     }
 
+    var pptxTextTargetIds: [String] {
+        normalizedTargetIds(pptxTextElementIds, fallback: pptxTextElementId)
+    }
+
+    var pptxImageTargetIds: [String] {
+        normalizedTargetIds(pptxImageElementIds, fallback: pptxImageElementId)
+    }
+
+    var pptxShapeTargetIds: [String] {
+        normalizedTargetIds(pptxShapeElementIds, fallback: pptxShapeElementId)
+    }
+
+    var pptxReviewTargetIds: [String] {
+        normalizedTargetIds(pptxReviewElementIds, fallback: pptxReviewElementId)
+    }
+
+    var pptxFallbackTargetIds: [String] {
+        normalizedTargetIds(pptxFallbackElementIds, fallback: pptxFallbackElementId)
+    }
+
     var runtimeCompatibilityDetail: String {
         let risks = runtimeCompatibilityRiskCount
         if risks == 0 {
@@ -1423,6 +1615,19 @@ private extension HTMLDiagnostics {
 
     private func boundedScore(_ value: Int) -> Int {
         min(100, max(0, value))
+    }
+
+    private func normalizedTargetIds(_ values: [String]?, fallback: String?) -> [String] {
+        var seen = Set<String>()
+        var ids: [String] = []
+        for value in values ?? [] {
+            guard !value.isEmpty, seen.insert(value).inserted else { continue }
+            ids.append(value)
+        }
+        if let fallback, !fallback.isEmpty, seen.insert(fallback).inserted {
+            ids.append(fallback)
+        }
+        return ids
     }
 }
 
