@@ -2,6 +2,13 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.9 - 2026-06-13
+
+- Added PPTX preflight `建议操作` repair actions for locating tables, SVG/vector objects, complex visual effects, and layered objects from the export panel.
+- Added direct preflight actions for converting dynamic or whole-object HTML into an editable version and for choosing PDF when visual fidelity is the safer delivery path.
+- Kept repair actions in object-facing language so users see tables, vectors, effects, layers, editable version, and PDF rather than implementation details.
+- Bumped the packaging version to `0.1.9` for the next preview build.
+
 ## 0.1.8 - 2026-06-13
 
 - Added target lists for PPTX editable-object diagnostics so text, image, shape, review, and whole-object fallback groups can be reviewed beyond the first matching object.

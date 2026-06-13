@@ -18,15 +18,15 @@ Confirm:
 
 ```bash
 codesign --verify --deep --strict --verbose=2 outputs/Chiselo.app
-hdiutil verify outputs/Chiselo-0.1.8.dmg
+hdiutil verify outputs/Chiselo-0.1.9.dmg
 ```
 
 ## GitHub Release
 
-1. Create a release tag such as `v0.1.8`.
+1. Create a release tag such as `v0.1.9`.
 2. Create a GitHub release from that tag.
-3. Upload `outputs/Chiselo-0.1.8.dmg`.
-4. Include release notes from `docs/releases/RELEASE_NOTES_0.1.8_PREVIEW.md` for the current preview.
+3. Upload `outputs/Chiselo-0.1.9.dmg`.
+4. Include release notes from `docs/releases/RELEASE_NOTES_0.1.9_PREVIEW.md` for the current preview.
 5. Do not mark downloadable public builds as `Pre-release`. GitHub's `/releases/latest` endpoint ignores prereleases, so website download buttons should point at a normal latest release.
 
 Do not commit `.app` or `.dmg` binaries to the repository. Upload them as release assets.

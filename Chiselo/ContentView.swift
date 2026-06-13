@@ -715,6 +715,21 @@ private struct ExportPreflightPanel: View {
                 dismiss()
                 model.selectHTMLNode(id: elementId)
             }
+            if diagnostics.hasPPTXRepairActions {
+                PPTXRepairActionCard(
+                    diagnostics: diagnostics,
+                    onSelectTarget: { elementId in
+                        dismiss()
+                        model.selectHTMLNode(id: elementId)
+                    },
+                    onConvertEditable: {
+                        closeThen { model.freezeCurrentHTMLLayout() }
+                    },
+                    onExportPDF: {
+                        closeThen { model.exportPDF() }
+                    }
+                )
+            }
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("问题定位")
@@ -1212,6 +1227,162 @@ private struct PPTXTargetNavigator: View {
     }
 }
 
+private struct PPTXRepairActionCard: View {
+    var diagnostics: HTMLDiagnostics
+    var onSelectTarget: (String) -> Void
+    var onConvertEditable: () -> Void
+    var onExportPDF: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("建议操作")
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(MaterialTheme.ink)
+
+            VStack(spacing: 8) {
+                if diagnostics.tableCount > 0 {
+                    PPTXRepairActionRow(
+                        icon: diagnostics.spanTableCount > 0 ? "tablecells.badge.ellipsis" : "tablecells",
+                        title: "复核表格",
+                        detail: diagnostics.spanTableCount > 0 ? "\(diagnostics.tableCount) 个表格，含合并单元格" : "\(diagnostics.tableCount) 个表格",
+                        color: warningColor,
+                        buttonTitle: "定位"
+                    ) {
+                        if let elementId = diagnostics.tableElementId {
+                            onSelectTarget(elementId)
+                        }
+                    }
+                    .disabled(diagnostics.tableElementId == nil)
+                }
+
+                if diagnostics.svgCount > 0 {
+                    PPTXRepairActionRow(
+                        icon: "scribble.variable",
+                        title: "复核矢量",
+                        detail: "\(diagnostics.svgCount) 个 SVG/矢量对象",
+                        color: warningColor,
+                        buttonTitle: "定位"
+                    ) {
+                        if let elementId = diagnostics.svgElementId {
+                            onSelectTarget(elementId)
+                        }
+                    }
+                    .disabled(diagnostics.svgElementId == nil)
+                }
+
+                if (diagnostics.pptxEffectRiskCount ?? 0) > 0 {
+                    PPTXRepairActionRow(
+                        icon: "camera.filters",
+                        title: "复核效果",
+                        detail: "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂视觉效果",
+                        color: warningColor,
+                        buttonTitle: "定位"
+                    ) {
+                        if let elementId = diagnostics.pptxEffectRiskElementId {
+                            onSelectTarget(elementId)
+                        }
+                    }
+                    .disabled(diagnostics.pptxEffectRiskElementId == nil)
+                }
+
+                if (diagnostics.overlapCount ?? 0) > 0 {
+                    PPTXRepairActionRow(
+                        icon: "square.stack.3d.up",
+                        title: "复核层叠",
+                        detail: "\(diagnostics.overlapCount ?? 0) 处重叠对象",
+                        color: warningColor,
+                        buttonTitle: "定位"
+                    ) {
+                        if let elementId = diagnostics.overlapElementId {
+                            onSelectTarget(elementId)
+                        }
+                    }
+                    .disabled(diagnostics.overlapElementId == nil)
+                }
+
+                if diagnostics.shouldOfferEditableConversion {
+                    PPTXRepairActionRow(
+                        icon: "viewfinder",
+                        title: "转为可编辑版",
+                        detail: diagnostics.runtimeCompatibilityDetail,
+                        color: MaterialTheme.primary,
+                        buttonTitle: "转换"
+                    ) {
+                        onConvertEditable()
+                    }
+                }
+
+                if diagnostics.shouldOfferPDFFallback {
+                    PPTXRepairActionRow(
+                        icon: "doc.richtext",
+                        title: "保真交付",
+                        detail: "视觉一致优先时使用 PDF",
+                        color: Color(red: 0.06, green: 0.52, blue: 0.26),
+                        buttonTitle: "导出PDF"
+                    ) {
+                        onExportPDF()
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium))
+    }
+
+    private var warningColor: Color {
+        Color(red: 0.78, green: 0.47, blue: 0.06)
+    }
+}
+
+private struct PPTXRepairActionRow: View {
+    var icon: String
+    var title: String
+    var detail: String
+    var color: Color
+    var buttonTitle: String
+    var action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(color)
+                .frame(width: 20, height: 20)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text(detail)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 0)
+
+            Button(buttonTitle) {
+                action()
+            }
+            .font(.system(size: 10, weight: .heavy))
+            .buttonStyle(.plain)
+            .padding(.horizontal, 9)
+            .frame(height: 24)
+            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            .foregroundStyle(color)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(color.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
 private struct PreflightNoteRow: View {
     var icon: String
     var title: String
@@ -1511,6 +1682,25 @@ private extension HTMLDiagnostics {
             return "大部分对象可编辑导出，但表格、矢量、复杂效果或层叠对象需要导出后重点复核。"
         }
         return "主要由文字、图片和简单形状组成，适合导出可编辑 PPTX，仍建议抽查文本框和图片。"
+    }
+
+    var hasPPTXRepairActions: Bool {
+        tableCount > 0
+            || svgCount > 0
+            || (pptxEffectRiskCount ?? 0) > 0
+            || (overlapCount ?? 0) > 0
+            || shouldOfferEditableConversion
+            || shouldOfferPDFFallback
+    }
+
+    var shouldOfferEditableConversion: Bool {
+        (pptxFallbackObjectCount ?? 0) > 0 || runtimeCompatibilityRiskCount > 0
+    }
+
+    var shouldOfferPDFFallback: Bool {
+        (pptxFallbackObjectCount ?? 0) > 0
+            || (pptxEffectRiskCount ?? 0) > 0
+            || pptxEditabilityScore < 65
     }
 
     var pptxTextTargetIds: [String] {

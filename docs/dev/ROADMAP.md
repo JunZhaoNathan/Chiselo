@@ -19,7 +19,7 @@ The core idea:
 - Add pixel-level visual save preview and screenshot diff before overwriting original HTML.
 - Strengthen table row/column editing for complex merged cells.
 - Improve SVG detection and export fallback.
-- Add repair actions after PPTX review navigation, especially for tables, vectors, effects, and whole-object fallbacks.
+- Add deeper one-click repair actions for tables, vectors, effects, and whole-object fallbacks.
 
 ## Medium Term
 
@@ -41,6 +41,7 @@ The core idea:
 - PPTX effect-risk preflight for complex CSS visuals before export.
 - Object-level visual diff v1 against the opened HTML.
 - PPTX editable-object report v1 before export, including first-object click-through targeting and next/previous object review navigation.
+- PPTX preflight repair-action panel for locating risky objects, converting to editable version, and choosing PDF for high-fidelity fallback.
 
 ## Long Term
 

@@ -19,12 +19,12 @@ Chiselo starts from an existing HTML document. It is a finishing and delivery wo
 
 ## Download
 
-Current source and package version: `0.1.8`.
+Current source and package version: `0.1.9`.
 
 The latest published DMG is still `Chiselo-0.1.4.dmg` until the next GitHub Release asset is uploaded.
 
 - [Latest Release](https://github.com/JunZhaoNathan/Chiselo/releases/latest)
-- [0.1.8 Preview Notes](docs/releases/RELEASE_NOTES_0.1.8_PREVIEW.md)
+- [0.1.9 Preview Notes](docs/releases/RELEASE_NOTES_0.1.9_PREVIEW.md)
 - [Latest Published Release Notes](docs/releases/RELEASE_NOTES_0.1.4_PREVIEW.md)
 
 The preview build is ad-hoc signed and not notarized. If macOS blocks the first launch, the DMG includes `首次打开帮助.txt` with step-by-step fixes for `Open Anyway`, Finder right-click `Open`, and quarantine removal.
