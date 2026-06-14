@@ -18,6 +18,7 @@
   const MAX_HTML_TREE_NODES = 260;
   const MAX_HTML_DIAGNOSTIC_NODES = 520;
   const MAX_HTML_DIAGNOSTIC_ISSUES = 12;
+  const MAX_VISUAL_CHANGE_PREVIEW_ITEMS = 48;
   const DIRECT_FIXED_FRAME_SELECTOR = ".slide,.sheet,.page,[data-slide],[data-page],[role='doc-page'],[aria-roledescription='slide'],[class~='slide'],[class^='slide-'],[class*=' slide-'],[class~='page'],[class^='page-'],[class*=' page-'],[id^='slide'],[id*='-slide'],[id^='page'],[id*='-page']";
   const CAPTURE_PAGE_SELECTOR = DIRECT_FIXED_FRAME_SELECTOR;
   const DIRECT_RUNTIME_ROOT_SELECTOR = "#app,#root,#__next,#__nuxt,[data-reactroot],[data-v-app],[ng-version]";
@@ -5570,6 +5571,9 @@ ${htmlSlides}
         pptxEffectRiskElementId: null,
         visualChangeElementId: null,
         visualChangeElementIds: [],
+        visualChangeItems: [],
+        visualChangeCanvasWidth: 0,
+        visualChangeCanvasHeight: 0,
         issues: []
       };
     }
@@ -5632,6 +5636,7 @@ ${htmlSlides}
     const pptxEffectDiagnostics = collectPPTXEffectDiagnostics(doc, issues);
     const visualDiffDiagnostics = collectVisualDiffDiagnostics(doc, issues);
     const layoutDiagnostics = collectLayoutDiagnostics(doc, issues);
+    const canvas = directCanvas();
     const pptxMappingDiagnostics = collectPPTXMappingDiagnostics(doc, {
       tableCount: tables.length,
       svgCount,
@@ -5690,6 +5695,9 @@ ${htmlSlides}
       pptxEffectRiskElementId: pptxEffectDiagnostics.pptxEffectRiskElementId,
       visualChangeElementId: visualDiffDiagnostics.visualChangeElementId,
       visualChangeElementIds: visualDiffDiagnostics.visualChangeElementIds,
+      visualChangeItems: visualDiffDiagnostics.visualChangeItems,
+      visualChangeCanvasWidth: canvas.width,
+      visualChangeCanvasHeight: canvas.height,
       issues
     };
   }
@@ -5837,7 +5845,7 @@ ${htmlSlides}
 
   function collectVisualDiffDiagnostics(doc, issues) {
     if (!directVisualBaseline?.entries) {
-      return { visualChangeCount: 0, visualChangeElementId: null, visualChangeElementIds: [] };
+      return { visualChangeCount: 0, visualChangeElementId: null, visualChangeElementIds: [], visualChangeItems: [] };
     }
 
     const current = captureDirectVisualSnapshot(doc);
@@ -5845,6 +5853,7 @@ ${htmlSlides}
     let count = 0;
     let firstElementId = null;
     const targetElementIds = [];
+    const visualChangeItems = [];
 
     for (const [key, currentEntry] of current.entries) {
       const baselineEntry = directVisualBaseline.entries.get(key);
@@ -5853,6 +5862,9 @@ ${htmlSlides}
 
       count += 1;
       changedKinds.add(changeKind);
+      if (visualChangeItems.length < MAX_VISUAL_CHANGE_PREVIEW_ITEMS) {
+        visualChangeItems.push(visualChangePreviewItem(currentEntry, changeKind));
+      }
       if (currentEntry.elementId) {
         if (!firstElementId) firstElementId = currentEntry.elementId;
         targetElementIds.push(currentEntry.elementId);
@@ -5863,6 +5875,9 @@ ${htmlSlides}
       if (current.entries.has(key)) continue;
       count += 1;
       changedKinds.add("删除对象");
+      if (visualChangeItems.length < MAX_VISUAL_CHANGE_PREVIEW_ITEMS) {
+        visualChangeItems.push(visualChangePreviewItem(directVisualBaseline.entries.get(key), "删除对象"));
+      }
     }
 
     if (count > 0) {
@@ -5879,7 +5894,21 @@ ${htmlSlides}
     return {
       visualChangeCount: count,
       visualChangeElementId: firstElementId,
-      visualChangeElementIds: [...new Set(targetElementIds)]
+      visualChangeElementIds: [...new Set(targetElementIds)],
+      visualChangeItems
+    };
+  }
+
+  function visualChangePreviewItem(entry, kind) {
+    const rect = entry?.rect || {};
+    return {
+      elementId: entry?.elementId || null,
+      label: truncateDiagnosticText(entry?.label || "", "对象"),
+      kind,
+      x: Math.round(Number(rect.x || 0)),
+      y: Math.round(Number(rect.y || 0)),
+      w: Math.round(Number(rect.w || 0)),
+      h: Math.round(Number(rect.h || 0))
     };
   }
 
@@ -6524,6 +6553,24 @@ ${htmlSlides}
     document.documentElement.dataset.backdrop = allowed.has(style) ? style : "clean";
   }
 
+  function getVisualReviewSnapshotRect() {
+    const rect = stage.getBoundingClientRect();
+    const view = viewport.getBoundingClientRect();
+    const left = Math.max(rect.left, view.left);
+    const top = Math.max(rect.top, view.top);
+    const right = Math.min(rect.right, view.right);
+    const bottom = Math.min(rect.bottom, view.bottom);
+    return {
+      x: Math.max(0, left),
+      y: Math.max(0, top),
+      width: Math.max(1, right - left),
+      height: Math.max(1, bottom - top),
+      scale,
+      canvasWidth: editorMode === "html" ? directCanvas().width : deck.canvas.width,
+      canvasHeight: editorMode === "html" ? directCanvas().height : deck.canvas.height
+    };
+  }
+
   function isEditingText() {
     const active = document.activeElement;
     if (active?.isContentEditable || active?.matches?.("input, textarea")) return true;
@@ -6549,6 +6596,7 @@ ${htmlSlides}
       w: frame.rect.w,
       h: frame.rect.h
     })),
+    getVisualReviewSnapshotRect,
     getViewportState: () => ({
       scale,
       fitScale,

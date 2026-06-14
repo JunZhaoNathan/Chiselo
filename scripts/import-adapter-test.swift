@@ -152,6 +152,8 @@ final class ImportAdapterTest: NSObject, WKNavigationDelegate, WKScriptMessageHa
             visualDiffDetected: afterAddDiagnostics.visualChangeCount >= 1 && afterAddIssueKinds.has('visual-change'),
             visualDiffTargetClickable: typeof afterAddDiagnostics.visualChangeElementId === 'string' && afterAddDiagnostics.visualChangeElementId.length > 0,
             visualDiffTargetListDetected: Array.isArray(afterAddDiagnostics.visualChangeElementIds) && afterAddDiagnostics.visualChangeElementIds.length >= 1,
+            visualDiffMapItemsDetected: Array.isArray(afterAddDiagnostics.visualChangeItems) && afterAddDiagnostics.visualChangeItems.length >= 1 && typeof afterAddDiagnostics.visualChangeItems[0].kind === 'string' && typeof afterAddDiagnostics.visualChangeItems[0].label === 'string' && Number.isFinite(afterAddDiagnostics.visualChangeItems[0].x) && Number.isFinite(afterAddDiagnostics.visualChangeItems[0].y) && Number.isFinite(afterAddDiagnostics.visualChangeItems[0].w) && Number.isFinite(afterAddDiagnostics.visualChangeItems[0].h),
+            visualDiffCanvasSizeDetected: afterAddDiagnostics.visualChangeCanvasWidth > 0 && afterAddDiagnostics.visualChangeCanvasHeight > 0,
             cleanExport: !afterDelete.includes('data-chiselo'),
             pseudoElementFrozen: frozenJSON.includes('AUTO'),
             gradientFillFrozen: frozenJSON.includes('linear-gradient'),

@@ -106,6 +106,20 @@ struct BridgeHTMLDiagnosticsMessage: Decodable {
     var diagnostics: HTMLDiagnostics
 }
 
+struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
+    var elementId: String?
+    var label: String
+    var kind: String
+    var x: Int
+    var y: Int
+    var w: Int
+    var h: Int
+
+    var id: String {
+        "\(elementId ?? "missing")-\(kind)-\(x)-\(y)-\(w)-\(h)"
+    }
+}
+
 struct HTMLDiagnostics: Codable, Equatable {
     var mode: String
     var imageCount: Int
@@ -155,6 +169,9 @@ struct HTMLDiagnostics: Codable, Equatable {
     var pptxEffectRiskElementId: String?
     var visualChangeElementId: String?
     var visualChangeElementIds: [String]?
+    var visualChangeItems: [HTMLVisualChangeItem]?
+    var visualChangeCanvasWidth: Int?
+    var visualChangeCanvasHeight: Int?
     var issues: [HTMLDiagnosticIssue]?
 
     static let empty = HTMLDiagnostics(
@@ -206,6 +223,9 @@ struct HTMLDiagnostics: Codable, Equatable {
         pptxEffectRiskElementId: nil,
         visualChangeElementId: nil,
         visualChangeElementIds: [],
+        visualChangeItems: [],
+        visualChangeCanvasWidth: 0,
+        visualChangeCanvasHeight: 0,
         issues: []
     )
 

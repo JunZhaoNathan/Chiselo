@@ -15,6 +15,41 @@ private enum OpenTabReadResult: Sendable {
     case failure(filename: String, message: String)
 }
 
+struct HTMLVisualSnapshotPair: Equatable {
+    var baseline: NSImage?
+    var current: NSImage?
+    var diff: HTMLVisualSnapshotDiff?
+    var capturedAt: Date?
+
+    var hasImages: Bool {
+        baseline != nil || current != nil
+    }
+
+    static let empty = HTMLVisualSnapshotPair(baseline: nil, current: nil, diff: nil, capturedAt: nil)
+}
+
+struct HTMLVisualSnapshotDiff: Equatable {
+    var changedPixelRatio: Double
+    var averageDelta: Double
+    var maxDelta: Double
+    var sampleWidth: Int
+    var sampleHeight: Int
+    var heatmap: NSImage?
+
+    var hasMeaningfulChange: Bool {
+        changedPixelRatio >= 0.001 || averageDelta >= 0.01
+    }
+
+    static func == (lhs: HTMLVisualSnapshotDiff, rhs: HTMLVisualSnapshotDiff) -> Bool {
+        lhs.changedPixelRatio == rhs.changedPixelRatio
+            && lhs.averageDelta == rhs.averageDelta
+            && lhs.maxDelta == rhs.maxDelta
+            && lhs.sampleWidth == rhs.sampleWidth
+            && lhs.sampleHeight == rhs.sampleHeight
+            && lhs.heatmap?.size == rhs.heatmap?.size
+    }
+}
+
 @MainActor
 final class EditorModel: ObservableObject {
     enum EditorBackdrop: String, CaseIterable, Identifiable {
@@ -72,6 +107,8 @@ final class EditorModel: ObservableObject {
     @Published var editorBackdrop: EditorBackdrop = .clean
     @Published var documentStats: DocumentStats = .empty
     @Published var htmlDiagnostics: HTMLDiagnostics = .empty
+    @Published var htmlVisualSnapshotPair: HTMLVisualSnapshotPair = .empty
+    @Published var isCapturingHTMLVisualSnapshot: Bool = false
     @Published var isExportPreflightPresented: Bool = false
     @Published var isHistoryBrowserPresented: Bool = false
     @Published var historySnapshots: [SafeFileHistory.VersionSnapshot] = []
@@ -99,6 +136,8 @@ final class EditorModel: ObservableObject {
     private var activeRenderExporter: HTMLRenderExporter?
     private var isSwitchingTabs = false
     private let editorBackdropDefaultsKey = "Chiselo.EditorBackdrop"
+    private var htmlVisualBaselineImage: NSImage?
+    private var pendingHTMLVisualBaselineCapture = false
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -607,6 +646,7 @@ final class EditorModel: ObservableObject {
                     updatePublished(\.selectionPath, to: nil)
                     updatePublished(\.htmlTree, to: [])
                     updatePublished(\.htmlDiagnostics, to: .empty)
+                    resetHTMLVisualSnapshots()
                     refreshDocumentStats()
                     return
                 }
@@ -615,6 +655,7 @@ final class EditorModel: ObservableObject {
                 updatePublished(\.deck, to: message.deck)
                 updatePublished(\.htmlTree, to: [])
                 updatePublished(\.htmlDiagnostics, to: .empty)
+                resetHTMLVisualSnapshots()
                 updatePublished(\.documentMode, to: "deck")
                 updatePublished(\.selectedSlideIndex, to: message.slideIndex ?? selectedSlideIndex)
                 updatePublished(\.status, to: "页面已更新")
@@ -632,6 +673,7 @@ final class EditorModel: ObservableObject {
                 updatePublished(\.htmlTree, to: message.tree)
                 updatePublished(\.htmlDiagnostics, to: message.diagnostics ?? .empty)
                 refreshDocumentStats()
+                capturePendingHTMLVisualBaselineIfNeeded()
 
             case "htmlDiagnosticsChanged":
                 guard hasOpenDocument else {
@@ -769,6 +811,11 @@ final class EditorModel: ObservableObject {
         default:
             return nil
         }
+    }
+
+    private func bridgeCGFloat(_ value: Any?) -> CGFloat? {
+        guard let value = bridgeDouble(value) else { return nil }
+        return CGFloat(value)
     }
 
     private func bridgeInt(_ value: Any?) -> Int? {
@@ -1126,6 +1173,7 @@ final class EditorModel: ObservableObject {
         }
 
         refreshHTMLDiagnostics()
+        refreshHTMLVisualReviewSnapshot()
         isExportPreflightPresented = true
         status = "已打开导出预检"
     }
@@ -1356,6 +1404,13 @@ final class EditorModel: ObservableObject {
         runJavaScript("window.ChiseloEditor?.clearDirty?.();")
     }
 
+    private func resetHTMLVisualSnapshots() {
+        htmlVisualBaselineImage = nil
+        pendingHTMLVisualBaselineCapture = false
+        isCapturingHTMLVisualSnapshot = false
+        updatePublished(\.htmlVisualSnapshotPair, to: .empty)
+    }
+
     func selectHTMLNode(id: String) {
         guard let literal = jsStringLiteral(id) else { return }
         runJavaScript("window.ChiseloEditor?.selectHTMLById(\(literal));")
@@ -1385,6 +1440,223 @@ final class EditorModel: ObservableObject {
         }
     }
 
+    private func capturePendingHTMLVisualBaselineIfNeeded() {
+        guard pendingHTMLVisualBaselineCapture, documentMode == "html" else { return }
+        pendingHTMLVisualBaselineCapture = false
+
+        captureHTMLVisualSnapshot { [weak self] image in
+            guard let self else { return }
+            self.htmlVisualBaselineImage = image
+            self.updatePublished(
+                \.htmlVisualSnapshotPair,
+                to: HTMLVisualSnapshotPair(baseline: image, current: nil, diff: nil, capturedAt: nil)
+            )
+        }
+    }
+
+    private func captureHTMLVisualSnapshot(completion: @escaping (NSImage?) -> Void) {
+        guard let webView, hasOpenDocument, documentMode == "html" else {
+            completion(nil)
+            return
+        }
+
+        isCapturingHTMLVisualSnapshot = true
+        let source = "JSON.stringify(window.ChiseloEditor?.getVisualReviewSnapshotRect?.() ?? null);"
+        webView.evaluateJavaScript(source) { [weak self, weak webView] result, error in
+            Task { @MainActor in
+                guard let self else { return }
+                guard let webView else {
+                    self.isCapturingHTMLVisualSnapshot = false
+                    completion(nil)
+                    return
+                }
+
+                if let error {
+                    self.isCapturingHTMLVisualSnapshot = false
+                    self.status = "截图复核捕获失败：\(error.localizedDescription)"
+                    completion(nil)
+                    return
+                }
+
+                guard let json = result as? String,
+                      json != "null",
+                      let data = json.data(using: .utf8),
+                      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    self.isCapturingHTMLVisualSnapshot = false
+                    completion(nil)
+                    return
+                }
+
+                let webBounds = webView.bounds
+                let rect = NSRect(
+                    x: max(0, self.bridgeCGFloat(object["x"]) ?? 0),
+                    y: max(0, self.bridgeCGFloat(object["y"]) ?? 0),
+                    width: max(1, self.bridgeCGFloat(object["width"]) ?? webBounds.width),
+                    height: max(1, self.bridgeCGFloat(object["height"]) ?? webBounds.height)
+                ).intersection(webBounds)
+
+                guard rect.width > 1, rect.height > 1 else {
+                    self.isCapturingHTMLVisualSnapshot = false
+                    completion(nil)
+                    return
+                }
+
+                let config = WKSnapshotConfiguration()
+                config.rect = rect
+                webView.takeSnapshot(with: config) { [weak self] image, error in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        self.isCapturingHTMLVisualSnapshot = false
+                        if let error {
+                            self.status = "截图复核捕获失败：\(error.localizedDescription)"
+                            completion(nil)
+                            return
+                        }
+                        completion(image)
+                    }
+                }
+            }
+        }
+    }
+
+    func refreshHTMLVisualReviewSnapshot() {
+        guard hasOpenDocument, documentMode == "html" else {
+            updatePublished(\.htmlVisualSnapshotPair, to: .empty)
+            return
+        }
+
+        captureHTMLVisualSnapshot { [weak self] image in
+            guard let self else { return }
+            let diff = self.visualSnapshotDiff(baseline: self.htmlVisualBaselineImage, current: image)
+            self.updatePublished(
+                \.htmlVisualSnapshotPair,
+                to: HTMLVisualSnapshotPair(
+                    baseline: self.htmlVisualBaselineImage,
+                    current: image,
+                    diff: diff,
+                    capturedAt: image == nil ? self.htmlVisualSnapshotPair.capturedAt : Date()
+                )
+            )
+        }
+    }
+
+    private func visualSnapshotDiff(baseline: NSImage?, current: NSImage?) -> HTMLVisualSnapshotDiff? {
+        guard let baseline,
+              let current,
+              let baselinePixels = rgbaPixels(for: baseline),
+              let currentPixels = rgbaPixels(for: current),
+              baselinePixels.width == currentPixels.width,
+              baselinePixels.height == currentPixels.height,
+              baselinePixels.bytes.count == currentPixels.bytes.count else {
+            return nil
+        }
+
+        let width = baselinePixels.width
+        let height = baselinePixels.height
+        let pixelCount = max(width * height, 1)
+        var changedPixels = 0
+        var totalDelta = 0.0
+        var maxDelta = 0.0
+        var heatmapBytes = Array(repeating: UInt8(0), count: pixelCount * 4)
+
+        var pixelIndex = 0
+        var byteIndex = 0
+        while byteIndex + 3 < baselinePixels.bytes.count {
+            let redDelta = abs(Int(baselinePixels.bytes[byteIndex]) - Int(currentPixels.bytes[byteIndex]))
+            let greenDelta = abs(Int(baselinePixels.bytes[byteIndex + 1]) - Int(currentPixels.bytes[byteIndex + 1]))
+            let blueDelta = abs(Int(baselinePixels.bytes[byteIndex + 2]) - Int(currentPixels.bytes[byteIndex + 2]))
+            let alphaDelta = abs(Int(baselinePixels.bytes[byteIndex + 3]) - Int(currentPixels.bytes[byteIndex + 3]))
+            let normalizedDelta = Double(redDelta + greenDelta + blueDelta + alphaDelta) / (255.0 * 4.0)
+
+            totalDelta += normalizedDelta
+            maxDelta = max(maxDelta, normalizedDelta)
+            if normalizedDelta >= 0.035 {
+                changedPixels += 1
+            }
+
+            let intensity = UInt8(min(255, max(0, Int((normalizedDelta * 420).rounded()))))
+            heatmapBytes[pixelIndex * 4] = 255
+            heatmapBytes[pixelIndex * 4 + 1] = UInt8(max(0, 180 - Int(intensity) / 2))
+            heatmapBytes[pixelIndex * 4 + 2] = 40
+            heatmapBytes[pixelIndex * 4 + 3] = intensity
+
+            pixelIndex += 1
+            byteIndex += 4
+        }
+
+        return HTMLVisualSnapshotDiff(
+            changedPixelRatio: Double(changedPixels) / Double(pixelCount),
+            averageDelta: totalDelta / Double(pixelCount),
+            maxDelta: maxDelta,
+            sampleWidth: width,
+            sampleHeight: height,
+            heatmap: imageFromRGBABytes(heatmapBytes, width: width, height: height)
+        )
+    }
+
+    private struct RGBAPixels {
+        var width: Int
+        var height: Int
+        var bytes: [UInt8]
+    }
+
+    private func rgbaPixels(for image: NSImage, width targetWidth: Int = 192, height targetHeight: Int = 128) -> RGBAPixels? {
+        let imageWidth = max(image.size.width, 1)
+        let imageHeight = max(image.size.height, 1)
+        let byteCount = targetWidth * targetHeight * 4
+        var bytes = Array(repeating: UInt8(0), count: byteCount)
+        guard let context = CGContext(
+            data: &bytes,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: targetWidth * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+
+        context.interpolationQuality = .medium
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
+        NSColor.white.setFill()
+        NSRect(x: 0, y: 0, width: targetWidth, height: targetHeight).fill()
+        image.draw(in: fittedRect(imageSize: NSSize(width: imageWidth, height: imageHeight), targetSize: NSSize(width: targetWidth, height: targetHeight)), from: .zero, operation: .copy, fraction: 1.0)
+        NSGraphicsContext.restoreGraphicsState()
+
+        return RGBAPixels(width: targetWidth, height: targetHeight, bytes: bytes)
+    }
+
+    private func fittedRect(imageSize: NSSize, targetSize: NSSize) -> NSRect {
+        let scale = min(targetSize.width / max(imageSize.width, 1), targetSize.height / max(imageSize.height, 1))
+        let width = max(1, imageSize.width * scale)
+        let height = max(1, imageSize.height * scale)
+        return NSRect(
+            x: (targetSize.width - width) / 2,
+            y: (targetSize.height - height) / 2,
+            width: width,
+            height: height
+        )
+    }
+
+    private func imageFromRGBABytes(_ bytes: [UInt8], width: Int, height: Int) -> NSImage? {
+        var mutableBytes = bytes
+        guard let context = CGContext(
+            data: &mutableBytes,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ), let cgImage = context.makeImage() else {
+            return nil
+        }
+
+        return NSImage(cgImage: cgImage, size: NSSize(width: width, height: height))
+    }
+
     func updateElement(_ element: EditorElement) {
         updatePublished(\.selectedElement, to: element)
         markActiveTabNeedsSnapshot()
@@ -1403,6 +1675,7 @@ final class EditorModel: ObservableObject {
 
         do {
             let decodedDeck = try JSONDecoder().decode(EditorDeck.self, from: data)
+            resetHTMLVisualSnapshots()
             deck = decodedDeck
             selectedElement = nil
             selectedSlideIndex = 0
@@ -1421,6 +1694,8 @@ final class EditorModel: ObservableObject {
 
     private func importHTML(_ html: String, from url: URL?) {
         guard let data = html.data(using: .utf8) else { return }
+        resetHTMLVisualSnapshots()
+        pendingHTMLVisualBaselineCapture = true
         deck = nil
         selectedElement = nil
         selectedSlideIndex = 0
@@ -1627,6 +1902,7 @@ final class EditorModel: ObservableObject {
         selectionPath = nil
         htmlTree = []
         htmlDiagnostics = .empty
+        resetHTMLVisualSnapshots()
         refreshDocumentStats()
         status = "打开项目或拖入 HTML 文件开始"
     }

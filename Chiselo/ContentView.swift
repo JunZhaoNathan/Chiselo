@@ -712,10 +712,18 @@ private struct ExportPreflightPanel: View {
 
             PreflightRecommendationCard(diagnostics: diagnostics)
             if (diagnostics.visualChangeCount ?? 0) > 0 {
-                VisualChangeReviewCard(diagnostics: diagnostics) { elementId in
-                    dismiss()
-                    model.selectHTMLNode(id: elementId)
-                }
+                VisualChangeReviewCard(
+                    diagnostics: diagnostics,
+                    snapshots: model.htmlVisualSnapshotPair,
+                    isCapturingSnapshot: model.isCapturingHTMLVisualSnapshot,
+                    onRefreshSnapshot: {
+                        model.refreshHTMLVisualReviewSnapshot()
+                    },
+                    onSelectTarget: { elementId in
+                        dismiss()
+                        model.selectHTMLNode(id: elementId)
+                    }
+                )
             }
             PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
                 dismiss()
@@ -956,6 +964,9 @@ private struct PreflightRecommendationCard: View {
 
 private struct VisualChangeReviewCard: View {
     var diagnostics: HTMLDiagnostics
+    var snapshots: HTMLVisualSnapshotPair
+    var isCapturingSnapshot: Bool
+    var onRefreshSnapshot: () -> Void
     var onSelectTarget: (String) -> Void
 
     @State private var targetIndex = 0
@@ -988,6 +999,32 @@ private struct VisualChangeReviewCard: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(MaterialTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
+
+            VisualSnapshotComparison(
+                snapshots: snapshots,
+                isCapturingSnapshot: isCapturingSnapshot,
+                color: warningColor,
+                onRefresh: onRefreshSnapshot
+            )
+
+            if !diagnostics.visualChangePreviewItems.isEmpty {
+                VisualChangeMap(
+                    items: diagnostics.visualChangePreviewItems,
+                    totalCount: changeCount,
+                    canvasWidth: diagnostics.visualChangePreviewCanvasWidth,
+                    canvasHeight: diagnostics.visualChangePreviewCanvasHeight,
+                    color: warningColor,
+                    onSelectTarget: onSelectTarget
+                )
+
+                VisualChangePreviewList(
+                    items: Array(diagnostics.visualChangePreviewItems.prefix(6)),
+                    totalCount: changeCount,
+                    previewCount: diagnostics.visualChangePreviewItems.count,
+                    color: warningColor,
+                    onSelectTarget: onSelectTarget
+                )
+            }
 
             if !targetIds.isEmpty {
                 PPTXTargetNavigator(
@@ -1023,6 +1060,444 @@ private struct VisualChangeReviewCard: View {
 
     private var warningColor: Color {
         Color(red: 0.78, green: 0.47, blue: 0.06)
+    }
+}
+
+private struct VisualSnapshotComparison: View {
+    var snapshots: HTMLVisualSnapshotPair
+    var isCapturingSnapshot: Bool
+    var color: Color
+    var onRefresh: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.split.2x1")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(color)
+                    .frame(width: 18, height: 18)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("截图前后对照")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text(subtitle)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    onRefresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10, weight: .heavy))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(color)
+                .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                .disabled(isCapturingSnapshot)
+                .help("刷新当前截图")
+            }
+
+            if snapshots.hasImages {
+                LazyVGrid(columns: snapshotColumns, spacing: 8) {
+                    VisualSnapshotTile(title: "打开时", image: snapshots.baseline, color: color)
+                    VisualSnapshotTile(title: "当前", image: snapshots.current, color: color)
+                    VisualSnapshotTile(title: "差异热图", image: snapshots.diff?.heatmap, color: diffColor)
+                }
+
+                if let diff = snapshots.diff {
+                    HStack(spacing: 8) {
+                        VisualDiffMetric(
+                            value: percentText(diff.changedPixelRatio),
+                            label: "变化像素",
+                            icon: "square.grid.3x3.fill",
+                            color: diffColor
+                        )
+                        VisualDiffMetric(
+                            value: percentText(diff.averageDelta),
+                            label: "平均差异",
+                            icon: "waveform.path.ecg",
+                            color: diffColor
+                        )
+                        VisualDiffMetric(
+                            value: percentText(diff.maxDelta),
+                            label: "峰值差异",
+                            icon: "exclamationmark.triangle.fill",
+                            color: diffColor
+                        )
+                    }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .opacity(isCapturingSnapshot ? 1 : 0)
+                    Text(isCapturingSnapshot ? "正在捕获当前画面..." : "暂无截图，点击刷新捕获当前画面。")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+            }
+        }
+        .padding(10)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+
+    private var subtitle: String {
+        if isCapturingSnapshot { return "正在刷新当前画面" }
+        if let diff = snapshots.diff {
+            return diff.hasMeaningfulChange ? "已生成截图差异热图" : "截图差异很轻微"
+        }
+        if snapshots.baseline != nil && snapshots.current != nil { return "打开时与当前画面" }
+        if snapshots.baseline != nil { return "已保存打开时画面，等待当前截图" }
+        if snapshots.current != nil { return "当前画面已捕获" }
+        return "用于导出前人工对比"
+    }
+
+    private var snapshotColumns: [GridItem] {
+        [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+    }
+
+    private var diffColor: Color {
+        guard let diff = snapshots.diff else { return color }
+        if diff.changedPixelRatio >= 0.12 || diff.averageDelta >= 0.055 {
+            return MaterialTheme.accentDanger
+        }
+        if diff.hasMeaningfulChange {
+            return color
+        }
+        return Color(red: 0.06, green: 0.52, blue: 0.26)
+    }
+
+    private func percentText(_ value: Double) -> String {
+        let percent = value * 100
+        if percent < 0.1 && percent > 0 {
+            return "<0.1%"
+        }
+        return "\(Int(percent.rounded()))%"
+    }
+}
+
+private struct VisualSnapshotTile: View {
+    var title: String
+    var image: NSImage?
+    var color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 9, weight: .heavy))
+                .foregroundStyle(MaterialTheme.muted)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(MaterialTheme.surfaceStrong)
+
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                        .padding(4)
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 16, weight: .heavy))
+                        Text("未捕获")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(MaterialTheme.muted)
+                }
+            }
+            .frame(height: 150)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(color.opacity(image == nil ? 0.10 : 0.18), lineWidth: 1)
+            )
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct VisualDiffMetric: View {
+    var value: String
+    var label: String
+    var icon: String
+    var color: Color
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .heavy))
+            Text(value)
+                .font(.system(size: 11, weight: .heavy))
+                .monospacedDigit()
+            Text(label)
+                .font(.system(size: 9, weight: .bold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+    }
+}
+
+private struct VisualChangeMap: View {
+    var items: [HTMLVisualChangeItem]
+    var totalCount: Int
+    var canvasWidth: Int
+    var canvasHeight: Int
+    var color: Color
+    var onSelectTarget: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "map")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(color)
+                    .frame(width: 18, height: 18)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("视觉变更地图")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text(mapSubtitle)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(MaterialTheme.surfaceStrong)
+                    pageGrid
+                    ForEach(items) { item in
+                        heatZone(for: item, in: proxy.size)
+                    }
+                }
+            }
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .frame(maxHeight: 230)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(color.opacity(0.18), lineWidth: 1)
+            )
+        }
+        .padding(10)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+
+    private var pageGrid: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.white.opacity(0.72), MaterialTheme.surfaceTint.opacity(0.72)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Path { path in
+                let step: CGFloat = 24
+                let maxLine: CGFloat = 4000
+                var position: CGFloat = step
+                while position < maxLine {
+                    path.move(to: CGPoint(x: position, y: 0))
+                    path.addLine(to: CGPoint(x: position, y: maxLine))
+                    path.move(to: CGPoint(x: 0, y: position))
+                    path.addLine(to: CGPoint(x: maxLine, y: position))
+                    position += step
+                }
+            }
+            .stroke(MaterialTheme.primary.opacity(0.045), lineWidth: 1)
+        }
+    }
+
+    private var mapSubtitle: String {
+        if items.count < totalCount {
+            return "显示前 \(items.count) / \(totalCount) 处热区"
+        }
+        return "\(totalCount) 处热区"
+    }
+
+    private var aspectRatio: CGFloat {
+        let width = max(CGFloat(canvasWidth), 1)
+        let height = max(CGFloat(canvasHeight), 1)
+        return width / height
+    }
+
+    @ViewBuilder
+    private func heatZone(for item: HTMLVisualChangeItem, in size: CGSize) -> some View {
+        let rect = normalizedRect(for: item, in: size)
+        let zone = RoundedRectangle(cornerRadius: 4)
+            .fill(fillColor(for: item).opacity(item.elementId == nil ? 0.20 : 0.28))
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(fillColor(for: item).opacity(item.elementId == nil ? 0.50 : 0.82), lineWidth: 1.4)
+            )
+            .frame(width: rect.width, height: rect.height)
+            .position(x: rect.midX, y: rect.midY)
+            .help(item.elementId == nil ? "\(item.kind)：\(item.label)" : "定位：\(item.kind) \(item.label)")
+
+        if let elementId = item.elementId {
+            Button {
+                onSelectTarget(elementId)
+            } label: {
+                zone
+            }
+            .buttonStyle(.plain)
+        } else {
+            zone
+        }
+    }
+
+    private func normalizedRect(for item: HTMLVisualChangeItem, in size: CGSize) -> CGRect {
+        let width = max(CGFloat(canvasWidth), 1)
+        let height = max(CGFloat(canvasHeight), 1)
+        let itemX = min(max(CGFloat(item.x), 0), width)
+        let itemY = min(max(CGFloat(item.y), 0), height)
+        let itemW = min(max(CGFloat(item.w), 1), width - itemX)
+        let itemH = min(max(CGFloat(item.h), 1), height - itemY)
+        let x = itemX / width * size.width
+        let y = itemY / height * size.height
+        let w = max(itemW / width * size.width, 5)
+        let h = max(itemH / height * size.height, 5)
+        return CGRect(
+            x: min(max(x, 0), max(size.width - w, 0)),
+            y: min(max(y, 0), max(size.height - h, 0)),
+            width: min(w, size.width),
+            height: min(h, size.height)
+        )
+    }
+
+    private func fillColor(for item: HTMLVisualChangeItem) -> Color {
+        if item.kind.contains("删除") { return MaterialTheme.accentDanger }
+        if item.kind.contains("新增") { return Color(red: 0.06, green: 0.52, blue: 0.26) }
+        return color
+    }
+}
+
+private struct VisualChangePreviewList: View {
+    var items: [HTMLVisualChangeItem]
+    var totalCount: Int
+    var previewCount: Int
+    var color: Color
+    var onSelectTarget: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text("变化清单")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Spacer(minLength: 0)
+                if totalCount > items.count {
+                    Text("前 \(items.count) 项")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+            }
+
+            ForEach(items) { item in
+                VisualChangePreviewRow(item: item, color: color, onSelectTarget: onSelectTarget)
+            }
+
+            if totalCount > previewCount {
+                Text("其余 \(totalCount - previewCount) 处变化未放入缩略预览，可通过逐项定位继续复核。")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(10)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+}
+
+private struct VisualChangePreviewRow: View {
+    var item: HTMLVisualChangeItem
+    var color: Color
+    var onSelectTarget: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(rowColor)
+                .frame(width: 18, height: 18)
+                .background(rowColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.label.isEmpty ? "对象" : item.label)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                    .lineLimit(1)
+                Text("\(item.kind) · x \(item.x), y \(item.y), \(item.w) x \(item.h)")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 0)
+
+            if let elementId = item.elementId {
+                Button {
+                    onSelectTarget(elementId)
+                } label: {
+                    Label("定位", systemImage: "scope")
+                        .font(.system(size: 10, weight: .heavy))
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(rowColor)
+                .background(rowColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                .help("定位这处变化")
+            } else {
+                Text("不可定位")
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .padding(.horizontal, 7)
+                    .frame(height: 22)
+                    .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: 6))
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(rowColor.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private var icon: String {
+        if item.kind.contains("删除") { return "minus.square" }
+        if item.kind.contains("新增") { return "plus.square" }
+        if item.kind.contains("位置") || item.kind.contains("尺寸") { return "arrow.up.left.and.arrow.down.right" }
+        if item.kind.contains("文字") { return "textformat" }
+        if item.kind.contains("样式") { return "paintpalette" }
+        return "rectangle.2.swap"
+    }
+
+    private var rowColor: Color {
+        if item.kind.contains("删除") { return MaterialTheme.accentDanger }
+        if item.kind.contains("新增") { return Color(red: 0.06, green: 0.52, blue: 0.26) }
+        return color
     }
 }
 
@@ -1803,6 +2278,24 @@ private extension HTMLDiagnostics {
 
     var visualChangeTargetIds: [String] {
         normalizedTargetIds(visualChangeElementIds, fallback: visualChangeElementId)
+    }
+
+    var visualChangePreviewItems: [HTMLVisualChangeItem] {
+        visualChangeItems ?? []
+    }
+
+    var visualChangePreviewCanvasWidth: Int {
+        if let visualChangeCanvasWidth, visualChangeCanvasWidth > 0 {
+            return visualChangeCanvasWidth
+        }
+        return max(visualChangePreviewItems.map { $0.x + $0.w }.max() ?? 1, 1)
+    }
+
+    var visualChangePreviewCanvasHeight: Int {
+        if let visualChangeCanvasHeight, visualChangeCanvasHeight > 0 {
+            return visualChangeCanvasHeight
+        }
+        return max(visualChangePreviewItems.map { $0.y + $0.h }.max() ?? 1, 1)
     }
 
     var runtimeCompatibilityDetail: String {
