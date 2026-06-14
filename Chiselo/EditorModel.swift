@@ -1482,22 +1482,15 @@ final class EditorModel: ObservableObject {
                       json != "null",
                       let data = json.data(using: .utf8),
                       let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let rectObject = object["rect"] as? [String: Any] else {
+                      let snapshotObject = object["snapshot"] as? [String: Any] else {
                     self.isCapturingHTMLVisualSnapshot = false
                     completion(nil)
                     return
                 }
                 let restoreState = object["state"]
+                let plan = self.visualSnapshotCapturePlan(from: snapshotObject)
 
-                let webBounds = webView.bounds
-                let rect = NSRect(
-                    x: max(0, self.bridgeCGFloat(rectObject["x"]) ?? 0),
-                    y: max(0, self.bridgeCGFloat(rectObject["y"]) ?? 0),
-                    width: max(1, self.bridgeCGFloat(rectObject["width"]) ?? webBounds.width),
-                    height: max(1, self.bridgeCGFloat(rectObject["height"]) ?? webBounds.height)
-                ).intersection(webBounds)
-
-                guard rect.width > 1, rect.height > 1 else {
+                guard !plan.segments.isEmpty else {
                     self.restoreHTMLVisualSnapshotState(restoreState, in: webView) {
                         self.isCapturingHTMLVisualSnapshot = false
                         completion(nil)
@@ -1505,27 +1498,128 @@ final class EditorModel: ObservableObject {
                     return
                 }
 
-                let config = WKSnapshotConfiguration()
-                config.rect = rect
-                webView.takeSnapshot(with: config) { [weak self] image, error in
-                    Task { @MainActor in
-                        guard let self else { return }
-                        if let error {
-                            self.restoreHTMLVisualSnapshotState(restoreState, in: webView) {
-                                self.isCapturingHTMLVisualSnapshot = false
+                self.captureHTMLVisualSnapshotSegments(plan: plan, webView: webView, restoreState: restoreState, completion: completion)
+            }
+        }
+    }
+
+    private struct VisualSnapshotCapturePlan {
+        var contentWidth: CGFloat
+        var contentHeight: CGFloat
+        var viewportHeight: CGFloat
+        var segments: [CGFloat]
+    }
+
+    private func visualSnapshotCapturePlan(from object: [String: Any]) -> VisualSnapshotCapturePlan {
+        let contentWidth = max(1, bridgeCGFloat(object["contentWidth"]) ?? 1)
+        let contentHeight = max(1, bridgeCGFloat(object["contentHeight"]) ?? bridgeCGFloat(object["height"]) ?? 1)
+        let viewportHeight = max(1, (object["rect"] as? [String: Any]).flatMap { bridgeCGFloat($0["height"]) } ?? contentHeight)
+        let maxSegments = 6
+        var segments: [CGFloat] = []
+        let maxOffset = max(0, contentHeight - viewportHeight)
+        if maxOffset <= 0 {
+            segments = [0]
+        } else {
+            let naturalCount = Int(ceil(contentHeight / viewportHeight))
+            let count = min(maxSegments, max(2, naturalCount))
+            for index in 0..<count {
+                let progress = CGFloat(index) / CGFloat(max(count - 1, 1))
+                segments.append(maxOffset * progress)
+            }
+        }
+        return VisualSnapshotCapturePlan(contentWidth: contentWidth, contentHeight: contentHeight, viewportHeight: viewportHeight, segments: Array(Set(segments)).sorted())
+    }
+
+    private func captureHTMLVisualSnapshotSegments(plan: VisualSnapshotCapturePlan, webView: WKWebView, restoreState: Any?, completion: @escaping (NSImage?) -> Void) {
+        var captures: [(offset: CGFloat, image: NSImage)] = []
+
+        func finish(_ image: NSImage?) {
+            restoreHTMLVisualSnapshotState(restoreState, in: webView) {
+                self.isCapturingHTMLVisualSnapshot = false
+                completion(image)
+            }
+        }
+
+        func captureNext(index: Int) {
+            guard index < plan.segments.count else {
+                finish(stitchedVisualSnapshot(captures: captures, plan: plan))
+                return
+            }
+
+            let offset = plan.segments[index]
+            webView.evaluateJavaScript("JSON.stringify(window.ChiseloEditor?.scrollVisualReviewSnapshotTo?.(\(offset)) ?? null);") { [weak self, weak webView] result, error in
+                Task { @MainActor in
+                    guard let self, let webView else { return }
+                    if let error {
+                        self.status = "截图复核捕获失败：\(error.localizedDescription)"
+                        finish(nil)
+                        return
+                    }
+
+                    guard let json = result as? String,
+                          json != "null",
+                          let data = json.data(using: .utf8),
+                          let snapshotObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          let rectObject = snapshotObject["rect"] as? [String: Any] else {
+                        finish(nil)
+                        return
+                    }
+
+                    let webBounds = webView.bounds
+                    let rect = NSRect(
+                        x: max(0, self.bridgeCGFloat(rectObject["x"]) ?? 0),
+                        y: max(0, self.bridgeCGFloat(rectObject["y"]) ?? 0),
+                        width: max(1, self.bridgeCGFloat(rectObject["width"]) ?? webBounds.width),
+                        height: max(1, self.bridgeCGFloat(rectObject["height"]) ?? webBounds.height)
+                    ).intersection(webBounds)
+
+                    guard rect.width > 1, rect.height > 1 else {
+                        captureNext(index: index + 1)
+                        return
+                    }
+
+                    let config = WKSnapshotConfiguration()
+                    config.rect = rect
+                    webView.takeSnapshot(with: config) { [weak self] image, error in
+                        Task { @MainActor in
+                            guard let self else { return }
+                            if let error {
                                 self.status = "截图复核捕获失败：\(error.localizedDescription)"
-                                completion(nil)
+                                finish(nil)
+                                return
                             }
-                            return
-                        }
-                        self.restoreHTMLVisualSnapshotState(restoreState, in: webView) {
-                            self.isCapturingHTMLVisualSnapshot = false
-                            completion(image)
+                            if let image {
+                                captures.append((offset: offset, image: image))
+                            }
+                            captureNext(index: index + 1)
                         }
                     }
                 }
             }
         }
+
+        captureNext(index: 0)
+    }
+
+    private func stitchedVisualSnapshot(captures: [(offset: CGFloat, image: NSImage)], plan: VisualSnapshotCapturePlan) -> NSImage? {
+        guard !captures.isEmpty, let first = captures.first?.image else { return nil }
+        if captures.count == 1 {
+            return first
+        }
+
+        let width = max(1, first.size.width)
+        let scale = width / max(plan.contentWidth, 1)
+        let height = max(1, plan.contentHeight * scale)
+        let result = NSImage(size: NSSize(width: width, height: height))
+        result.lockFocus()
+        NSColor.white.setFill()
+        NSRect(x: 0, y: 0, width: width, height: height).fill()
+        for capture in captures {
+            let y = max(0, height - capture.offset * scale - capture.image.size.height)
+            capture.image.draw(in: NSRect(x: 0, y: y, width: width, height: capture.image.size.height), from: .zero, operation: .copy, fraction: 1.0)
+        }
+        result.unlockFocus()
+        return result
     }
 
     private func restoreHTMLVisualSnapshotState(_ state: Any?, in webView: WKWebView, completion: @escaping () -> Void) {

@@ -6554,17 +6554,29 @@ ${htmlSlides}
   }
 
   function getVisualReviewSnapshotRect() {
+    return visualReviewSnapshotInfo().rect;
+  }
+
+  function visualReviewSnapshotInfo() {
     const rect = stage.getBoundingClientRect();
     const view = viewport.getBoundingClientRect();
     const left = Math.max(rect.left, view.left);
     const top = Math.max(rect.top, view.top);
     const right = Math.min(rect.right, view.right);
     const bottom = Math.min(rect.bottom, view.bottom);
+    const contentWidth = stageOuter.offsetWidth || rect.width;
+    const contentHeight = stageOuter.offsetHeight || rect.height;
     return {
-      x: Math.max(0, left),
-      y: Math.max(0, top),
-      width: Math.max(1, right - left),
-      height: Math.max(1, bottom - top),
+      rect: {
+        x: Math.max(0, left),
+        y: Math.max(0, top),
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top)
+      },
+      offsetX: Math.max(0, left - rect.left),
+      offsetY: Math.max(0, top - rect.top),
+      contentWidth,
+      contentHeight,
       scale,
       canvasWidth: editorMode === "html" ? directCanvas().width : deck.canvas.width,
       canvasHeight: editorMode === "html" ? directCanvas().height : deck.canvas.height
@@ -6587,8 +6599,18 @@ ${htmlSlides}
     updateSelectionBox();
     return {
       state,
-      rect: getVisualReviewSnapshotRect()
+      snapshot: visualReviewSnapshotInfo()
     };
+  }
+
+  function scrollVisualReviewSnapshotTo(offsetY = 0) {
+    viewport.scrollTo({
+      left: 0,
+      top: clampNumber(Number(offsetY || 0), 0, Math.max(0, viewport.scrollHeight - viewport.clientHeight)),
+      behavior: "instant"
+    });
+    updateSelectionBox();
+    return visualReviewSnapshotInfo();
   }
 
   function restoreVisualReviewSnapshot(state) {
@@ -6630,6 +6652,7 @@ ${htmlSlides}
     })),
     getVisualReviewSnapshotRect,
     prepareVisualReviewSnapshot,
+    scrollVisualReviewSnapshotTo,
     restoreVisualReviewSnapshot,
     getViewportState: () => ({
       scale,

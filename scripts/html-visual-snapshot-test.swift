@@ -7,6 +7,7 @@ final class HTMLVisualSnapshotTest: NSObject, WKNavigationDelegate, WKScriptMess
     private var webView: WKWebView?
     private var didStart = false
     private var didCapture = false
+    private var didLongPageCheck = false
 
     init(editorURL: URL) {
         self.editorURL = editorURL
@@ -81,8 +82,7 @@ final class HTMLVisualSnapshotTest: NSObject, WKNavigationDelegate, WKScriptMess
                         self.fail("Snapshot diff did not detect the visual change: \(diff)")
                     }
 
-                    let output: [String: Any] = [
-                        "type": "result",
+                    self.checkLongPageSegmentation(previous: [
                         "rect": [
                             "x": rect.origin.x,
                             "y": rect.origin.y,
@@ -94,16 +94,92 @@ final class HTMLVisualSnapshotTest: NSObject, WKNavigationDelegate, WKScriptMess
                         "heatmapPngBytes": heatmapBytes,
                         "changedPixelRatio": diff.changedPixelRatio,
                         "averageDelta": diff.averageDelta
-                    ]
-
-                    if let data = try? JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted, .sortedKeys]),
-                       let string = String(data: data, encoding: .utf8) {
-                        print(string)
-                    }
-                    exit(0)
+                    ])
                 }
             }
         }
+    }
+
+    private func checkLongPageSegmentation(previous: [String: Any]) {
+        guard !didLongPageCheck else { return }
+        didLongPageCheck = true
+
+        loadLongFixture { [weak self] in
+            self?.prepareLongFixtureSnapshot(previous: previous)
+        }
+    }
+
+    private func loadLongFixture(completion: @escaping () -> Void) {
+        let base64 = Data(Self.longFixtureHTML.utf8).base64EncodedString()
+        let script = """
+        void window.ChiseloEditor.openHTMLFromBase64('\(base64)', '')
+          .catch(error => console.error(error));
+        """
+
+        webView?.evaluateJavaScript(script) { [weak self] _, error in
+            guard let self else { return }
+            if let error {
+                self.fail("Could not load long fixture: \(error.localizedDescription)")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                completion()
+            }
+        }
+    }
+
+    private func prepareLongFixtureSnapshot(previous: [String: Any]) {
+        webView?.evaluateJavaScript("JSON.stringify(window.ChiseloEditor.prepareVisualReviewSnapshot())") { [weak self] result, error in
+            guard let self else { return }
+            if let error {
+                self.fail("Could not prepare long fixture: \(error.localizedDescription)")
+            }
+
+            guard let json = result as? String,
+                  let data = json.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let snapshot = object["snapshot"] as? [String: Any],
+                  let rect = snapshot["rect"] as? [String: Any],
+                  let contentHeight = self.bridgeCGFloat(snapshot["contentHeight"]),
+                  let viewportHeight = self.bridgeCGFloat(rect["height"]),
+                  contentHeight > viewportHeight * 1.5 else {
+                self.fail("Long page snapshot metadata did not show a scrollable page")
+            }
+
+            self.webView?.evaluateJavaScript("JSON.stringify(window.ChiseloEditor.scrollVisualReviewSnapshotTo(\(viewportHeight)))") { [weak self] segmentResult, segmentError in
+                guard let self else { return }
+                if let segmentError {
+                    self.fail("Could not scroll long fixture snapshot: \(segmentError.localizedDescription)")
+                }
+                guard let segmentJSON = segmentResult as? String,
+                      let segmentData = segmentJSON.data(using: .utf8),
+                      let segment = try? JSONSerialization.jsonObject(with: segmentData) as? [String: Any],
+                      let offsetY = self.bridgeCGFloat(segment["offsetY"]),
+                      offsetY > 0 else {
+                    self.fail("Long page second segment did not report a positive offset")
+                }
+
+                if let state = object["state"] {
+                    self.restoreSnapshotState(state, in: self.webView!) {
+                        self.printResult(previous: previous, longContentHeight: contentHeight, longViewportHeight: viewportHeight)
+                    }
+                } else {
+                    self.printResult(previous: previous, longContentHeight: contentHeight, longViewportHeight: viewportHeight)
+                }
+            }
+        }
+    }
+
+    private func printResult(previous: [String: Any], longContentHeight: CGFloat, longViewportHeight: CGFloat) {
+        var output = previous
+        output["type"] = "result"
+        output["longContentHeight"] = longContentHeight
+        output["longViewportHeight"] = longViewportHeight
+
+        if let data = try? JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted, .sortedKeys]),
+           let string = String(data: data, encoding: .utf8) {
+            print(string)
+        }
+        exit(0)
     }
 
     private func captureSnapshot(completion: @escaping (NSImage, NSRect, Int) -> Void) {
@@ -122,7 +198,8 @@ final class HTMLVisualSnapshotTest: NSObject, WKNavigationDelegate, WKScriptMess
                   json != "null",
                   let data = json.data(using: .utf8),
                   let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let rectObject = object["rect"] as? [String: Any] else {
+                  let snapshotObject = object["snapshot"] as? [String: Any],
+                  let rectObject = snapshotObject["rect"] as? [String: Any] else {
                 self.fail("Snapshot rect was not valid JSON")
             }
             let restoreState = object["state"]
@@ -367,6 +444,31 @@ final class HTMLVisualSnapshotTest: NSObject, WKNavigationDelegate, WKScriptMess
         <h1>Visual Snapshot Fixture</h1>
         <p>This page exists to verify that the export preflight can capture the rendered canvas for before/after review.</p>
         <div class="badge">Snapshot target</div>
+      </main>
+    </body>
+    </html>
+    """
+
+    private static let longFixtureHTML = """
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
+        main { width: 960px; min-height: 2200px; padding: 48px; color: #0f172a; background: linear-gradient(180deg, #dbeafe, #f8fafc 40%, #dcfce7); }
+        section { height: 360px; margin-bottom: 42px; padding: 28px; border-radius: 18px; background: rgba(255,255,255,.78); border: 1px solid rgba(15,23,42,.12); }
+        h1 { margin: 0 0 18px; font-size: 44px; }
+      </style>
+    </head>
+    <body>
+      <main>
+        <h1>Long Visual Snapshot Fixture</h1>
+        <section>Segment 1</section>
+        <section>Segment 2</section>
+        <section>Segment 3</section>
+        <section>Segment 4</section>
+        <section>Segment 5</section>
       </main>
     </body>
     </html>
