@@ -451,6 +451,7 @@
     clearTimeout(directLayoutTimer);
     const delay = activeDirectTextEditNode?.isConnected ? 96 : 40;
     directLayoutTimer = setTimeout(() => {
+      collapseDirectQuickActions();
       fitStage({ preserveScale: true });
       updatePageBoundaryOverlay();
       updateSelectionBox();
@@ -465,6 +466,7 @@
 
       if (mutation.type !== "attributes") continue;
       const name = mutation.attributeName || "";
+      if (name.startsWith("data-chiselo")) continue;
       if (name === "id" || name === "class" || name === "src" || name === "alt" || name === "href" || name === "title" || name === "hidden" || name === "aria-label") {
         return true;
       }
@@ -2108,13 +2110,11 @@
 
     if (!shouldRebuildChrome) {
       if (activeGesture?.mode === "html") return;
+      collapseDirectQuickActions();
       const chip = selectionBox.querySelector(".quick-chip");
       if (chip) chip.textContent = directQuickLabel(nodes, rect);
       const bar = selectionBox.querySelector(".quick-action-bar");
-      if (bar) {
-        bar.className = `quick-action-bar${rect.y < 42 ? " is-below" : ""}`;
-        requestAnimationFrame(() => clampDirectQuickActions(bar, rect));
-      }
+      if (bar) requestAnimationFrame(() => placeDirectQuickActions(bar, rect));
       return;
     }
 
@@ -2423,7 +2423,12 @@
 
     const observer = new MutationObserver((mutations) => {
       let sawAddedEditableNodes = false;
+      let sawRelevantMutations = false;
       for (const mutation of mutations) {
+        if (mutation.type === "attributes" && (mutation.attributeName || "").startsWith("data-chiselo")) {
+          continue;
+        }
+        sawRelevantMutations = true;
         if (mutation.type === "attributes" && mutation.target?.nodeType === Node.ELEMENT_NODE) {
           applyDirectEditingAssist(mutation.target);
         }
@@ -2433,6 +2438,7 @@
           sawAddedEditableNodes = true;
         }
       }
+      if (!sawRelevantMutations) return;
       const affectsTree = mutationsAffectHTMLTree(mutations);
       if (activeGesture?.mode === "html") {
         directMutationRefreshPending = true;
@@ -2489,7 +2495,7 @@
     const targetNode = directEditableTarget(event.target);
     if (!targetNode) return null;
 
-    if (!shouldResolveSelectionTargetFromPoint(targetNode)) {
+    if (!shouldResolveSelectionTargetFromPoint(targetNode) && !isSelectionPassThroughCandidate(targetNode)) {
       return targetNode;
     }
 
@@ -2947,7 +2953,7 @@
     setDirectSelection([node], node);
   }
 
-  function setDirectSelection(nodes, activeNode = null) {
+  function setDirectSelection(nodes, activeNode = null, options = {}) {
     const uniqueNodes = [];
     const seen = new Set();
 
@@ -2967,7 +2973,7 @@
     hoverBox.hidden = true;
     selectedId = directSelectedNode ? ensureDirectId(directSelectedNode) : null;
     updateSelectionBox();
-    postSelectionChanged();
+    postSelectionChanged(options);
   }
 
   function directSelectionMatches(nodes, activeNode) {
@@ -3089,7 +3095,7 @@
 
   function appendDirectQuickActions(nodes, rect) {
     const bar = document.createElement("div");
-    bar.className = `quick-action-bar${rect.y < 42 ? " is-below" : ""}`;
+    bar.className = "quick-action-bar";
     bar.addEventListener("pointerdown", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3099,6 +3105,42 @@
     chip.className = "quick-chip";
     chip.textContent = directQuickLabel(nodes, rect);
     bar.appendChild(chip);
+
+    const menuButton = document.createElement("button");
+    menuButton.type = "button";
+    menuButton.className = "quick-action-menu-toggle";
+    menuButton.textContent = "...";
+    menuButton.title = "显示快捷操作";
+    menuButton.setAttribute("aria-label", "显示快捷操作");
+    menuButton.setAttribute("aria-expanded", "false");
+    bar.appendChild(menuButton);
+
+    const menu = document.createElement("div");
+    menu.className = "quick-action-menu";
+    menu.hidden = true;
+
+    const setMenuOpen = (open) => {
+      bar.classList.toggle("is-open", open);
+      menu.hidden = !open;
+      menuButton.title = open ? "收起快捷操作" : "显示快捷操作";
+      menuButton.setAttribute("aria-label", menuButton.title);
+      menuButton.setAttribute("aria-expanded", String(open));
+      requestAnimationFrame(() => placeDirectQuickActions(bar, rect));
+    };
+
+    menuButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setMenuOpen(!bar.classList.contains("is-open"));
+    });
+
+    bar.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && bar.classList.contains("is-open")) {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuButton.focus();
+      }
+    });
 
     const actions = directQuickActions(nodes);
     for (const item of actions) {
@@ -3110,24 +3152,65 @@
       button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        setMenuOpen(false);
         runDirectQuickAction(item.action);
       });
-      bar.appendChild(button);
+      menu.appendChild(button);
     }
 
+    bar.appendChild(menu);
     selectionBox.appendChild(bar);
-    requestAnimationFrame(() => clampDirectQuickActions(bar, rect));
+    requestAnimationFrame(() => placeDirectQuickActions(bar, rect));
   }
 
-  function clampDirectQuickActions(bar, rect) {
+  function collapseDirectQuickActions() {
+    const bar = selectionBox.querySelector(".quick-action-bar.is-open");
+    if (!bar) return;
+    const menu = bar.querySelector(".quick-action-menu");
+    const menuButton = bar.querySelector(".quick-action-menu-toggle");
+    bar.classList.remove("is-open");
+    if (menu) menu.hidden = true;
+    if (menuButton) {
+      menuButton.title = "显示快捷操作";
+      menuButton.setAttribute("aria-label", "显示快捷操作");
+      menuButton.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function placeDirectQuickActions(bar, rect) {
     if (!bar.isConnected) return;
     const canvas = directCanvas();
-    const width = bar.offsetWidth / Math.max(scale, 0.05);
-    let left = 0;
-    if (rect.x + width > canvas.width - 8) {
-      left = Math.max(8 - rect.x, canvas.width - 8 - rect.x - width);
-    }
-    bar.style.left = `${Math.round(left)}px`;
+    const effectiveScale = Math.max(scale, 0.05);
+    const margin = 8 / effectiveScale;
+    const menu = bar.querySelector(".quick-action-menu:not([hidden])");
+    const width = Math.max(bar.offsetWidth, menu?.offsetWidth || 0) / effectiveScale;
+    const menuGap = menu ? 6 / effectiveScale : 0;
+    const height = (bar.offsetHeight + menuGap + (menu?.offsetHeight || 0)) / effectiveScale;
+    const placements = [
+      { name: "right", left: rect.w + margin, top: 0 },
+      { name: "left", left: -width - margin, top: 0 },
+      { name: "below", left: 0, top: rect.h + margin },
+      { name: "above", left: 0, top: -height - margin }
+    ];
+    const fits = (placement) => {
+      const x = rect.x + placement.left;
+      const y = rect.y + placement.top;
+      return x >= margin
+        && y >= margin
+        && x + width <= canvas.width - margin
+        && y + height <= canvas.height - margin;
+    };
+    const fallbackTop = rect.y + rect.h + height + margin <= canvas.height
+      ? rect.h + margin
+      : -height - margin;
+    const placement = placements.find(fits) || {
+      name: fallbackTop >= 0 ? "below" : "above",
+      left: clampNumber(0, margin - rect.x, canvas.width - margin - rect.x - width),
+      top: clampNumber(fallbackTop, margin - rect.y, canvas.height - margin - rect.y - height)
+    };
+    bar.dataset.placement = placement.name;
+    bar.style.top = `${Math.round(placement.top)}px`;
+    bar.style.left = `${Math.round(placement.left)}px`;
   }
 
   function directQuickLabel(nodes, rect) {
@@ -6401,16 +6484,33 @@ ${htmlSlides}
     const doc = directFrame?.contentDocument;
     if (!doc) return null;
 
-    const target = doc.elementFromPoint(x, y) || doc.body;
+    const target = directTopSelectableTargetAtPoint(doc, x, y) || doc.elementFromPoint(x, y) || doc.body;
     const node = directSelectionTargetFromEvent({ target, clientX: x, clientY: y });
     if (!node) return null;
 
+    const selectionPayload = directElementPayloadForNode(node, directNodeRect(node));
     if (additive) {
       setDirectSelection([...directSelectionNodes(), node], node);
     } else {
-      selectDirectNode(node);
+      setDirectSelection([node], node, {
+        payload: {
+          element: selectionPayload,
+          slideIndex: currentSlideIndex,
+          path: directNodePath(node)
+        }
+      });
     }
-    return selectedElement();
+    return selectionPayload;
+  }
+
+  function directTopSelectableTargetAtPoint(doc, x, y) {
+    const elements = doc.elementsFromPoint?.(x, y) || [];
+    for (const element of elements) {
+      const node = directEditableTarget(element);
+      if (!node || node === doc.body || isSelectionPassThroughCandidate(node) || isDecorativeDirectNode(node)) continue;
+      return node;
+    }
+    return null;
   }
 
   function cssEscape(value) {
