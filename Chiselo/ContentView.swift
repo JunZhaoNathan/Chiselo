@@ -4743,6 +4743,15 @@ private struct InspectorPanel: View {
                             .buttonStyle(MaterialButtonStyle(compact: true))
 
                             Button {
+                                restoreSourceDraft(for: element)
+                            } label: {
+                                Label("恢复", systemImage: "arrow.uturn.backward")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(MaterialButtonStyle(compact: true))
+                            .disabled(!canRestoreSourceDraft(for: element))
+
+                            Button {
                                 model.applySelectedHTMLSource(sourceDraft)
                             } label: {
                                 Label("应用源码", systemImage: "checkmark.square")
@@ -5042,6 +5051,18 @@ private struct InspectorPanel: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(snippet, forType: .string)
         model.status = "已复制选中对象源码片段"
+    }
+
+    private func restoreSourceDraft(for element: EditorElement) {
+        sourceDraft = element.sourceSnippet ?? ""
+        sourceDraftElementID = element.id
+        model.status = "已恢复为当前选中对象的原始源码片段"
+    }
+
+    private func canRestoreSourceDraft(for element: EditorElement) -> Bool {
+        let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !original.isEmpty && draft != original
     }
 
     private func canApplySourceDraft(for element: EditorElement) -> Bool {
