@@ -734,6 +734,12 @@ private struct ExportPreflightPanel: View {
                     model.selectHTMLNode(id: elementId)
                 }
             }
+            if diagnostics.sourcePollutionReviewCount > 0 {
+                SourceWritebackReviewCard(diagnostics: diagnostics) { elementId in
+                    dismiss()
+                    model.selectHTMLNode(id: elementId)
+                }
+            }
             PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
                 dismiss()
                 model.selectHTMLNode(id: elementId)
@@ -1214,6 +1220,140 @@ private struct ResponsiveChangeReviewCard: View {
         if item.kind.contains("位置") || item.kind.contains("尺寸") { return "arrow.up.left.and.arrow.down.right" }
         if item.kind.contains("样式") { return "paintbrush" }
         return "scope"
+    }
+}
+
+private struct SourceWritebackReviewCard: View {
+    var diagnostics: HTMLDiagnostics
+    var onSelectTarget: (String) -> Void
+
+    @State private var targetIndex = 0
+
+    private let color = Color(red: 0.78, green: 0.47, blue: 0.06)
+
+    var body: some View {
+        let inlineItems = diagnostics.inlineStyleChangeItems
+        let ruleItems = diagnostics.stylesheetRuleChangeItems
+        let targetIds = diagnostics.sourceWritebackTargetIds
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "curlybraces.square")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(color)
+                    .frame(width: 22, height: 22)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("源码写回复核")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text(sourceWritebackSubtitle(inlineCount: inlineItems.count, ruleCount: ruleItems.count))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(color)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Text(diagnostics.sourcePollutionReviewDetail)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            let previewItems = Array((inlineItems + ruleItems).prefix(6))
+            if !previewItems.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(previewItems) { item in
+                        SourceWritebackRow(item: item, color: color, onSelectTarget: onSelectTarget)
+                    }
+                }
+                .padding(10)
+                .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+            }
+
+            if !targetIds.isEmpty {
+                PPTXTargetNavigator(
+                    title: "源码写回",
+                    icon: "curlybraces.square",
+                    count: inlineItems.count + ruleItems.count,
+                    targetIds: targetIds,
+                    color: color,
+                    index: $targetIndex,
+                    onSelectTarget: onSelectTarget
+                )
+            }
+        }
+        .padding(14)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func sourceWritebackSubtitle(inlineCount: Int, ruleCount: Int) -> String {
+        var parts: [String] = []
+        if ruleCount > 0 { parts.append("\(ruleCount) 处写入 CSS 规则") }
+        if inlineCount > 0 { parts.append("\(inlineCount) 处写入 inline style") }
+        return parts.isEmpty ? "未检测到对象级源码写回" : parts.joined(separator: "，")
+    }
+}
+
+private struct SourceWritebackRow: View {
+    var item: HTMLVisualChangeItem
+    var color: Color
+    var onSelectTarget: (String) -> Void
+
+    var body: some View {
+        Button {
+            if let elementId = item.elementId {
+                onSelectTarget(elementId)
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: item.writebackKind == "stylesheet-rule" ? "curlybraces" : "paintbrush.pointed")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 18, height: 18)
+                    .background(iconColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.label)
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                        .lineLimit(1)
+                    Text(detail)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                }
+
+                Spacer(minLength: 0)
+
+                if item.elementId != nil {
+                    Image(systemName: "scope")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.primary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(item.elementId == nil)
+    }
+
+    private var detail: String {
+        let label = item.writebackLabel ?? "源码"
+        if let afterValue = item.afterValue, !afterValue.isEmpty {
+            return "\(label)：\(afterValue)"
+        }
+        return "\(label)：\(item.detail ?? item.kind)"
+    }
+
+    private var iconColor: Color {
+        item.writebackKind == "stylesheet-rule" ? Color(red: 0.06, green: 0.52, blue: 0.26) : color
     }
 }
 
@@ -3189,8 +3329,12 @@ private struct HTMLDeliveryCheckCard: View {
                         title: "源码写回",
                         detail: diagnostics.sourcePollutionReviewDetail,
                         color: warningColor,
-                        isClickable: false
-                    )
+                        isClickable: !diagnostics.sourceWritebackTargetIds.isEmpty
+                    ) {
+                        if let elementId = diagnostics.sourceWritebackTargetIds.first {
+                            model.selectHTMLNode(id: elementId)
+                        }
+                    }
                 }
 
                 if diagnostics.tableCount > 0 {

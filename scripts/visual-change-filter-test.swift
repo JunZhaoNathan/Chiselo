@@ -16,8 +16,8 @@ struct VisualChangeFilterTest {
         let items = [
             HTMLVisualChangeItem(changeKey: "text-key", elementId: "text-1", label: "标题", kind: "文字", detail: "文字内容发生变化。", beforeValue: "旧标题", afterValue: "新标题", canRevert: true, revertReason: nil, x: 1, y: 2, w: 30, h: 10),
             HTMLVisualChangeItem(elementId: "image-1", label: "封面图", kind: "图片", x: 4, y: 5, w: 40, h: 20),
-            HTMLVisualChangeItem(elementId: "box-1", label: "卡片", kind: "位置/尺寸", x: 8, y: 9, w: 50, h: 30),
-            HTMLVisualChangeItem(elementId: "style-1", label: "按钮", kind: "样式", x: 12, y: 13, w: 60, h: 25),
+            HTMLVisualChangeItem(elementId: "box-1", label: "卡片", kind: "位置/尺寸", writebackKind: "inline-style", writebackLabel: "inline style", x: 8, y: 9, w: 50, h: 30),
+            HTMLVisualChangeItem(elementId: "style-1", label: "按钮", kind: "样式", writebackKind: "stylesheet-rule", writebackLabel: "CSS 规则", x: 12, y: 13, w: 60, h: 25),
             HTMLVisualChangeItem(elementId: nil, label: "旧对象", kind: "删除对象", x: 16, y: 17, w: 70, h: 35)
         ]
 
@@ -37,6 +37,9 @@ struct VisualChangeFilterTest {
         try expect(diagnostics.visualChangeTargetIds == ["text-1", "image-1", "fallback-1"], "All target ids should be deduplicated and include fallback.")
         try expect(diagnostics.visualChangeTargetIds(for: .text) == ["text-1"], "Filtered target ids should use preview items for text.")
         try expect(diagnostics.visualChangeTargetIds(for: .deleted).isEmpty, "Deleted preview item without element id should not become a target.")
+        try expect(diagnostics.inlineStyleChangeItems.map(\.elementId) == ["box-1"], "Inline style writeback items should be filtered from visual changes.")
+        try expect(diagnostics.stylesheetRuleChangeItems.map(\.elementId) == ["style-1"], "Stylesheet rule writeback items should be filtered from visual changes.")
+        try expect(diagnostics.sourceWritebackTargetIds == ["box-1", "style-1"], "Source writeback target ids should combine inline and stylesheet items.")
 
         print("Visual change filter test OK")
     }

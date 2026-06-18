@@ -124,6 +124,8 @@ struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
     var detail: String? = nil
     var beforeValue: String? = nil
     var afterValue: String? = nil
+    var writebackKind: String? = nil
+    var writebackLabel: String? = nil
     var canRevert: Bool? = nil
     var revertReason: String? = nil
     var x: Int
@@ -377,6 +379,23 @@ extension HTMLDiagnostics {
 
     var responsiveChangePreviewItems: [HTMLVisualChangeItem] {
         responsiveChangeItems ?? []
+    }
+
+    var inlineStyleChangeItems: [HTMLVisualChangeItem] {
+        visualChangePreviewItems.filter { $0.writebackKind == "inline-style" }
+    }
+
+    var stylesheetRuleChangeItems: [HTMLVisualChangeItem] {
+        visualChangePreviewItems.filter { $0.writebackKind == "stylesheet-rule" }
+    }
+
+    var sourceWritebackTargetIds: [String] {
+        var seen = Set<String>()
+        return (inlineStyleChangeItems + stylesheetRuleChangeItems).compactMap(\.elementId).filter { id in
+            guard !id.isEmpty, !seen.contains(id) else { return false }
+            seen.insert(id)
+            return true
+        }
     }
 
     func visualChangeTargetIds(for filter: VisualChangeFilter) -> [String] {

@@ -47,6 +47,9 @@ echo "==> Safe file history"
 SAFE_HISTORY_TEST_BIN="/tmp/chiselo-safe-file-history-test"
 swiftc Chiselo/SafeFileHistory.swift scripts/safe-file-history-test.swift -o "$SAFE_HISTORY_TEST_BIN"
 "$SAFE_HISTORY_TEST_BIN"
+VISUAL_FILTER_TEST_BIN="/tmp/chiselo-visual-change-filter-test"
+swiftc Chiselo/DeckModel.swift scripts/visual-change-filter-test.swift -o "$VISUAL_FILTER_TEST_BIN"
+"$VISUAL_FILTER_TEST_BIN"
 
 echo "==> Core editor smoke tests"
 swift scripts/import-smoke-test.swift

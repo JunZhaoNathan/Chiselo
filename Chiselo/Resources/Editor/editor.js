@@ -6549,6 +6549,7 @@ ${htmlSlides}
     const entry = after || before || {};
     const rect = entry?.rect || {};
     const detail = visualChangeDetail(kind, before, after);
+    const writebackKind = visualChangeWritebackKind(before, after);
     return {
       changeKey: key || null,
       elementId: entry?.elementId || null,
@@ -6557,6 +6558,8 @@ ${htmlSlides}
       detail: detail.detail,
       beforeValue: detail.beforeValue,
       afterValue: detail.afterValue,
+      writebackKind,
+      writebackLabel: visualChangeWritebackLabel(writebackKind),
       canRevert: Boolean(revertInfo?.canRevert),
       revertReason: revertInfo?.reason || null,
       x: Math.round(Number(rect.x || 0)),
@@ -6564,6 +6567,19 @@ ${htmlSlides}
       w: Math.round(Number(rect.w || 0)),
       h: Math.round(Number(rect.h || 0))
     };
+  }
+
+  function visualChangeWritebackKind(before, after) {
+    if (!before || !after) return null;
+    if (String(before.styleAttr || "") !== String(after.styleAttr || "")) return "inline-style";
+    if (visualStylesheetRuleDiffers(before, after)) return "stylesheet-rule";
+    return null;
+  }
+
+  function visualChangeWritebackLabel(kind) {
+    if (kind === "inline-style") return "inline style";
+    if (kind === "stylesheet-rule") return "CSS 规则";
+    return null;
   }
 
   function visualChangeRevertInfo(kind, before, after) {
