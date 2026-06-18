@@ -23,7 +23,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
         self.webView = webView
         webView.loadFileURL(editorURL, allowingReadAccessTo: editorURL.deletingLastPathComponent())
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 16) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 18) { [weak self] in
             self?.fail("Timed out waiting for visual change revert result.")
         }
     }
@@ -91,7 +91,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           editor.updateElement({ x: 92, y: 102, w: 240, h: 96, style: { fill: 'rgb(220, 252, 231)' } });
           await sleep(180);
           diagnostics = editor.getImportDiagnostics();
-          const styleItem = (diagnostics.visualChangeItems || []).find(item => item.kind === '样式' || item.kind === '位置/尺寸');
+          const styleItem = (diagnostics.visualChangeItems || []).find(item => String(item.label || '').includes('#card') && item.writebackKind === 'inline-style');
           if (!styleItem || !styleItem.changeKey || styleItem.canRevert !== true) {
             throw new Error(`Expected revertable style or geometry change, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
           }

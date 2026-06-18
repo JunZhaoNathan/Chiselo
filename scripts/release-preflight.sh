@@ -58,6 +58,7 @@ swift scripts/html-delivery-diagnostics-test.swift
 swift scripts/html-diagnostics-webpage-flow-test.swift
 swift scripts/html-visual-snapshot-test.swift
 swift scripts/visual-change-revert-test.swift
+swift scripts/visual-change-added-revert-test.swift
 swift scripts/deck-gesture-smoothness-test.swift
 swift scripts/direct-html-source-cleanliness-test.swift
 swift scripts/direct-html-stylesheet-writeback-test.swift

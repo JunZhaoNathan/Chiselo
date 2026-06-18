@@ -6732,7 +6732,7 @@ ${htmlSlides}
   function visualChangeDetail(kind, before, after) {
     if (!before && after) {
       return {
-        detail: "新增对象，回退会移除此对象。",
+        detail: "新增对象，回退会从当前 HTML 中移除此对象。",
         beforeValue: "无",
         afterValue: visualRectText(after.rect)
       };
