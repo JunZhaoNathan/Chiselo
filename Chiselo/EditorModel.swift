@@ -769,6 +769,7 @@ final class EditorModel: ObservableObject {
             sourceSnippet: bridgeString(object["sourceSnippet"]),
             sourceSnippetLineCount: bridgeInt(object["sourceSnippetLineCount"]),
             sourceAncestorItems: bridgeSourceNodeItems(object["sourceAncestorItems"]),
+            sourceSiblingItems: bridgeSourceNodeItems(object["sourceSiblingItems"]),
             sourceChildItems: bridgeSourceNodeItems(object["sourceChildItems"]),
             editability: bridgeString(object["editability"]),
             fidelity: bridgeString(object["fidelity"]),

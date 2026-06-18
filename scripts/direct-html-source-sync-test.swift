@@ -41,6 +41,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const snippet = String(selected.sourceSnippet || '');
           const lineCount = Number(selected.sourceSnippetLineCount || 0);
           const ancestorItems = Array.isArray(selected.sourceAncestorItems) ? selected.sourceAncestorItems : [];
+          const siblingItems = Array.isArray(selected.sourceSiblingItems) ? selected.sourceSiblingItems : [];
           const childItems = Array.isArray(selected.sourceChildItems) ? selected.sourceChildItems : [];
           const sourceHasTag = snippet.includes('<article') && snippet.includes('id="sourceTarget"');
           const sourceHasChildren = snippet.includes('<h2>Synced title</h2>') && snippet.includes('<strong>real source</strong>');
@@ -49,6 +50,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const ancestorTags = ancestorItems.map(item => String(item && item.tagName || '').toLowerCase());
           const ancestorPaths = ancestorItems.map(item => String(item && item.path || ''));
           const sourceAncestorItemsVisible = ancestorItems.length >= 3 && ancestorTags[0] === 'body' && ancestorTags.includes('main') && ancestorTags.includes('article') && ancestorPaths.every(path => path.length > 0);
+          const sourceSiblingItemsAvailable = siblingItems.some(item => String(item && item.tagName || '').toLowerCase() === 'article' && item.id === selected.id);
           const childItemTags = childItems.map(item => String(item && item.tagName || '').toLowerCase());
           const childItemPaths = childItems.map(item => String(item && item.path || ''));
           const sourceChildItemsVisible = childItems.length >= 3 && childItemTags.includes('h2') && childItemTags.includes('p') && childItemTags.includes('strong') && childItemPaths.every(path => path.includes('sourceTarget'));
@@ -60,6 +62,12 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const h2Selection = selectedH2Item ? editor.selectHTMLById(selectedH2Item.id) : null;
           const h2Snippet = String(h2Selection?.sourceSnippet || '');
           const h2SelectionOk = !!h2Selection && h2Selection.tagName === 'h2' && h2Snippet.includes('<h2') && h2Snippet.includes('Synced title');
+          const h2SiblingItems = Array.isArray(h2Selection?.sourceSiblingItems) ? h2Selection.sourceSiblingItems : [];
+          const h2SiblingTags = h2SiblingItems.map(item => String(item && item.tagName || '').toLowerCase());
+          const selectedParagraphSibling = h2SiblingItems.find(item => String(item && item.tagName || '').toLowerCase() === 'p');
+          const paragraphSelection = selectedParagraphSibling ? editor.selectHTMLById(selectedParagraphSibling.id) : null;
+          const paragraphSiblingSelectionOk = !!paragraphSelection && paragraphSelection.tagName === 'p' && String(paragraphSelection.sourceSnippet || '').includes('real source');
+          const sourceSiblingItemsVisible = h2SiblingItems.length >= 2 && h2SiblingTags.includes('h2') && h2SiblingTags.includes('p') && paragraphSiblingSelectionOk;
           const strongSelection = selectedStrongItem ? editor.selectHTMLById(selectedStrongItem.id) : null;
           const strongSnippet = String(strongSelection?.sourceSnippet || '');
           const strongSelectionOk = !!strongSelection && strongSelection.tagName === 'strong' && strongSnippet.includes('<strong') && strongSnippet.includes('real source');
@@ -84,7 +92,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -93,11 +101,16 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               lineCount,
               sourceAncestorItemsVisible,
               ancestorItems,
+              sourceSiblingItemsAvailable,
+              siblingItems,
               articleSelectionOk,
               sourceChildItemsVisible,
               childItems,
               h2SelectionOk,
               h2Snippet,
+              sourceSiblingItemsVisible,
+              h2SiblingItems,
+              paragraphSiblingSelectionOk,
               strongSelectionOk,
               strongSnippet,
               reselectedSame,
@@ -124,9 +137,11 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             id: selected.id,
             lineCount,
             sourceAncestorItemsVisible,
+            sourceSiblingItemsAvailable,
             sourceChildItemsVisible,
             articleSelectionOk,
             h2SelectionOk,
+            sourceSiblingItemsVisible,
             strongSelectionOk,
             warningDetected,
             dangerousRejected,

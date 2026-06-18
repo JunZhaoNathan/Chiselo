@@ -4725,6 +4725,10 @@ private struct InspectorPanel: View {
 
                         SourceDraftValidationBadge(validation: validation)
 
+                        if let siblingItems = element.sourceSiblingItems, siblingItems.count > 1 {
+                            sourceSiblingNavigationGroup(siblingItems, selectedID: element.id)
+                        }
+
                         if let childItems = element.sourceChildItems, !childItems.isEmpty {
                             sourceChildNavigationGroup(childItems)
                         }
@@ -4816,6 +4820,67 @@ private struct InspectorPanel: View {
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(isSelected ? Color.clear : MaterialTheme.separator, lineWidth: 1)
                 )
+        }
+        .buttonStyle(.plain)
+        .help(item.path)
+    }
+
+    private func sourceSiblingNavigationGroup(_ items: [EditorSourceNodeItem], selectedID: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.left.and.right")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                Text("同级对象")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text("\(items.count)")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(MaterialTheme.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+                Spacer(minLength: 0)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(items) { item in
+                        sourceSiblingNavigationButton(item, isSelected: item.id == selectedID)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(8)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private func sourceSiblingNavigationButton(_ item: EditorSourceNodeItem, isSelected: Bool) -> some View {
+        Button {
+            model.selectHTMLNode(id: item.id)
+        } label: {
+            HStack(spacing: 5) {
+                Text(item.tagName.uppercased())
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.88) : MaterialTheme.primaryDark)
+                Text(item.label.isEmpty ? item.tagName : item.label)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(isSelected ? Color.white : MaterialTheme.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(isSelected ? MaterialTheme.primary : Color.white.opacity(0.48), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? Color.clear : MaterialTheme.separator, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .help(item.path)

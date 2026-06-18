@@ -34,6 +34,7 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var sourceSnippet: String?
     var sourceSnippetLineCount: Int?
     var sourceAncestorItems: [EditorSourceNodeItem]?
+    var sourceSiblingItems: [EditorSourceNodeItem]?
     var sourceChildItems: [EditorSourceNodeItem]?
     var editability: String?
     var fidelity: String?

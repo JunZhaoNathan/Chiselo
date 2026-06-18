@@ -2133,6 +2133,7 @@
     Object.assign(payloadStyle, directStyleWritebackPreview(node));
     const sourceSnippet = directSourceSnippetForNode(node);
     const sourceAncestorItems = directSourceAncestorItemsForNode(node);
+    const sourceSiblingItems = directSourceSiblingItemsForNode(node);
     const sourceChildItems = directSourceChildItemsForNode(node);
 
     return {
@@ -2146,6 +2147,7 @@
       sourceSnippet: sourceSnippet.text,
       sourceSnippetLineCount: sourceSnippet.lineCount,
       sourceAncestorItems,
+      sourceSiblingItems,
       sourceChildItems,
       layoutMode: directLayoutMode,
       imageSource: node.matches?.("img") ? (node.currentSrc || node.getAttribute("src") || "") : null,
@@ -2405,13 +2407,7 @@
         const tagName = child.tagName?.toLowerCase?.() || "";
         if (!tagName || blockedTags.has(tagName) || child.hasAttribute?.("data-chiselo-style")) continue;
 
-        items.push({
-          id: ensureDirectId(child),
-          tagName,
-          label: htmlTreeLabel(child),
-          path: directNodePath(child),
-          depth
-        });
+        items.push(directSourceNodeItem(child, depth));
 
         visit(child, depth + 1);
       }
@@ -2419,6 +2415,20 @@
 
     visit(node, 1);
     return items;
+  }
+
+  function directSourceSiblingItemsForNode(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE || !node.parentElement) return [];
+
+    const siblings = [...node.parentElement.children]
+      .filter((child) => directSourceNodeIsVisible(child));
+    const index = siblings.indexOf(node);
+    if (index < 0) return [];
+
+    const radius = 4;
+    const start = Math.max(0, index - radius);
+    const end = Math.min(siblings.length, index + radius + 1);
+    return siblings.slice(start, end).map((sibling, offset) => directSourceNodeItem(sibling, start + offset));
   }
 
   function directSourceAncestorItemsForNode(node) {
@@ -2433,13 +2443,26 @@
     }
 
     const visibleNodes = nodes.length > maxItems ? nodes.slice(nodes.length - maxItems) : nodes;
-    return visibleNodes.map((current, depth) => ({
-      id: ensureDirectId(current),
-      tagName: current.tagName.toLowerCase(),
-      label: directNodeToken(current),
-      path: directNodePath(current),
+    return visibleNodes.map((current, depth) => directSourceNodeItem(current, depth, { compactLabel: true }));
+  }
+
+  function directSourceNodeItem(node, depth, options = {}) {
+    return {
+      id: ensureDirectId(node),
+      tagName: node.tagName.toLowerCase(),
+      label: options.compactLabel ? directNodeToken(node) : htmlTreeLabel(node),
+      path: directNodePath(node),
       depth
-    }));
+    };
+  }
+
+  function directSourceNodeIsVisible(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+    const tagName = node.tagName?.toLowerCase?.() || "";
+    if (!tagName) return false;
+    if (["script", "style", "meta", "link", "base", "title", "noscript"].includes(tagName)) return false;
+    if (node.hasAttribute?.("data-chiselo-style")) return false;
+    return true;
   }
 
   function formatHTMLSnippet(html) {

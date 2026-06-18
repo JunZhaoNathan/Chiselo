@@ -38,6 +38,7 @@ All notable changes to Chiselo will be documented here.
 - Added a selected-object source sync panel that shows, edits, applies, copies, and re-locates a clean HTML snippet for the visual selection.
 - Added source-snippet structure validation so dangerous tags/handlers are blocked and tag, ID, or class changes are called out before applying visual-source edits.
 - Added a clickable source-path breadcrumb for selected HTML objects so parent containers can be reselected from the source sync panel.
+- Added source-sibling navigation so neighboring objects under the same parent can be reselected from the source sync panel.
 - Added source-child navigation from selected HTML source snippets so rows inside the snippet can reselect the real rendered child object.
 - Added compact quick-action regression coverage to release preflight.
 - Added visual-change rollback regression coverage to release preflight.
