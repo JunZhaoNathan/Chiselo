@@ -53,6 +53,51 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
           });
           await sleep(180);
 
+          const cta = editor.selectHTML('button.cta-button');
+          if (!cta) throw new Error('Could not select tag.class CTA.');
+          editor.updateElement({
+            id: cta.id,
+            x: cta.x,
+            y: cta.y,
+            w: cta.w,
+            h: cta.h,
+            style: {
+              color: 'rgb(255, 255, 255)',
+              fill: 'rgb(37, 99, 235)',
+              radius: 16
+            }
+          });
+          await sleep(180);
+
+          const scoped = editor.selectHTML('.hero .scoped-copy');
+          if (!scoped) throw new Error('Could not select scoped descendant copy.');
+          editor.updateElement({
+            id: scoped.id,
+            x: scoped.x,
+            y: scoped.y,
+            w: scoped.w,
+            h: scoped.h,
+            style: {
+              color: 'rgb(79, 70, 229)',
+              textAlign: 'center'
+            }
+          });
+          await sleep(180);
+
+          const idTarget = editor.selectHTML('#idOnly');
+          if (!idTarget) throw new Error('Could not select id-only target.');
+          editor.updateElement({
+            id: idTarget.id,
+            x: idTarget.x,
+            y: idTarget.y,
+            w: idTarget.w,
+            h: idTarget.h,
+            style: {
+              fill: 'rgb(236, 253, 245)'
+            }
+          });
+          await sleep(180);
+
           const shared = editor.selectHTML('.shared-card');
           if (!shared) throw new Error('Could not select shared class card.');
           editor.updateElement({
@@ -73,14 +118,22 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
           const ruleColorWritten = /\\.hero-title\\s*\\{[^}]*color:\\s*rgb\\(12, 34, 56\\)/i.test(exported);
           const ruleFillWritten = /\\.hero-title\\s*\\{[^}]*background:\\s*rgb\\(240, 249, 255\\)/i.test(exported);
           const ruleFontWritten = /\\.hero-title\\s*\\{[^}]*font-size:\\s*42px/i.test(exported) && /\\.hero-title\\s*\\{[^}]*font-weight:\\s*800/i.test(exported);
+          const tagClassWritten = /button\\.cta-button\\s*\\{[^}]*background:\\s*rgb\\(37, 99, 235\\)/i.test(exported) && /button\\.cta-button\\s*\\{[^}]*border-radius:\\s*16px/i.test(exported);
+          const descendantWritten = /\\.hero \\.scoped-copy\\s*\\{[^}]*color:\\s*rgb\\(79, 70, 229\\)/i.test(exported) && /\\.hero \\.scoped-copy\\s*\\{[^}]*text-align:\\s*center/i.test(exported);
+          const idRuleWritten = /#idOnly\\s*\\{[^}]*background:\\s*rgb\\(236, 253, 245\\)/i.test(exported);
+          const complexTargetsHaveNoInline = !/<button[^>]*class="cta-button"[^>]*style=/i.test(exported) && !/<p[^>]*class="scoped-copy"[^>]*style=/i.test(exported) && !/<aside[^>]*id="idOnly"[^>]*style=/i.test(exported);
           const sharedInlineFallback = /<article[^>]*class="shared-card"[^>]*style="[^"]*background:\\s*rgb\\(254, 242, 242\\)/i.test(exported);
 
-          if (titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 1 || (diagnostics.inlineStyleChangeCount || 0) < 1) {
+          if (titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !tagClassWritten || !descendantWritten || !idRuleWritten || !complexTargetsHaveNoInline || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 4 || (diagnostics.inlineStyleChangeCount || 0) < 1) {
             throw new Error(JSON.stringify({
               titleHasInlineStyle,
               ruleColorWritten,
               ruleFillWritten,
               ruleFontWritten,
+              tagClassWritten,
+              descendantWritten,
+              idRuleWritten,
+              complexTargetsHaveNoInline,
               sharedInlineFallback,
               stylesheetRuleWritebackCount: diagnostics.stylesheetRuleWritebackCount,
               inlineStyleChangeCount: diagnostics.inlineStyleChangeCount,
@@ -140,12 +193,20 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         main { width: 760px; min-height: 420px; padding: 48px; }
         .hero-title { color: rgb(15, 23, 42); background: rgb(255, 255, 255); font-size: 36px; font-weight: 700; }
+        button.cta-button { color: rgb(15, 23, 42); background: rgb(226, 232, 240); border-radius: 8px; }
+        .hero .scoped-copy { color: rgb(71, 85, 105); text-align: left; }
+        #idOnly { background: rgb(255, 255, 255); padding: 14px; }
         .shared-card { background: rgb(248, 250, 252); padding: 18px; border: 1px solid rgb(203, 213, 225); }
       </style>
     </head>
     <body>
       <main>
-        <h1 class="hero-title">Precise HTML editing</h1>
+        <section class="hero">
+          <h1 class="hero-title">Precise HTML editing</h1>
+          <p class="scoped-copy">Scoped copy target</p>
+          <button class="cta-button">Call to action</button>
+        </section>
+        <aside id="idOnly">ID selector target</aside>
         <article class="shared-card">First shared card</article>
         <article class="shared-card">Second shared card</article>
       </main>

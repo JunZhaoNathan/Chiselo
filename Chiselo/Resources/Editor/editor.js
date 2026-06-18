@@ -4231,12 +4231,11 @@
 
   function directStylesheetWriteTarget(node, style) {
     if (!node || !style || !shouldPreferStylesheetWriteback(node, style)) return null;
-    const match = uniqueDirectClassRule(node);
+    const match = uniqueDirectStylesheetRule(node);
     return match ? { style: match.rule.style, selector: match.selector } : null;
   }
 
   function shouldPreferStylesheetWriteback(node, style) {
-    if (!node?.classList?.length) return false;
     if (node.getAttribute("style")) return false;
     if (styleHasLayoutWrite(style)) return false;
     const keys = Object.keys(style).filter((key) => style[key] !== undefined && style[key] !== null && style[key] !== "");
@@ -4247,23 +4246,41 @@
     return ["x", "y", "w", "h", "rotation"].some((key) => style[key] !== undefined);
   }
 
-  function uniqueDirectClassRule(node) {
-    const classes = [...node.classList || []].filter((name) => !name.startsWith("chiselo"));
-    if (!classes.length) return null;
-
+  function uniqueDirectStylesheetRule(node) {
     const matches = [];
-    for (const className of classes) {
-      const selector = `.${cssEscape(className)}`;
-      for (const rule of localDirectStyleRules(node.ownerDocument)) {
-        if (rule.selectorText?.trim() !== selector) continue;
-        const scopedMatches = [...node.ownerDocument.querySelectorAll(selector)].filter((item) => item.matches(selector));
-        if (scopedMatches.length === 1 && scopedMatches[0] === node) {
-          matches.push({ rule, selector });
-        }
-      }
+    for (const rule of localDirectStyleRules(node.ownerDocument)) {
+      const selector = String(rule.selectorText || "").trim();
+      if (!isSafeDirectStylesheetSelector(selector)) continue;
+      if (!directRuleUniquelyTargetsNode(node, selector)) continue;
+      matches.push({ rule, selector });
     }
 
     return matches.length === 1 ? matches[0] : null;
+  }
+
+  function isSafeDirectStylesheetSelector(selector) {
+    if (!selector || selector.includes(",")) return false;
+    if (/[+~]/.test(selector)) return false;
+    if (selector.includes("[") || selector.includes("]")) return false;
+    if (/::?/.test(selector)) return false;
+    if (selector.length > 140) return false;
+    return /^[#.a-zA-Z0-9_\-\s>]+$/.test(selector);
+  }
+
+  function directRuleUniquelyTargetsNode(node, selector) {
+    try {
+      if (!node.matches(selector)) return false;
+      const matches = [...node.ownerDocument.querySelectorAll(selector)];
+      if (matches.length !== 1 || matches[0] !== node) return false;
+      if (selector.startsWith("#") && !selector.includes(" ")) return node.id && selector === `#${cssEscape(node.id)}`;
+      if (selector.startsWith(".") && !selector.includes(" ") && !selector.includes(">")) {
+        const className = selector.slice(1);
+        return [...node.classList || []].some((name) => selector === `.${cssEscape(name)}` && className === cssEscape(name));
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function localDirectStyleRules(doc) {

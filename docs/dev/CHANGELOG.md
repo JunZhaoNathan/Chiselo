@@ -10,6 +10,7 @@ All notable changes to Chiselo will be documented here.
 - Preserved original `contenteditable` and `spellcheck` attributes while direct text editing, including clean export during an active text edit.
 - Added direct HTML source-cleanliness regression coverage to release preflight.
 - Added conservative stylesheet-rule writeback for unique local class rules so safe style edits can update CSS instead of adding inline style.
+- Expanded stylesheet-rule writeback to safe unique selectors such as `#id`, `tag.class`, and simple descendant selectors when they only target the selected object.
 - Added stylesheet writeback diagnostics and regression coverage, while shared-class edits still fall back to inline style to avoid changing multiple objects unexpectedly.
 - Kept direct-selection quick actions compact by default, with action buttons tucked behind an on-demand menu so selected text stays visible.
 - Quieted direct-selection chrome further: selected objects now show only a small on-demand action button, object labels stay inside the menu, hover labels avoid instruction text, and object right-clicks no longer open the browser menu outside text editing.
