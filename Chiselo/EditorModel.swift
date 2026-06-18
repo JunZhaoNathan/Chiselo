@@ -1489,6 +1489,42 @@ final class EditorModel: ObservableObject {
         runJavaScript("window.ChiseloEditor?.selectHTMLById(\(literal));")
     }
 
+    func revertHTMLVisualChange(changeKey: String) {
+        guard hasOpenDocument, documentMode == "html" else {
+            status = "请先打开 HTML 文件"
+            return
+        }
+
+        guard let literal = jsStringLiteral(changeKey) else { return }
+        let source = "JSON.stringify(window.ChiseloEditor?.revertVisualChange?.(\(literal)) ?? null);"
+        webView?.evaluateJavaScript(source) { [weak self] result, error in
+            Task { @MainActor in
+                guard let self else { return }
+
+                if let error {
+                    self.status = "视觉变更回退失败：\(error.localizedDescription)"
+                    return
+                }
+
+                guard let json = result as? String,
+                      json != "null",
+                      let data = json.data(using: .utf8),
+                      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    self.status = "视觉变更回退失败：编辑器未返回结果"
+                    return
+                }
+
+                if (object["ok"] as? Bool) == true {
+                    self.status = "已回退此处视觉变更，可用撤销恢复"
+                    self.refreshHTMLDiagnostics()
+                    self.refreshHTMLVisualReviewSnapshot()
+                } else {
+                    self.status = object["reason"] as? String ?? "这处变化不能安全一键回退"
+                }
+            }
+        }
+    }
+
     func refreshHTMLDiagnostics() {
         guard hasOpenDocument, documentMode == "html" else { return }
 
@@ -2064,17 +2100,41 @@ final class EditorModel: ObservableObject {
             ? "复核提示：\(diagnostics.warningCount) 项建议查看"
             : "复核提示：暂无额外风险"
         let changeLine = visualChangeCount > 0
-            ? "本次变更：\(visualChangeCount) 个对象发生变化，\(locatedCount) 个可定位\(previewKinds.isEmpty ? "" : "，主要是 \(previewKinds)")"
+            ? "本次变更：\(visualChangeCount) 个对象发生变化，\(locatedCount) 个可定位\(previewKinds.isEmpty ? "" : "，主要是 \(previewKinds)")\(saveReviewRevertableSuffix(diagnostics))"
             : "本次变更：未检测到明显对象级视觉变化"
+        let responsiveLine = (diagnostics.responsiveLayoutRiskCount ?? 0) > 0
+            ? "多宽度复核：\(diagnostics.responsiveRuleCount ?? 0) 条响应式规则或 \(diagnostics.responsiveLayoutRiskCount ?? 0) 个弹性/网格对象，保存后建议检查窄屏和宽屏"
+            : nil
+        let sourceLine = saveReviewSourcePollutionLine(diagnostics)
 
         return [
             "即将覆盖保存：\(url.lastPathComponent)",
             backupLine,
             changeLine,
+            responsiveLine,
+            sourceLine,
             issueLine,
             warningLine,
             "保存前会再写入 `.chiselo-history` 版本快照。"
-        ].joined(separator: "\n")
+        ].compactMap { $0 }.joined(separator: "\n")
+    }
+
+    private func saveReviewRevertableSuffix(_ diagnostics: HTMLDiagnostics) -> String {
+        let count = diagnostics.revertableVisualChangeCount ?? 0
+        return count > 0 ? "，\(count) 处可一键回退" : ""
+    }
+
+    private func saveReviewSourcePollutionLine(_ diagnostics: HTMLDiagnostics) -> String? {
+        let inlineChanges = diagnostics.inlineStyleChangeCount ?? 0
+        let stylesheets = diagnostics.stylesheetCount ?? 0
+        let externalSheets = diagnostics.externalStylesheetCount ?? 0
+        if inlineChanges > 0 && stylesheets > 0 {
+            return "源码写回：\(inlineChanges) 个对象改动 inline style；原稿含 \(stylesheets) 个样式表，建议保存前抽查源码"
+        }
+        if externalSheets > 0 {
+            return "样式表复核：\(externalSheets) 个外部样式表影响 class 级样式，当前修改以对象级写回为主"
+        }
+        return nil
     }
 
     private func saveReviewVisualChangeTargetIds(_ diagnostics: HTMLDiagnostics) -> [String] {

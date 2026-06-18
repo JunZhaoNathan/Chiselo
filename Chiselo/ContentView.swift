@@ -722,6 +722,9 @@ private struct ExportPreflightPanel: View {
                     onSelectTarget: { elementId in
                         dismiss()
                         model.selectHTMLNode(id: elementId)
+                    },
+                    onRevertChange: { changeKey in
+                        model.revertHTMLVisualChange(changeKey: changeKey)
                     }
                 )
             }
@@ -778,6 +781,7 @@ private struct ExportPreflightPanel: View {
                     .foregroundStyle(MaterialTheme.ink)
 
                 PreflightNoteRow(icon: "rectangle.2.swap", title: "视觉变更", detail: (diagnostics.visualChangeCount ?? 0) > 0 ? "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时发生变化，导出前建议逐项复核。" : "当前画面与打开时未检测到明显对象级变化。")
+                PreflightNoteRow(icon: "rectangle.split.3x1", title: "响应式", detail: diagnostics.responsiveReviewDetail)
                 PreflightNoteRow(icon: "tablecells", title: "表格", detail: diagnostics.spanTableCount > 0 ? "合并单元格会降低 PPTX 对象映射稳定性。" : "普通表格仍建议导出后抽查行列和文字框。")
                 PreflightNoteRow(icon: "scribble.variable", title: "矢量/SVG", detail: diagnostics.svgCount > 0 ? "SVG 或复杂矢量可能会转成形状或图片，需要复核可编辑程度。" : "未检测到明显 SVG 风险。")
                 PreflightNoteRow(icon: "camera.filters", title: "视觉效果", detail: (diagnostics.pptxEffectRiskCount ?? 0) > 0 ? "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂 CSS 效果导出 PPTX 后需要复核。" : "未检测到明显复杂 CSS 效果风险。")
@@ -968,6 +972,7 @@ private struct VisualChangeReviewCard: View {
     var isCapturingSnapshot: Bool
     var onRefreshSnapshot: () -> Void
     var onSelectTarget: (String) -> Void
+    var onRevertChange: (String) -> Void
 
     @State private var targetIndex = 0
     @State private var selectedFilter: VisualChangeFilter = .all
@@ -990,7 +995,7 @@ private struct VisualChangeReviewCard: View {
                     Text("视觉变更复核")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(MaterialTheme.ink)
-                    Text(targetIds.isEmpty ? "\(changeCount) 处变化，含不可定位对象" : "\(changeCount) 处变化，\(targetIds.count) 处可定位")
+                    Text(visualChangeSubtitle(changeCount: changeCount, targetCount: targetIds.count))
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(warningColor)
                 }
@@ -1036,7 +1041,8 @@ private struct VisualChangeReviewCard: View {
                         totalCount: selectedFilter == .all ? changeCount : filteredItems.count,
                         previewCount: filteredItems.count,
                         color: warningColor,
-                        onSelectTarget: onSelectTarget
+                        onSelectTarget: onSelectTarget,
+                        onRevertChange: onRevertChange
                     )
                 }
             }
@@ -1075,6 +1081,15 @@ private struct VisualChangeReviewCard: View {
 
     private var warningColor: Color {
         Color(red: 0.78, green: 0.47, blue: 0.06)
+    }
+
+    private func visualChangeSubtitle(changeCount: Int, targetCount: Int) -> String {
+        let revertableCount = diagnostics.revertableVisualChangeCount ?? 0
+        let targetPart = targetCount == 0 ? "含不可定位对象" : "\(targetCount) 处可定位"
+        if revertableCount > 0 {
+            return "\(changeCount) 处变化，\(targetPart)，\(revertableCount) 处可一键回退"
+        }
+        return "\(changeCount) 处变化，\(targetPart)"
     }
 }
 
@@ -1457,6 +1472,7 @@ private struct VisualChangePreviewList: View {
     var previewCount: Int
     var color: Color
     var onSelectTarget: (String) -> Void
+    var onRevertChange: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -1473,7 +1489,7 @@ private struct VisualChangePreviewList: View {
             }
 
             ForEach(items) { item in
-                VisualChangePreviewRow(item: item, color: color, onSelectTarget: onSelectTarget)
+                VisualChangePreviewRow(item: item, color: color, onSelectTarget: onSelectTarget, onRevertChange: onRevertChange)
             }
 
             if totalCount > previewCount {
@@ -1492,28 +1508,82 @@ private struct VisualChangePreviewRow: View {
     var item: HTMLVisualChangeItem
     var color: Color
     var onSelectTarget: (String) -> Void
+    var onRevertChange: (String) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(rowColor)
-                .frame(width: 18, height: 18)
-                .background(rowColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(rowColor)
+                    .frame(width: 18, height: 18)
+                    .background(rowColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.label.isEmpty ? "对象" : item.label)
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(MaterialTheme.ink)
-                    .lineLimit(1)
-                Text("\(item.kind) · x \(item.x), y \(item.y), \(item.w) x \(item.h)")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(MaterialTheme.muted)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.label.isEmpty ? "对象" : item.label)
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                        .lineLimit(1)
+                    Text("\(item.kind) · x \(item.x), y \(item.y), \(item.w) x \(item.h)")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+
+                Spacer(minLength: 0)
+
+                actionBar
             }
 
-            Spacer(minLength: 0)
+            if let detail = item.detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .lineLimit(2)
+            }
+
+            if hasBeforeAfter {
+                HStack(spacing: 6) {
+                    VisualChangeValuePill(title: "打开时", value: item.beforeValue, color: MaterialTheme.muted)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 8, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.muted)
+                    VisualChangeValuePill(title: "当前", value: item.afterValue, color: rowColor)
+                }
+            } else if let reason = item.revertReason, !(item.canRevert ?? false) {
+                Text(reason)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(rowColor.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var actionBar: some View {
+        HStack(spacing: 5) {
+            if let changeKey = item.changeKey, item.canRevert == true {
+                Button {
+                    onRevertChange(changeKey)
+                } label: {
+                    Label("回退", systemImage: "arrow.uturn.backward")
+                        .font(.system(size: 10, weight: .heavy))
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(rowColor)
+                .background(rowColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                .help("只回退这一处视觉变更")
+            }
 
             if let elementId = item.elementId {
                 Button {
@@ -1537,13 +1607,10 @@ private struct VisualChangePreviewRow: View {
                     .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: 6))
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
-        .overlay(
-            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
-                .stroke(rowColor.opacity(0.12), lineWidth: 1)
-        )
+    }
+
+    private var hasBeforeAfter: Bool {
+        !(item.beforeValue ?? "").isEmpty || !(item.afterValue ?? "").isEmpty
     }
 
     private var icon: String {
@@ -1559,6 +1626,33 @@ private struct VisualChangePreviewRow: View {
         if item.kind.contains("删除") { return MaterialTheme.accentDanger }
         if item.kind.contains("新增") { return Color(red: 0.06, green: 0.52, blue: 0.26) }
         return color
+    }
+}
+
+private struct VisualChangeValuePill: View {
+    var title: String
+    var value: String?
+    var color: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 8, weight: .heavy))
+                .foregroundStyle(color)
+            Text(displayValue)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 5))
+    }
+
+    private var displayValue: String {
+        let text = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? "空" : text
     }
 }
 
@@ -2379,6 +2473,38 @@ private extension HTMLDiagnostics {
         return parts.isEmpty ? "\(risks) 项动态内容风险" : parts.joined(separator: "，")
     }
 
+    var responsiveReviewDetail: String {
+        let responsiveRules = responsiveRuleCount ?? 0
+        let responsiveRisks = responsiveLayoutRiskCount ?? 0
+        if responsiveRisks == 0 {
+            return "未检测到明显响应式规则，常规宽度复核即可。"
+        }
+        if responsiveRules > 0 {
+            return "\(responsiveRules) 条响应式规则或容器规则，修改后建议检查窄屏和宽屏。"
+        }
+        return "\(responsiveRisks) 个弹性/网格/粘性布局对象，修改后建议做多宽度预览。"
+    }
+
+    var sourcePollutionReviewCount: Int {
+        max(0, inlineStyleChangeCount ?? 0) + max(0, externalStylesheetCount ?? 0)
+    }
+
+    var sourcePollutionReviewDetail: String {
+        let inlineChanges = inlineStyleChangeCount ?? 0
+        let stylesheets = stylesheetCount ?? 0
+        let externalSheets = externalStylesheetCount ?? 0
+        if inlineChanges > 0 && stylesheets > 0 {
+            return "\(inlineChanges) 个变化写入 inline style；原稿含 \(stylesheets) 个样式表，保存前建议抽查源码。"
+        }
+        if externalSheets > 0 {
+            return "\(externalSheets) 个外部样式表影响 class 样式，当前以对象级写回为主。"
+        }
+        if inlineChanges > 0 {
+            return "\(inlineChanges) 个对象发生 inline style 写回。"
+        }
+        return "未检测到明显源码污染风险。"
+    }
+
     var htmlReadinessScore: Int {
         boundedScore(
             100
@@ -2387,6 +2513,7 @@ private extension HTMLDiagnostics {
             - (textOverflowCount ?? 0) * 10
             - (outOfBoundsCount ?? 0) * 10
             - min(12, (overlayBlockerCount ?? 0) * 6)
+            - min(8, (responsiveLayoutRiskCount ?? 0) * 2)
             - min(18, (overlapCount ?? 0) * 3)
         )
     }
@@ -2911,6 +3038,26 @@ private struct HTMLDeliveryCheckCard: View {
                     }
                 }
 
+                if diagnostics.responsiveLayoutRiskCount ?? 0 > 0 {
+                    DeliveryCheckRow(
+                        icon: "rectangle.split.3x1",
+                        title: "多宽度复核",
+                        detail: diagnostics.responsiveReviewDetail,
+                        color: warningColor,
+                        isClickable: false
+                    )
+                }
+
+                if diagnostics.sourcePollutionReviewCount > 0 {
+                    DeliveryCheckRow(
+                        icon: "curlybraces.square",
+                        title: "源码写回",
+                        detail: diagnostics.sourcePollutionReviewDetail,
+                        color: warningColor,
+                        isClickable: false
+                    )
+                }
+
                 if diagnostics.tableCount > 0 {
                     DeliveryCheckRow(
                         icon: diagnostics.spanTableCount > 0 ? "tablecells.badge.ellipsis" : "tablecells",
@@ -3175,6 +3322,10 @@ private struct DeliveryIssueRow: View {
             return "camera.filters"
         case "visual-change":
             return "rectangle.2.swap"
+        case "responsive-review":
+            return "rectangle.split.3x1"
+        case "source-pollution-review", "stylesheet-edit-review":
+            return "curlybraces.square"
         case "runtime-rendered", "external-runtime-resource":
             return "wand.and.rays"
         case "iframe-content":

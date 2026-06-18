@@ -14,7 +14,7 @@ private func expect(_ condition: @autoclosure () -> Bool, _ message: String) thr
 struct VisualChangeFilterTest {
     static func main() throws {
         let items = [
-            HTMLVisualChangeItem(elementId: "text-1", label: "标题", kind: "文字", x: 1, y: 2, w: 30, h: 10),
+            HTMLVisualChangeItem(changeKey: "text-key", elementId: "text-1", label: "标题", kind: "文字", detail: "文字内容发生变化。", beforeValue: "旧标题", afterValue: "新标题", canRevert: true, revertReason: nil, x: 1, y: 2, w: 30, h: 10),
             HTMLVisualChangeItem(elementId: "image-1", label: "封面图", kind: "图片", x: 4, y: 5, w: 40, h: 20),
             HTMLVisualChangeItem(elementId: "box-1", label: "卡片", kind: "位置/尺寸", x: 8, y: 9, w: 50, h: 30),
             HTMLVisualChangeItem(elementId: "style-1", label: "按钮", kind: "样式", x: 12, y: 13, w: 60, h: 25),
@@ -32,6 +32,8 @@ struct VisualChangeFilterTest {
         try expect(VisualChangeFilter.geometry.items(from: items).map(\.elementId) == ["box-1"], "Geometry filter should match position/size changes.")
         try expect(VisualChangeFilter.style.items(from: items).map(\.elementId) == ["style-1"], "Style filter should match style changes.")
         try expect(VisualChangeFilter.deleted.items(from: items).count == 1, "Deleted filter should match deleted objects.")
+        try expect(items[0].id.contains("text-key"), "Visual change item id should prefer the stable change key.")
+        try expect(items[0].canRevert == true, "Visual change item should decode revertability metadata.")
         try expect(diagnostics.visualChangeTargetIds == ["text-1", "image-1", "fallback-1"], "All target ids should be deduplicated and include fallback.")
         try expect(diagnostics.visualChangeTargetIds(for: .text) == ["text-1"], "Filtered target ids should use preview items for text.")
         try expect(diagnostics.visualChangeTargetIds(for: .deleted).isEmpty, "Deleted preview item without element id should not become a target.")

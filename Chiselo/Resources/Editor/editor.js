@@ -19,6 +19,7 @@
   const MAX_HTML_DIAGNOSTIC_NODES = 520;
   const MAX_HTML_DIAGNOSTIC_ISSUES = 12;
   const MAX_VISUAL_CHANGE_PREVIEW_ITEMS = 48;
+  const MAX_VISUAL_REVERT_TEXT_LENGTH = 10000;
   const DIRECT_FIXED_FRAME_SELECTOR = ".slide,.sheet,.page,[data-slide],[data-page],[role='doc-page'],[aria-roledescription='slide'],[class~='slide'],[class^='slide-'],[class*=' slide-'],[class~='page'],[class^='page-'],[class*=' page-'],[id^='slide'],[id*='-slide'],[id^='page'],[id*='-page']";
   const CAPTURE_PAGE_SELECTOR = DIRECT_FIXED_FRAME_SELECTOR;
   const DIRECT_RUNTIME_ROOT_SELECTOR = "#app,#root,#__next,#__nuxt,[data-reactroot],[data-v-app],[ng-version]";
@@ -2255,11 +2256,15 @@
     const style = node.ownerDocument.defaultView.getComputedStyle(node);
     const rect = directNodeRect(node);
     const image = node.matches?.("img") ? node : null;
+    const text = normalizedText(node);
     return {
       elementId: optionalDirectId(node),
       label: diagnosticNodeLabel(node),
-      text: normalizedText(node).slice(0, 180),
-      imageSource: image ? (image.currentSrc || image.getAttribute("src") || "") : "",
+      tagName: node.tagName.toLowerCase(),
+      childElementCount: node.children?.length || 0,
+      text,
+      imageSource: image ? (image.getAttribute("src") || image.currentSrc || "") : "",
+      styleAttr: node.getAttribute("style") || "",
       rect: {
         x: Math.round(rect.x),
         y: Math.round(rect.y),
@@ -4136,6 +4141,93 @@
     if (typeof nextElement.imageAlt === "string") node.setAttribute("alt", nextElement.imageAlt);
   }
 
+  function findDirectNodeByVisualChangeKey(key, entry = null) {
+    const doc = directFrame?.contentDocument;
+    if (!doc || !key) return null;
+
+    if (entry?.elementId) {
+      const byId = doc.querySelector(`[data-chiselo-id="${cssEscape(entry.elementId)}"]`);
+      if (byId) return byId;
+    }
+
+    for (const node of diagnosticLayoutNodes(doc)) {
+      if (directVisualSnapshotKey(node) === key) return node;
+    }
+
+    return null;
+  }
+
+  function restoreDirectStyleAttribute(node, styleAttr) {
+    if (!node) return;
+    if (styleAttr) {
+      node.setAttribute("style", styleAttr);
+    } else {
+      node.removeAttribute("style");
+    }
+    delete node.dataset.chiseloBaseTransform;
+    delete node.dataset.chiseloTranslateX;
+    delete node.dataset.chiseloTranslateY;
+  }
+
+  function revertVisualChange(changeKey) {
+    if (editorMode !== "html" || !directVisualBaseline?.entries || !changeKey) {
+      return { ok: false, reason: "没有可回退的 HTML 视觉基线。" };
+    }
+
+    const doc = directFrame?.contentDocument;
+    if (!doc) return { ok: false, reason: "当前 HTML 文档不可用。" };
+
+    const key = String(changeKey);
+    const current = captureDirectVisualSnapshot(doc);
+    const before = directVisualBaseline.entries.get(key) || null;
+    const after = current.entries.get(key) || null;
+    const kind = before && after ? visualEntryChangeKind(before, after) : before ? "删除对象" : after ? "新增对象" : null;
+    if (!kind) {
+      return { ok: false, reason: "这处变化已经不存在。" };
+    }
+
+    const revertInfo = visualChangeRevertInfo(kind, before, after);
+    if (!revertInfo.canRevert) {
+      return { ok: false, reason: revertInfo.reason || "这处变化不能安全一键回退。" };
+    }
+
+    const node = findDirectNodeByVisualChangeKey(key, after || before);
+    if (!node) {
+      return { ok: false, reason: "未找到当前对象，请刷新预检后再试。" };
+    }
+
+    pushHistory({ label: "回退视觉变更" });
+
+    if (!before && after) {
+      const parent = node.parentElement;
+      node.remove();
+      if (parent) {
+        selectDirectNode(parent === doc.body ? doc.body : parent);
+      } else {
+        setDirectSelection([], null);
+      }
+    } else if (kind === "文字") {
+      node.textContent = before.text || "";
+      selectDirectNode(node);
+    } else if (kind === "图片") {
+      const image = node.matches?.("img") ? node : node.querySelector?.("img");
+      if (!image) return { ok: false, reason: "当前对象不是可回退图片。" };
+      image.setAttribute("src", before.imageSource || "");
+      selectDirectNode(image);
+      settleDirectImageNode(image);
+    } else if (kind === "位置/尺寸" || kind === "样式") {
+      restoreDirectStyleAttribute(node, before.styleAttr || "");
+      selectDirectNode(node);
+    }
+
+    updateSelectionBox();
+    scheduleDirectLayoutRefresh();
+    scheduleHTMLTreeChanged();
+    scheduleHTMLDiagnosticsChanged();
+    postSelectionChanged({ immediate: true });
+    return { ok: true, elementId: selectedId, kind };
+  }
+
   function nextFrame() {
     return new Promise((resolve) => {
       let settled = false;
@@ -5763,6 +5855,12 @@ ${htmlSlides}
         runtimeRiskCount: 0,
         pptxEffectRiskCount: 0,
         visualChangeCount: 0,
+        revertableVisualChangeCount: 0,
+        responsiveRuleCount: 0,
+        responsiveLayoutRiskCount: 0,
+        stylesheetCount: 0,
+        externalStylesheetCount: 0,
+        inlineStyleChangeCount: 0,
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,
@@ -5856,6 +5954,7 @@ ${htmlSlides}
 
     const pptxEffectDiagnostics = collectPPTXEffectDiagnostics(doc, issues);
     const visualDiffDiagnostics = collectVisualDiffDiagnostics(doc, issues);
+    const sourceMaturityDiagnostics = collectSourceMaturityDiagnostics(doc, visualDiffDiagnostics, issues);
     const layoutDiagnostics = collectLayoutDiagnostics(doc, issues);
     const canvas = directCanvas();
     const pptxMappingDiagnostics = collectPPTXMappingDiagnostics(doc, {
@@ -5887,6 +5986,12 @@ ${htmlSlides}
       runtimeRiskCount: runtimeDiagnostics.runtimeRiskCount,
       pptxEffectRiskCount: pptxEffectDiagnostics.pptxEffectRiskCount,
       visualChangeCount: visualDiffDiagnostics.visualChangeCount,
+      revertableVisualChangeCount: visualDiffDiagnostics.revertableVisualChangeCount,
+      responsiveRuleCount: sourceMaturityDiagnostics.responsiveRuleCount,
+      responsiveLayoutRiskCount: sourceMaturityDiagnostics.responsiveLayoutRiskCount,
+      stylesheetCount: sourceMaturityDiagnostics.stylesheetCount,
+      externalStylesheetCount: sourceMaturityDiagnostics.externalStylesheetCount,
+      inlineStyleChangeCount: visualDiffDiagnostics.inlineStyleChangeCount,
       pptxTextObjectCount: pptxMappingDiagnostics.pptxTextObjectCount,
       pptxImageObjectCount: pptxMappingDiagnostics.pptxImageObjectCount,
       pptxShapeObjectCount: pptxMappingDiagnostics.pptxShapeObjectCount,
@@ -6066,41 +6171,61 @@ ${htmlSlides}
 
   function collectVisualDiffDiagnostics(doc, issues) {
     if (!directVisualBaseline?.entries) {
-      return { visualChangeCount: 0, visualChangeElementId: null, visualChangeElementIds: [], visualChangeItems: [] };
+      return {
+        visualChangeCount: 0,
+        visualChangeElementId: null,
+        visualChangeElementIds: [],
+        visualChangeItems: [],
+        revertableVisualChangeCount: 0,
+        inlineStyleChangeCount: 0
+      };
     }
 
     const current = captureDirectVisualSnapshot(doc);
-    const changedKinds = new Set();
-    let count = 0;
-    let firstElementId = null;
-    const targetElementIds = [];
-    const visualChangeItems = [];
+    const records = [];
 
     for (const [key, currentEntry] of current.entries) {
       const baselineEntry = directVisualBaseline.entries.get(key);
       const changeKind = baselineEntry ? visualEntryChangeKind(baselineEntry, currentEntry) : "新增对象";
       if (!changeKind) continue;
-
-      count += 1;
-      changedKinds.add(changeKind);
-      if (visualChangeItems.length < MAX_VISUAL_CHANGE_PREVIEW_ITEMS) {
-        visualChangeItems.push(visualChangePreviewItem(currentEntry, changeKind));
-      }
-      if (currentEntry.elementId) {
-        if (!firstElementId) firstElementId = currentEntry.elementId;
-        targetElementIds.push(currentEntry.elementId);
-      }
+      records.push({ key, kind: changeKind, before: baselineEntry, after: currentEntry });
     }
 
     for (const key of directVisualBaseline.entries.keys()) {
       if (current.entries.has(key)) continue;
-      count += 1;
-      changedKinds.add("删除对象");
+      records.push({ key, kind: "删除对象", before: directVisualBaseline.entries.get(key), after: null });
+    }
+
+    const filteredRecords = filterVisualChangeRecords(records);
+    const changedKinds = new Set();
+    let revertableVisualChangeCount = 0;
+    let inlineStyleChangeCount = 0;
+    let firstElementId = null;
+    const targetElementIds = [];
+    const visualChangeItems = [];
+
+    for (const record of filteredRecords) {
+      changedKinds.add(record.kind);
+      const revertInfo = visualChangeRevertInfo(record.kind, record.before, record.after);
+      if (revertInfo.canRevert) revertableVisualChangeCount += 1;
+      if (record.before && record.after && record.before.styleAttr !== record.after.styleAttr) inlineStyleChangeCount += 1;
       if (visualChangeItems.length < MAX_VISUAL_CHANGE_PREVIEW_ITEMS) {
-        visualChangeItems.push(visualChangePreviewItem(directVisualBaseline.entries.get(key), "删除对象"));
+        visualChangeItems.push(visualChangePreviewItem({
+          key: record.key,
+          kind: record.kind,
+          before: record.before,
+          after: record.after,
+          revertInfo
+        }));
+      }
+      const elementId = (record.after || record.before)?.elementId;
+      if (elementId) {
+        if (!firstElementId) firstElementId = elementId;
+        if (record.after) targetElementIds.push(elementId);
       }
     }
 
+    const count = filteredRecords.length;
     if (count > 0) {
       const detail = [...changedKinds].slice(0, 4).join("、");
       addDiagnosticIssue(issues, {
@@ -6116,21 +6241,264 @@ ${htmlSlides}
       visualChangeCount: count,
       visualChangeElementId: firstElementId,
       visualChangeElementIds: [...new Set(targetElementIds)],
-      visualChangeItems
+      visualChangeItems,
+      revertableVisualChangeCount,
+      inlineStyleChangeCount
     };
   }
 
-  function visualChangePreviewItem(entry, kind) {
+  function filterVisualChangeRecords(records) {
+    return records.filter((record) => !isDuplicateAncestorVisualChange(record, records));
+  }
+
+  function isDuplicateAncestorVisualChange(record, records) {
+    if (!record?.key || record.kind !== "文字") return false;
+    const childPrefix = `${record.key} > `;
+    return records.some((other) => (
+      other !== record
+      && other.kind === "文字"
+      && typeof other.key === "string"
+      && other.key.startsWith(childPrefix)
+    ));
+  }
+
+  function visualChangePreviewItem({ key, kind, before, after, revertInfo }) {
+    const entry = after || before || {};
     const rect = entry?.rect || {};
+    const detail = visualChangeDetail(kind, before, after);
     return {
+      changeKey: key || null,
       elementId: entry?.elementId || null,
       label: truncateDiagnosticText(entry?.label || "", "对象"),
       kind,
+      detail: detail.detail,
+      beforeValue: detail.beforeValue,
+      afterValue: detail.afterValue,
+      canRevert: Boolean(revertInfo?.canRevert),
+      revertReason: revertInfo?.reason || null,
       x: Math.round(Number(rect.x || 0)),
       y: Math.round(Number(rect.y || 0)),
       w: Math.round(Number(rect.w || 0)),
       h: Math.round(Number(rect.h || 0))
     };
+  }
+
+  function visualChangeRevertInfo(kind, before, after) {
+    if (!before && after) {
+      return { canRevert: true, reason: null };
+    }
+    if (before && !after) {
+      return { canRevert: false, reason: "已删除对象暂不支持一键恢复，请从版本历史恢复或手动重建。" };
+    }
+    if (!before || !after) {
+      return { canRevert: false, reason: "缺少打开时或当前对象快照。" };
+    }
+
+    if (kind === "文字") {
+      if (before.childElementCount > 0 || after.childElementCount > 0) {
+        return { canRevert: false, reason: "对象含内联结构，自动回退可能破坏源码层级。" };
+      }
+      if (String(before.text || "").length > MAX_VISUAL_REVERT_TEXT_LENGTH) {
+        return { canRevert: false, reason: "文字过长，建议定位后手动复核。" };
+      }
+      return { canRevert: true, reason: null };
+    }
+
+    if (kind === "图片") {
+      return after.imageSource !== undefined
+        ? { canRevert: true, reason: null }
+        : { canRevert: false, reason: "当前对象不是可替换图片。" };
+    }
+
+    if (kind === "位置/尺寸" || kind === "样式") {
+      return before.styleAttr !== after.styleAttr
+        ? { canRevert: true, reason: null }
+        : { canRevert: false, reason: "变化来自样式表、响应式规则或父级布局，先定位后手动复核更安全。" };
+    }
+
+    return { canRevert: false, reason: "此类变化暂不支持一键回退。" };
+  }
+
+  function visualChangeDetail(kind, before, after) {
+    if (!before && after) {
+      return {
+        detail: "新增对象，回退会移除此对象。",
+        beforeValue: "无",
+        afterValue: visualRectText(after.rect)
+      };
+    }
+    if (before && !after) {
+      return {
+        detail: "对象已删除，当前只能定位历史记录或用版本快照恢复。",
+        beforeValue: visualRectText(before.rect),
+        afterValue: "已删除"
+      };
+    }
+    if (!before || !after) {
+      return { detail: "缺少可比对快照。", beforeValue: null, afterValue: null };
+    }
+
+    if (kind === "位置/尺寸") {
+      return {
+        detail: "位置或尺寸发生变化。",
+        beforeValue: visualRectText(before.rect),
+        afterValue: visualRectText(after.rect)
+      };
+    }
+    if (kind === "文字") {
+      return {
+        detail: "文字内容发生变化。",
+        beforeValue: truncateDiagnosticText(before.text, "空文字"),
+        afterValue: truncateDiagnosticText(after.text, "空文字")
+      };
+    }
+    if (kind === "图片") {
+      return {
+        detail: "图片来源发生变化。",
+        beforeValue: visualSourceLabel(before.imageSource),
+        afterValue: visualSourceLabel(after.imageSource)
+      };
+    }
+
+    const changedStyles = visualStyleDiffKeys(before.style, after.style);
+    return {
+      detail: changedStyles.length ? `关键样式变化：${changedStyles.join("、")}` : "关键样式发生变化。",
+      beforeValue: visualStyleSummary(before.style, changedStyles),
+      afterValue: visualStyleSummary(after.style, changedStyles)
+    };
+  }
+
+  function visualRectText(rect) {
+    if (!rect) return "";
+    return `x ${Math.round(rect.x || 0)}, y ${Math.round(rect.y || 0)}, ${Math.round(rect.w || 0)} x ${Math.round(rect.h || 0)}`;
+  }
+
+  function visualSourceLabel(value) {
+    const source = String(value || "").trim();
+    if (!source) return "空";
+    if (source.startsWith("data:")) return "嵌入图片";
+    return truncateDiagnosticText(source.split(/[/?#]/).filter(Boolean).pop() || source, source);
+  }
+
+  function visualStyleDiffKeys(before = {}, after = {}) {
+    const labels = {
+      color: "文字色",
+      background: "背景",
+      borderColor: "边框色",
+      borderWidth: "边框",
+      radius: "圆角",
+      fontSize: "字号",
+      fontWeight: "字重",
+      textAlign: "对齐",
+      objectFit: "图片适配",
+      opacity: "透明度",
+      shadow: "阴影"
+    };
+    return Object.keys(labels).filter((key) => JSON.stringify(before?.[key]) !== JSON.stringify(after?.[key])).map((key) => labels[key]);
+  }
+
+  function visualStyleSummary(style = {}, changedKeys = []) {
+    if (!changedKeys.length) return "";
+    const reverseLabels = {
+      "文字色": "color",
+      "背景": "background",
+      "边框色": "borderColor",
+      "边框": "borderWidth",
+      "圆角": "radius",
+      "字号": "fontSize",
+      "字重": "fontWeight",
+      "对齐": "textAlign",
+      "图片适配": "objectFit",
+      "透明度": "opacity",
+      "阴影": "shadow"
+    };
+    return changedKeys
+      .slice(0, 3)
+      .map((label) => `${label} ${truncateDiagnosticText(style?.[reverseLabels[label]], "空")}`)
+      .join("；");
+  }
+
+  function collectSourceMaturityDiagnostics(doc, visualDiffDiagnostics, issues) {
+    const styleNodes = [...doc.querySelectorAll("style")].filter((node) => !node.hasAttribute("data-chiselo-style"));
+    const stylesheetLinks = [...doc.querySelectorAll("link[rel~='stylesheet'][href]")];
+    const responsiveRuleCount = countResponsiveRules(doc, styleNodes);
+    const responsiveLayoutRiskCount = responsiveRuleCount + countResponsiveLayoutNodes(doc);
+    const stylesheetCount = styleNodes.length + stylesheetLinks.length;
+    const externalStylesheetCount = stylesheetLinks.filter((node) => isExternalResource(node.getAttribute("href") || "", doc)).length;
+    const changedObjects = Number(visualDiffDiagnostics.visualChangeCount || 0);
+    const inlineStyleChangeCount = Number(visualDiffDiagnostics.inlineStyleChangeCount || 0);
+
+    if (changedObjects > 0 && responsiveLayoutRiskCount > 0) {
+      addDiagnosticIssue(issues, {
+        kind: "responsive-review",
+        severity: "warning",
+        title: "多宽度复核",
+        detail: `检测到 ${responsiveRuleCount} 条响应式规则或网格/弹性布局，修改后建议在窄屏和宽屏各预览一次`
+      });
+    }
+
+    if (inlineStyleChangeCount > 0 && stylesheetCount > 0) {
+      addDiagnosticIssue(issues, {
+        kind: "source-pollution-review",
+        severity: "warning",
+        title: "源码改写复核",
+        detail: `${inlineStyleChangeCount} 个变化对象改动了 inline style；若原稿依赖 class/stylesheet，保存前建议确认源码仍可维护`
+      });
+    }
+
+    if (changedObjects > 0 && externalStylesheetCount > 0) {
+      addDiagnosticIssue(issues, {
+        kind: "stylesheet-edit-review",
+        severity: "warning",
+        title: "外部样式表",
+        detail: `${externalStylesheetCount} 个外部样式表会影响 class 级样式，当前修改以对象级写回为主`
+      });
+    }
+
+    return {
+      responsiveRuleCount,
+      responsiveLayoutRiskCount,
+      stylesheetCount,
+      externalStylesheetCount
+    };
+  }
+
+  function countResponsiveRules(doc, styleNodes) {
+    let count = 0;
+    for (const node of styleNodes) {
+      count += (node.textContent.match(/@media\b|@container\b/gi) || []).length;
+    }
+
+    for (const sheet of doc.styleSheets || []) {
+      if (styleNodes.includes(sheet.ownerNode)) continue;
+      try {
+        for (const rule of sheet.cssRules || []) {
+          if (rule.type === CSSRule.MEDIA_RULE || rule.type === CSSRule.CONTAINER_RULE) count += 1;
+        }
+      } catch {
+        // Cross-origin stylesheet rules are not readable; external links are reported separately.
+      }
+    }
+    return count;
+  }
+
+  function countResponsiveLayoutNodes(doc) {
+    return diagnosticLayoutNodes(doc)
+      .slice(0, 120)
+      .filter((node) => {
+        const style = doc.defaultView.getComputedStyle(node);
+        return style.display.includes("grid") || style.display.includes("flex") || style.position === "sticky";
+      }).length;
+  }
+
+  function isExternalResource(value, doc) {
+    if (!value || value.startsWith("data:") || value.startsWith("blob:")) return false;
+    try {
+      const url = new URL(value, directBaseHref || doc.baseURI);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
   }
 
   function collectPPTXMappingDiagnostics(doc, context) {
@@ -6261,10 +6629,10 @@ ${htmlSlides}
   }
 
   function visualEntryChangeKind(before, after) {
-    if (rectDiffers(before.rect, after.rect)) return "位置/尺寸";
-    if (before.text !== after.text) return "文字";
     if (before.imageSource !== after.imageSource) return "图片";
+    if (before.text !== after.text) return "文字";
     if (JSON.stringify(before.style) !== JSON.stringify(after.style)) return "样式";
+    if (rectDiffers(before.rect, after.rect)) return "位置/尺寸";
     return null;
   }
 
@@ -6885,6 +7253,7 @@ ${htmlSlides}
     getVisualReviewSnapshotRect,
     getHistoryState: historyState,
     prepareVisualReviewSnapshot,
+    revertVisualChange,
     scrollVisualReviewSnapshotTo,
     restoreVisualReviewSnapshot,
     getViewportState: () => ({

@@ -14,7 +14,10 @@ All notable changes to Chiselo will be documented here.
 - Labeled undo/redo history entries so menus and toolbar help can show the next reversible action such as text edits, object moves, image replacement, and table changes.
 - Added a save-before-overwrite review prompt for real HTML files summarizing backup status, visual changes, preflight issues, and an option to open the visual review before saving.
 - Added visual-change review filters for all, text, image, geometry, style, and deleted changes so preflight review can focus on the kind of edit being checked.
+- Added before/after details and safe one-click rollback for revertable visual-change items, with rollback actions preserved in undo history.
+- Added responsive-layout and source-writeback review signals so save/export preflight can flag multi-width checks and inline-style changes on stylesheet-backed HTML.
 - Added compact quick-action regression coverage to release preflight.
+- Added visual-change rollback regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.
 
 ## 0.1.10 - 2026-06-13

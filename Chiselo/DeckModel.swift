@@ -117,16 +117,22 @@ struct BridgeHistoryMessage: Decodable, Equatable {
 }
 
 struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
+    var changeKey: String? = nil
     var elementId: String?
     var label: String
     var kind: String
+    var detail: String? = nil
+    var beforeValue: String? = nil
+    var afterValue: String? = nil
+    var canRevert: Bool? = nil
+    var revertReason: String? = nil
     var x: Int
     var y: Int
     var w: Int
     var h: Int
 
     var id: String {
-        "\(elementId ?? "missing")-\(kind)-\(x)-\(y)-\(w)-\(h)"
+        "\(changeKey ?? elementId ?? "missing")-\(kind)-\(x)-\(y)-\(w)-\(h)"
     }
 }
 
@@ -193,6 +199,12 @@ struct HTMLDiagnostics: Codable, Equatable {
     var runtimeRiskCount: Int?
     var pptxEffectRiskCount: Int?
     var visualChangeCount: Int?
+    var revertableVisualChangeCount: Int?
+    var responsiveRuleCount: Int?
+    var responsiveLayoutRiskCount: Int?
+    var stylesheetCount: Int?
+    var externalStylesheetCount: Int?
+    var inlineStyleChangeCount: Int?
     var pptxTextObjectCount: Int?
     var pptxImageObjectCount: Int?
     var pptxShapeObjectCount: Int?
@@ -247,6 +259,12 @@ struct HTMLDiagnostics: Codable, Equatable {
         runtimeRiskCount: 0,
         pptxEffectRiskCount: 0,
         visualChangeCount: 0,
+        revertableVisualChangeCount: 0,
+        responsiveRuleCount: 0,
+        responsiveLayoutRiskCount: 0,
+        stylesheetCount: 0,
+        externalStylesheetCount: 0,
+        inlineStyleChangeCount: 0,
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,
