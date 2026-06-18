@@ -735,10 +735,16 @@ private struct ExportPreflightPanel: View {
                 }
             }
             if diagnostics.sourcePollutionReviewCount > 0 {
-                SourceWritebackReviewCard(diagnostics: diagnostics) { elementId in
-                    dismiss()
-                    model.selectHTMLNode(id: elementId)
-                }
+                SourceWritebackReviewCard(
+                    diagnostics: diagnostics,
+                    onSelectTarget: { elementId in
+                        dismiss()
+                        model.selectHTMLNode(id: elementId)
+                    },
+                    onRevertChange: { changeKey in
+                        model.revertHTMLVisualChange(changeKey: changeKey)
+                    }
+                )
             }
             PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
                 dismiss()
@@ -1226,6 +1232,7 @@ private struct ResponsiveChangeReviewCard: View {
 private struct SourceWritebackReviewCard: View {
     var diagnostics: HTMLDiagnostics
     var onSelectTarget: (String) -> Void
+    var onRevertChange: (String) -> Void
 
     @State private var targetIndex = 0
 
@@ -1268,7 +1275,12 @@ private struct SourceWritebackReviewCard: View {
             if !previewItems.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(previewItems) { item in
-                        SourceWritebackRow(item: item, color: color, onSelectTarget: onSelectTarget)
+                        SourceWritebackRow(
+                            item: item,
+                            color: color,
+                            onSelectTarget: onSelectTarget,
+                            onRevertChange: onRevertChange
+                        )
                     }
                 }
                 .padding(10)
@@ -1349,44 +1361,61 @@ private struct SourceWritebackRow: View {
     var item: HTMLVisualChangeItem
     var color: Color
     var onSelectTarget: (String) -> Void
+    var onRevertChange: (String) -> Void
 
     var body: some View {
-        Button {
-            if let elementId = item.elementId {
-                onSelectTarget(elementId)
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: item.writebackKind == "stylesheet-rule" ? "curlybraces" : "paintbrush.pointed")
-                    .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(iconColor)
-                    .frame(width: 18, height: 18)
-                    .background(iconColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.label)
-                        .font(.system(size: 11, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.ink)
-                        .lineLimit(1)
-                    Text(detail)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(MaterialTheme.muted)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
+        HStack(alignment: .top, spacing: 8) {
+            Button {
+                if let elementId = item.elementId {
+                    onSelectTarget(elementId)
                 }
+            } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: item.writebackKind == "stylesheet-rule" ? "curlybraces" : "paintbrush.pointed")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(iconColor)
+                        .frame(width: 18, height: 18)
+                        .background(iconColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
 
-                Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.label)
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundStyle(MaterialTheme.ink)
+                            .lineLimit(1)
+                        Text(detail)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.82)
+                    }
 
-                if item.elementId != nil {
-                    Image(systemName: "scope")
+                    Spacer(minLength: 0)
+
+                    if item.elementId != nil {
+                        Image(systemName: "scope")
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(MaterialTheme.primary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(item.elementId == nil)
+
+            if let changeKey = item.changeKey, item.canRevert == true {
+                Button {
+                    onRevertChange(changeKey)
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
                         .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.primary)
+                        .frame(width: 24, height: 24)
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(iconColor)
+                .background(iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                .help("回退这处源码相关变更")
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(item.elementId == nil)
     }
 
     private var detail: String {

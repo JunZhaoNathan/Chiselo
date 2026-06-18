@@ -16,8 +16,8 @@ struct VisualChangeFilterTest {
         let items = [
             HTMLVisualChangeItem(changeKey: "text-key", elementId: "text-1", label: "标题", kind: "文字", detail: "文字内容发生变化。", beforeValue: "旧标题", afterValue: "新标题", canRevert: true, revertReason: nil, x: 1, y: 2, w: 30, h: 10),
             HTMLVisualChangeItem(elementId: "image-1", label: "封面图", kind: "图片", x: 4, y: 5, w: 40, h: 20),
-            HTMLVisualChangeItem(elementId: "box-1", label: "卡片", kind: "位置/尺寸", writebackKind: "inline-style", writebackLabel: "inline style", writebackTarget: "style", x: 8, y: 9, w: 50, h: 30),
-            HTMLVisualChangeItem(elementId: "style-1", label: "按钮", kind: "样式", writebackKind: "stylesheet-rule", writebackLabel: "CSS 规则", writebackTarget: ".button", x: 12, y: 13, w: 60, h: 25),
+            HTMLVisualChangeItem(changeKey: "inline-key", elementId: "box-1", label: "卡片", kind: "位置/尺寸", writebackKind: "inline-style", writebackLabel: "inline style", writebackTarget: "style", canRevert: true, x: 8, y: 9, w: 50, h: 30),
+            HTMLVisualChangeItem(changeKey: "rule-key", elementId: "style-1", label: "按钮", kind: "样式", writebackKind: "stylesheet-rule", writebackLabel: "CSS 规则", writebackTarget: ".button", canRevert: true, x: 12, y: 13, w: 60, h: 25),
             HTMLVisualChangeItem(elementId: "style-2", label: "按钮副本", kind: "样式", writebackKind: "stylesheet-rule", writebackLabel: "CSS 规则", writebackTarget: ".button", x: 14, y: 15, w: 60, h: 25),
             HTMLVisualChangeItem(elementId: nil, label: "旧对象", kind: "删除对象", x: 16, y: 17, w: 70, h: 35)
         ]
@@ -45,6 +45,8 @@ struct VisualChangeFilterTest {
         try expect(diagnostics.inlineStyleChangeItems.map(\.elementId) == ["box-1"], "Inline style writeback items should be filtered from visual changes.")
         try expect(diagnostics.stylesheetRuleChangeItems.map(\.elementId) == ["style-1", "style-2"], "Stylesheet rule writeback items should be filtered from visual changes.")
         try expect(diagnostics.stylesheetRuleChangeItems.first?.writebackTarget == ".button", "Stylesheet rule writeback items should preserve the CSS selector target.")
+        try expect(diagnostics.inlineStyleChangeItems.first?.changeKey == "inline-key" && diagnostics.inlineStyleChangeItems.first?.canRevert == true, "Inline style source review rows should keep one-click revert metadata.")
+        try expect(diagnostics.stylesheetRuleChangeItems.first?.changeKey == "rule-key" && diagnostics.stylesheetRuleChangeItems.first?.canRevert == true, "Stylesheet source review rows should keep one-click revert metadata.")
         try expect(diagnostics.stylesheetRuleWritebackTargets == [".button", "#hero"], "Stylesheet rule writeback selectors should prefer diagnostics and deduplicate preview items.")
         try expect(diagnostics.sourceWritebackTargetIds == ["box-1", "style-1", "style-2", "external-1"], "Source writeback target ids should combine inline, stylesheet, and external CSS review items.")
         try expect(diagnostics.externalStylesheetAffectedChangeCount == 0, "External stylesheets alone should not imply changed-object stylesheet review.")
