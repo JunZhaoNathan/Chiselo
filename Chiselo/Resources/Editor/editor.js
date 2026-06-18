@@ -2318,6 +2318,10 @@
       elementId: optionalDirectId(node),
       label: diagnosticNodeLabel(node),
       tagName: node.tagName.toLowerCase(),
+      parentKey: node.parentElement ? directVisualSnapshotKey(node.parentElement) : null,
+      previousSiblingKey: directVisualSiblingKey(node.previousElementSibling),
+      nextSiblingKey: directVisualSiblingKey(node.nextElementSibling),
+      outerHTML: directVisualSnapshotHTML(node),
       childElementCount: node.children?.length || 0,
       text,
       imageSource: image ? (image.getAttribute("src") || image.currentSrc || "") : "",
@@ -2343,6 +2347,21 @@
         shadow: shadowValue(style.boxShadow)
       }
     };
+  }
+
+  function directVisualSiblingKey(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return null;
+    return directVisualSnapshotKey(node);
+  }
+
+  function directVisualSnapshotHTML(node) {
+    if (!node || node.matches?.("html,body")) return "";
+    const clone = node.cloneNode(true);
+    for (const child of [clone, ...clone.querySelectorAll?.("*") || []]) {
+      cleanDirectExportNode(child);
+      stripChiseloAttributes(child);
+    }
+    return clone.outerHTML || "";
   }
 
   function normalizeDirectHTMLSource(input) {
@@ -4359,6 +4378,40 @@
     return null;
   }
 
+  function prepareDeletedDirectNodeRestore(entry) {
+    const doc = directFrame?.contentDocument;
+    if (!doc || !entry?.outerHTML || !entry.parentKey) return null;
+
+    const parent = findDirectNodeByVisualChangeKey(entry.parentKey);
+    if (!parent || !parent.isConnected) return null;
+
+    const template = doc.createElement("template");
+    template.innerHTML = String(entry.outerHTML || "").trim();
+    const restored = template.content.firstElementChild;
+    if (!restored) return null;
+
+    const nextSibling = entry.nextSiblingKey ? findDirectNodeByVisualChangeKey(entry.nextSiblingKey) : null;
+    const previousSibling = entry.previousSiblingKey ? findDirectNodeByVisualChangeKey(entry.previousSiblingKey) : null;
+
+    return { parent, restored, nextSibling, previousSibling };
+  }
+
+  function commitDeletedDirectNodeRestore(restore) {
+    if (!restore?.parent || !restore.restored) return null;
+    const { parent, restored, nextSibling, previousSibling } = restore;
+    prepareDirectSubtree(restored);
+
+    if (nextSibling && nextSibling.parentElement === parent) {
+      parent.insertBefore(restored, nextSibling);
+    } else if (previousSibling && previousSibling.parentElement === parent) {
+      previousSibling.insertAdjacentElement("afterend", restored);
+    } else {
+      parent.appendChild(restored);
+    }
+
+    return restored;
+  }
+
   function restoreDirectStyleAttribute(node, styleAttr) {
     if (!node) return;
     if (styleAttr) {
@@ -4393,9 +4446,14 @@
       return { ok: false, reason: revertInfo.reason || "这处变化不能安全一键回退。" };
     }
 
-    const node = findDirectNodeByVisualChangeKey(key, after || before);
-    if (!node) {
+    const node = kind === "删除对象" ? null : findDirectNodeByVisualChangeKey(key, after || before);
+    if (kind !== "删除对象" && !node) {
       return { ok: false, reason: "未找到当前对象，请刷新预检后再试。" };
+    }
+
+    const deletedRestore = kind === "删除对象" ? prepareDeletedDirectNodeRestore(before) : null;
+    if (kind === "删除对象" && !deletedRestore) {
+      return { ok: false, reason: "原父级位置已变化，无法安全恢复此删除对象。" };
     }
 
     pushHistory({ label: "回退视觉变更" });
@@ -4408,6 +4466,12 @@
       } else {
         setDirectSelection([], null);
       }
+    } else if (kind === "删除对象") {
+      const restoredDeletedNode = commitDeletedDirectNodeRestore(deletedRestore);
+      if (!restoredDeletedNode) {
+        return { ok: false, reason: "原父级位置已变化，无法安全恢复此删除对象。" };
+      }
+      selectDirectNode(restoredDeletedNode);
     } else if (kind === "文字") {
       node.textContent = before.text || "";
       selectDirectNode(node);
@@ -6632,7 +6696,9 @@ ${htmlSlides}
       return { canRevert: true, reason: null };
     }
     if (before && !after) {
-      return { canRevert: false, reason: "已删除对象暂不支持一键恢复，请从版本历史恢复或手动重建。" };
+      return before.outerHTML && before.parentKey
+        ? { canRevert: true, reason: null }
+        : { canRevert: false, reason: "已删除对象缺少可恢复源码快照，请从版本历史恢复或手动重建。" };
     }
     if (!before || !after) {
       return { canRevert: false, reason: "缺少打开时或当前对象快照。" };
@@ -6673,7 +6739,7 @@ ${htmlSlides}
     }
     if (before && !after) {
       return {
-        detail: "对象已删除，当前只能定位历史记录或用版本快照恢复。",
+        detail: "对象已删除，可尝试一键恢复到打开时的位置。",
         beforeValue: visualRectText(before.rect),
         afterValue: "已删除"
       };
@@ -7139,7 +7205,7 @@ ${htmlSlides}
 
   function visualEntryChangeKind(before, after) {
     if (before.imageSource !== after.imageSource) return "图片";
-    if (before.text !== after.text) return "文字";
+    if (before.text !== after.text && !(before.childElementCount > 0 || after.childElementCount > 0)) return "文字";
     if (JSON.stringify(before.style) !== JSON.stringify(after.style)) return "样式";
     if (rectDiffers(before.rect, after.rect)) return "位置/尺寸";
     return null;

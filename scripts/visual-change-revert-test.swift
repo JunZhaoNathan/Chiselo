@@ -163,11 +163,38 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
             throw new Error(`Stylesheet-rule writeback diagnostics should clear after revert, got ${JSON.stringify(diagnostics)}`);
           }
 
+          const deleteTarget = editor.selectHTML('#deleteMe');
+          if (!deleteTarget) throw new Error('Could not select deletion fixture object.');
+          editor.command('delete');
+          await sleep(220);
+          diagnostics = editor.getImportDiagnostics();
+          const deletedItem = (diagnostics.visualChangeItems || []).find(item => item.kind === '删除对象' && item.canRevert === true && String(item.label || '').includes('Delete me'));
+          if (!deletedItem || !deletedItem.changeKey) {
+            throw new Error(`Expected revertable deleted-object visual change, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
+          }
+          if (editor.exportHTML().includes('id="deleteMe"')) {
+            throw new Error('Deleted fixture object still appeared in exported HTML before revert.');
+          }
+          const deletedRevertResult = editor.revertVisualChange(deletedItem.changeKey);
+          await sleep(240);
+          if (!deletedRevertResult || deletedRevertResult.ok !== true || deletedRevertResult.kind !== '删除对象') {
+            throw new Error(`Expected successful deleted-object revert, got ${JSON.stringify(deletedRevertResult)}`);
+          }
+          const restoredExport = editor.exportHTML();
+          if (!restoredExport.includes('id="deleteMe"') || !restoredExport.includes('Delete me safely')) {
+            throw new Error('Deleted object was not restored into exported HTML.');
+          }
+          diagnostics = editor.getImportDiagnostics();
+          if ((diagnostics.visualChangeItems || []).some(item => item.kind === '删除对象' && String(item.label || '').includes('Delete me'))) {
+            throw new Error(`Deleted-object visual change should clear after restore, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
+          }
+
           window.webkit.messageHandlers.visualRevert.postMessage({
             type: 'result',
             textItem,
             styleItem,
             ruleItem,
+            deletedItem,
             diagnostics: editor.getImportDiagnostics(),
             history: editor.getHistoryState()
           });
@@ -214,6 +241,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
         <h1 id="title">Original title</h1>
         <div id="card">Card copy</div>
         <article class="rule-card">Stylesheet rule card</article>
+        <section id="deleteMe" class="delete-me">Delete me safely</section>
       </main>
     </body>
     </html>
