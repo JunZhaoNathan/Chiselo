@@ -22,6 +22,12 @@ private struct OpenTabSafetyInfo: Equatable {
     var editWarningShown: Bool = false
 }
 
+private enum SaveReviewDecision {
+    case save
+    case review
+    case cancel
+}
+
 struct HTMLVisualSnapshotPair: Equatable {
     var baseline: NSImage?
     var current: NSImage?
@@ -1956,6 +1962,21 @@ final class EditorModel: ObservableObject {
                 }
 
                 guard let url = self.openedURL ?? self.chooseSaveURL(defaultName: "document.html", contentTypes: [.html]) else { return }
+                let isOverwritingOpenedFile = self.openedURL != nil
+
+                if isOverwritingOpenedFile {
+                    let diagnostics = await self.currentHTMLDiagnosticsForSave() ?? self.htmlDiagnostics
+                    switch self.presentHTMLSaveReviewIfNeeded(url: url, diagnostics: diagnostics) {
+                    case .save:
+                        break
+                    case .review:
+                        self.presentExportPreflight()
+                        return
+                    case .cancel:
+                        self.status = "已取消保存"
+                        return
+                    }
+                }
 
                 do {
                     let snapshotURL = try self.safeFileHistory.protectFileBeforeOverwrite(at: url, fallbackExtension: "html")
@@ -1968,6 +1989,120 @@ final class EditorModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func currentHTMLDiagnosticsForSave() async -> HTMLDiagnostics? {
+        guard documentMode == "html", let webView else { return nil }
+
+        return await withCheckedContinuation { continuation in
+            webView.evaluateJavaScript("JSON.stringify(window.ChiseloEditor?.getImportDiagnostics?.() ?? null);") { [weak self] result, _ in
+                Task { @MainActor in
+                    guard let self else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+
+                    guard let json = result as? String,
+                          json != "null",
+                          let data = json.data(using: .utf8),
+                          let diagnostics = try? JSONDecoder().decode(HTMLDiagnostics.self, from: data) else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+
+                    self.updatePublished(\.htmlDiagnostics, to: diagnostics)
+                    continuation.resume(returning: diagnostics)
+                }
+            }
+        }
+    }
+
+    private func presentHTMLSaveReviewIfNeeded(url: URL, diagnostics: HTMLDiagnostics) -> SaveReviewDecision {
+        let visualChangeCount = diagnostics.visualChangeCount ?? 0
+        let issueCount = diagnostics.issueCount
+        let warningCount = diagnostics.warningCount
+        guard visualChangeCount > 0 || issueCount > 0 || warningCount > 0 else {
+            return .save
+        }
+
+        let safety = activeTabID.flatMap { tabSafetyInfo[$0] }
+        let alert = NSAlert()
+        alert.messageText = "保存前复核这次 HTML 修改？"
+        alert.informativeText = saveReviewSummary(url: url, diagnostics: diagnostics, safety: safety)
+        alert.alertStyle = issueCount > 0 ? .warning : .informational
+        alert.addButton(withTitle: "继续保存")
+        alert.addButton(withTitle: "查看复核")
+        alert.addButton(withTitle: "取消")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return .save
+        case .alertSecondButtonReturn:
+            return .review
+        default:
+            return .cancel
+        }
+    }
+
+    private func saveReviewSummary(url: URL, diagnostics: HTMLDiagnostics, safety: OpenTabSafetyInfo?) -> String {
+        let backupLine: String
+        if let warning = safety?.warning {
+            backupLine = "原始备份：\(warning)"
+        } else if let backupURL = safety?.backupURL {
+            backupLine = "原始备份：已准备 \(backupURL.lastPathComponent)"
+        } else {
+            backupLine = "原始备份：未找到自动备份，建议确认已有原始文件副本"
+        }
+
+        let visualChangeCount = diagnostics.visualChangeCount ?? 0
+        let locatedCount = saveReviewVisualChangeTargetIds(diagnostics).count
+        let previewKinds = saveReviewVisualChangeKinds(diagnostics)
+        let issueLine = diagnostics.issueCount > 0
+            ? "预检问题：\(diagnostics.issueCount) 项需要处理"
+            : "预检问题：未发现阻断保存的问题"
+        let warningLine = diagnostics.warningCount > 0
+            ? "复核提示：\(diagnostics.warningCount) 项建议查看"
+            : "复核提示：暂无额外风险"
+        let changeLine = visualChangeCount > 0
+            ? "本次变更：\(visualChangeCount) 个对象发生变化，\(locatedCount) 个可定位\(previewKinds.isEmpty ? "" : "，主要是 \(previewKinds)")"
+            : "本次变更：未检测到明显对象级视觉变化"
+
+        return [
+            "即将覆盖保存：\(url.lastPathComponent)",
+            backupLine,
+            changeLine,
+            issueLine,
+            warningLine,
+            "保存前会再写入 `.chiselo-history` 版本快照。"
+        ].joined(separator: "\n")
+    }
+
+    private func saveReviewVisualChangeTargetIds(_ diagnostics: HTMLDiagnostics) -> [String] {
+        var ids = diagnostics.visualChangeElementIds ?? []
+        if let fallback = diagnostics.visualChangeElementId, !fallback.isEmpty {
+            ids.append(fallback)
+        }
+        var seen = Set<String>()
+        return ids.filter { id in
+            guard !id.isEmpty, !seen.contains(id) else { return false }
+            seen.insert(id)
+            return true
+        }
+    }
+
+    private func saveReviewVisualChangeKinds(_ diagnostics: HTMLDiagnostics) -> String {
+        let kinds = (diagnostics.visualChangeItems ?? [])
+            .map(\.kind)
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let counts = Dictionary(grouping: kinds, by: { $0 }).mapValues(\.count)
+        return counts
+            .sorted { left, right in
+                if left.value == right.value { return left.key < right.key }
+                return left.value > right.value
+            }
+            .prefix(3)
+            .map { "\($0.key) \($0.value)" }
+            .joined(separator: "、")
     }
 
     private func chooseSaveURL(defaultName: String, contentTypes: [UTType]) -> URL? {

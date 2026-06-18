@@ -12,6 +12,7 @@ All notable changes to Chiselo will be documented here.
 - Hardened direct HTML point selection through transparent overlays so review navigation and canvas clicks keep finding the real object underneath.
 - Added live undo/redo availability from the editor runtime to the macOS menu and preserved redo state across direct HTML undo restores.
 - Labeled undo/redo history entries so menus and toolbar help can show the next reversible action such as text edits, object moves, image replacement, and table changes.
+- Added a save-before-overwrite review prompt for real HTML files summarizing backup status, visual changes, preflight issues, and an option to open the visual review before saving.
 - Added compact quick-action regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.
 
