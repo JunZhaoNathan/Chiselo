@@ -126,6 +126,7 @@ struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
     var afterValue: String? = nil
     var writebackKind: String? = nil
     var writebackLabel: String? = nil
+    var writebackTarget: String? = nil
     var canRevert: Bool? = nil
     var revertReason: String? = nil
     var x: Int

@@ -6550,6 +6550,7 @@ ${htmlSlides}
     const rect = entry?.rect || {};
     const detail = visualChangeDetail(kind, before, after);
     const writebackKind = visualChangeWritebackKind(before, after);
+    const writebackTarget = visualChangeWritebackTarget(writebackKind, before, after);
     return {
       changeKey: key || null,
       elementId: entry?.elementId || null,
@@ -6560,6 +6561,7 @@ ${htmlSlides}
       afterValue: detail.afterValue,
       writebackKind,
       writebackLabel: visualChangeWritebackLabel(writebackKind),
+      writebackTarget,
       canRevert: Boolean(revertInfo?.canRevert),
       revertReason: revertInfo?.reason || null,
       x: Math.round(Number(rect.x || 0)),
@@ -6573,6 +6575,12 @@ ${htmlSlides}
     if (!before || !after) return null;
     if (String(before.styleAttr || "") !== String(after.styleAttr || "")) return "inline-style";
     if (visualStylesheetRuleDiffers(before, after)) return "stylesheet-rule";
+    return null;
+  }
+
+  function visualChangeWritebackTarget(kind, before, after) {
+    if (kind === "inline-style") return "style";
+    if (kind === "stylesheet-rule") return after?.stylesheetRule?.selector || before?.stylesheetRule?.selector || null;
     return null;
   }
 

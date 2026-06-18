@@ -1345,11 +1345,17 @@ private struct SourceWritebackRow: View {
     }
 
     private var detail: String {
-        let label = item.writebackLabel ?? "源码"
+        let label = [item.writebackLabel, item.writebackTarget]
+            .compactMap { value -> String? in
+                let trimmed = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+            .joined(separator: " ")
+        let prefix = label.isEmpty ? "源码" : label
         if let afterValue = item.afterValue, !afterValue.isEmpty {
-            return "\(label)：\(afterValue)"
+            return "\(prefix)：\(afterValue)"
         }
-        return "\(label)：\(item.detail ?? item.kind)"
+        return "\(prefix)：\(item.detail ?? item.kind)"
     }
 
     private var iconColor: Color {

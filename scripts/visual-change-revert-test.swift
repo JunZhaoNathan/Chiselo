@@ -95,7 +95,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           if (!styleItem || !styleItem.changeKey || styleItem.canRevert !== true) {
             throw new Error(`Expected revertable style or geometry change, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
           }
-          if (styleItem.writebackKind !== 'inline-style' || styleItem.writebackLabel !== 'inline style') {
+          if (styleItem.writebackKind !== 'inline-style' || styleItem.writebackLabel !== 'inline style' || styleItem.writebackTarget !== 'style') {
             throw new Error(`Expected inline-style writeback metadata, got ${JSON.stringify(styleItem)}`);
           }
           if ((diagnostics.inlineStyleChangeCount || 0) < 1) {
@@ -132,7 +132,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           if (!ruleItem || !ruleItem.changeKey || ruleItem.canRevert !== true || !String(ruleItem.detail || '').includes('样式表规则')) {
             throw new Error(`Expected revertable stylesheet-rule visual change, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
           }
-          if (ruleItem.writebackKind !== 'stylesheet-rule' || ruleItem.writebackLabel !== 'CSS 规则') {
+          if (ruleItem.writebackKind !== 'stylesheet-rule' || ruleItem.writebackLabel !== 'CSS 规则' || ruleItem.writebackTarget !== '.rule-card') {
             throw new Error(`Expected stylesheet-rule writeback metadata, got ${JSON.stringify(ruleItem)}`);
           }
           if ((diagnostics.stylesheetRuleWritebackCount || 0) < 1) {
