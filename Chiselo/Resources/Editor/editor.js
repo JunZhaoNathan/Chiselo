@@ -531,6 +531,7 @@
 
   function pushHistory(options = {}) {
     if (suppressHistory) return;
+    ensureDirectVisualBaseline();
     markDocumentDirty();
 
     const key = options.coalesceKey || null;
@@ -551,6 +552,17 @@
     if (historyPast.length > 100) historyPast.shift();
     historyFuture = [];
     postHistoryChanged();
+  }
+
+  function ensureDirectVisualBaseline() {
+    if (editorMode !== "html" || directVisualBaseline?.entries) return;
+    if (directVisualBaselineTimer) {
+      clearTimeout(directVisualBaselineTimer);
+      directVisualBaselineTimer = null;
+    }
+    const doc = directFrame?.contentDocument;
+    if (!doc?.body) return;
+    directVisualBaseline = captureDirectVisualSnapshot(doc);
   }
 
   function historyLabel(label) {
@@ -2272,8 +2284,25 @@
     }
     return {
       capturedAt: Date.now(),
-      entries
+      entries,
+      stylesheetRules: captureDirectStylesheetSnapshot(doc)
     };
+  }
+
+  function captureDirectStylesheetSnapshot(doc) {
+    const rules = new Map();
+    const selectorCounts = new Map();
+    for (const rule of localDirectStyleRules(doc)) {
+      const selector = String(rule.selectorText || "").trim();
+      if (!selector) continue;
+      const occurrence = (selectorCounts.get(selector) || 0) + 1;
+      selectorCounts.set(selector, occurrence);
+      rules.set(`${selector}#${occurrence}`, {
+        selector,
+        styleText: rule.style?.cssText || ""
+      });
+    }
+    return rules;
   }
 
   function directVisualSnapshotKey(node) {
@@ -6117,6 +6146,7 @@ ${htmlSlides}
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
         stylesheetRuleWritebackCount: 0,
+        stylesheetRuleWritebackSelectors: [],
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,
@@ -6256,6 +6286,7 @@ ${htmlSlides}
       externalStylesheetCount: sourceMaturityDiagnostics.externalStylesheetCount,
       inlineStyleChangeCount: visualDiffDiagnostics.inlineStyleChangeCount,
       stylesheetRuleWritebackCount: sourceMaturityDiagnostics.stylesheetRuleWritebackCount,
+      stylesheetRuleWritebackSelectors: sourceMaturityDiagnostics.stylesheetRuleWritebackSelectors,
       pptxTextObjectCount: pptxMappingDiagnostics.pptxTextObjectCount,
       pptxImageObjectCount: pptxMappingDiagnostics.pptxImageObjectCount,
       pptxShapeObjectCount: pptxMappingDiagnostics.pptxShapeObjectCount,
@@ -6739,7 +6770,8 @@ ${htmlSlides}
     const externalStylesheetCount = stylesheetLinks.filter((node) => isExternalResource(node.getAttribute("href") || "", doc)).length;
     const changedObjects = Number(visualDiffDiagnostics.visualChangeCount || 0);
     const inlineStyleChangeCount = Number(visualDiffDiagnostics.inlineStyleChangeCount || 0);
-    const stylesheetRuleWritebackCount = Number(directStylesheetWritebackCount || 0);
+    const stylesheetRuleWritebackDiagnostics = currentStylesheetRuleWritebackDiagnostics(doc);
+    const stylesheetRuleWritebackCount = stylesheetRuleWritebackDiagnostics.count;
 
     if (changedObjects > 0 && responsiveLayoutRiskCount > 0) {
       const affected = responsiveChangeDiagnostics.responsiveChangeCount;
@@ -6790,7 +6822,25 @@ ${htmlSlides}
       responsiveChangeItems: responsiveChangeDiagnostics.responsiveChangeItems,
       stylesheetCount,
       externalStylesheetCount,
-      stylesheetRuleWritebackCount
+      stylesheetRuleWritebackCount,
+      stylesheetRuleWritebackSelectors: stylesheetRuleWritebackDiagnostics.selectors
+    };
+  }
+
+  function currentStylesheetRuleWritebackDiagnostics(doc) {
+    const baselineRules = directVisualBaseline?.stylesheetRules;
+    if (!baselineRules) return { count: 0, selectors: [] };
+
+    const currentRules = captureDirectStylesheetSnapshot(doc);
+    const selectors = [];
+    for (const [key, beforeRule] of baselineRules.entries()) {
+      const afterRule = currentRules.get(key);
+      if (!afterRule || String(beforeRule.styleText || "") === String(afterRule.styleText || "")) continue;
+      selectors.push(afterRule.selector || beforeRule.selector);
+    }
+    return {
+      count: selectors.length,
+      selectors: uniqueIds(selectors)
     };
   }
 

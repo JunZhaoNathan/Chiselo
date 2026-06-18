@@ -124,7 +124,10 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
           const complexTargetsHaveNoInline = !/<button[^>]*class="cta-button"[^>]*style=/i.test(exported) && !/<p[^>]*class="scoped-copy"[^>]*style=/i.test(exported) && !/<aside[^>]*id="idOnly"[^>]*style=/i.test(exported);
           const sharedInlineFallback = /<article[^>]*class="shared-card"[^>]*style="[^"]*background:\\s*rgb\\(254, 242, 242\\)/i.test(exported);
 
-          if (titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !tagClassWritten || !descendantWritten || !idRuleWritten || !complexTargetsHaveNoInline || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 4 || (diagnostics.inlineStyleChangeCount || 0) < 1) {
+          const writebackSelectors = diagnostics.stylesheetRuleWritebackSelectors || [];
+          const selectorTargetsDetected = ['.hero-title', 'button.cta-button', '.hero .scoped-copy', '#idOnly'].every(selector => writebackSelectors.includes(selector));
+
+          if (titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !tagClassWritten || !descendantWritten || !idRuleWritten || !complexTargetsHaveNoInline || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 4 || !selectorTargetsDetected || (diagnostics.inlineStyleChangeCount || 0) < 1) {
             throw new Error(JSON.stringify({
               titleHasInlineStyle,
               ruleColorWritten,
@@ -136,6 +139,8 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
               complexTargetsHaveNoInline,
               sharedInlineFallback,
               stylesheetRuleWritebackCount: diagnostics.stylesheetRuleWritebackCount,
+              stylesheetRuleWritebackSelectors: diagnostics.stylesheetRuleWritebackSelectors,
+              selectorTargetsDetected,
               inlineStyleChangeCount: diagnostics.inlineStyleChangeCount,
               exportedSnippet: exported.slice(0, 780)
             }));
@@ -144,6 +149,7 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
           window.webkit.messageHandlers.stylesheetWriteback.postMessage({
             type: 'result',
             stylesheetRuleWritebackCount: diagnostics.stylesheetRuleWritebackCount,
+            stylesheetRuleWritebackSelectors: diagnostics.stylesheetRuleWritebackSelectors,
             inlineStyleChangeCount: diagnostics.inlineStyleChangeCount,
             cleanExport: diagnostics.cleanExport,
             sourceCleanlinessScore: diagnostics.sourceCleanlinessScore

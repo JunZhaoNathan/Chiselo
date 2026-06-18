@@ -158,6 +158,10 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           if (!/\\.rule-card\\s*\\{[^}]*background:\\s*rgb\\(240, 253, 244\\)/i.test(ruleExport) || !/\\.rule-card\\s*\\{[^}]*color:\\s*rgb\\(20, 83, 45\\)/i.test(ruleExport) || !/\\.rule-card\\s*\\{[^}]*border-radius:\\s*12px/i.test(ruleExport)) {
             throw new Error('Stylesheet-rule visual change did not restore original CSS rule values.');
           }
+          diagnostics = editor.getImportDiagnostics();
+          if ((diagnostics.stylesheetRuleWritebackCount || 0) !== 0 || (diagnostics.stylesheetRuleWritebackSelectors || []).length !== 0 || (diagnostics.issues || []).some(item => item.kind === 'stylesheet-rule-writeback')) {
+            throw new Error(`Stylesheet-rule writeback diagnostics should clear after revert, got ${JSON.stringify(diagnostics)}`);
+          }
 
           window.webkit.messageHandlers.visualRevert.postMessage({
             type: 'result',

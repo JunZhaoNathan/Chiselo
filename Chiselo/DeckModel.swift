@@ -213,6 +213,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var externalStylesheetCount: Int?
     var inlineStyleChangeCount: Int?
     var stylesheetRuleWritebackCount: Int?
+    var stylesheetRuleWritebackSelectors: [String]?
     var pptxTextObjectCount: Int?
     var pptxImageObjectCount: Int?
     var pptxShapeObjectCount: Int?
@@ -280,6 +281,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
         stylesheetRuleWritebackCount: 0,
+        stylesheetRuleWritebackSelectors: [],
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,
@@ -392,7 +394,7 @@ extension HTMLDiagnostics {
 
     var stylesheetRuleWritebackTargets: [String] {
         var seen = Set<String>()
-        return stylesheetRuleChangeItems.compactMap(\.writebackTarget).filter { value in
+        return ((stylesheetRuleWritebackSelectors ?? []) + stylesheetRuleChangeItems.compactMap(\.writebackTarget)).filter { value in
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, !seen.contains(trimmed) else { return false }
             seen.insert(trimmed)
