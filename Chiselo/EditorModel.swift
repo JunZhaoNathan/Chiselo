@@ -124,6 +124,8 @@ final class EditorModel: ObservableObject {
     @Published var canRedoEdit: Bool = false
     @Published var undoDepth: Int = 0
     @Published var redoDepth: Int = 0
+    @Published var nextUndoLabel: String?
+    @Published var nextRedoLabel: String?
 
     var hasOpenDocument: Bool {
         activeTabID != nil && !tabs.isEmpty
@@ -707,6 +709,8 @@ final class EditorModel: ObservableObject {
                 updatePublished(\.canRedoEdit, to: message.canRedo)
                 updatePublished(\.undoDepth, to: max(0, message.undoDepth ?? 0))
                 updatePublished(\.redoDepth, to: max(0, message.redoDepth ?? 0))
+                updatePublished(\.nextUndoLabel, to: normalizedHistoryLabel(message.nextUndoLabel))
+                updatePublished(\.nextRedoLabel, to: normalizedHistoryLabel(message.nextRedoLabel))
 
             case "documentDirty":
                 markActiveTabNeedsSnapshot()
@@ -2120,6 +2124,13 @@ final class EditorModel: ObservableObject {
         updatePublished(\.canRedoEdit, to: false)
         updatePublished(\.undoDepth, to: 0)
         updatePublished(\.redoDepth, to: 0)
+        updatePublished(\.nextUndoLabel, to: nil)
+        updatePublished(\.nextRedoLabel, to: nil)
+    }
+
+    private func normalizedHistoryLabel(_ label: String?) -> String? {
+        let trimmed = label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func canOpenURL(_ url: URL) -> Bool {

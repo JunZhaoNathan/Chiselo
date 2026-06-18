@@ -399,11 +399,15 @@
   }
 
   function historyState() {
+    const nextUndo = historyPast[historyPast.length - 1] || null;
+    const nextRedo = historyFuture[historyFuture.length - 1] || null;
     return {
       canUndo: historyPast.length > 0,
       canRedo: historyFuture.length > 0,
       undoDepth: historyPast.length,
-      redoDepth: historyFuture.length
+      redoDepth: historyFuture.length,
+      nextUndoLabel: nextUndo?.label || null,
+      nextRedoLabel: nextRedo?.label || null
     };
   }
 
@@ -505,19 +509,35 @@
     markDocumentDirty();
 
     const key = options.coalesceKey || null;
+    const label = historyLabel(options.label);
     const interval = Number.isFinite(options.interval) ? options.interval : 700;
     const now = performance.now();
     if (key && historyCoalesceKey === key && now < historyCoalesceUntil) {
       historyCoalesceUntil = now + interval;
+      const last = historyPast[historyPast.length - 1];
+      if (last) last.label = label;
+      postHistoryChanged();
       return;
     }
 
     historyCoalesceKey = key;
     historyCoalesceUntil = key ? now + interval : 0;
-    historyPast.push(currentSnapshot());
+    historyPast.push({ snapshot: currentSnapshot(), label });
     if (historyPast.length > 100) historyPast.shift();
     historyFuture = [];
     postHistoryChanged();
+  }
+
+  function historyLabel(label) {
+    return String(label || "编辑对象").trim() || "编辑对象";
+  }
+
+  function historyEntrySnapshot(entry) {
+    return typeof entry === "string" ? entry : entry?.snapshot;
+  }
+
+  function historyEntryLabel(entry, fallback = "编辑对象") {
+    return historyLabel(typeof entry === "string" ? fallback : entry?.label || fallback);
   }
 
   function resetHistoryCoalescing() {
@@ -569,18 +589,20 @@
   function undo() {
     if (!historyPast.length) return;
     resetHistoryCoalescing();
-    historyFuture.push(currentSnapshot());
+    const entry = historyPast.pop();
+    historyFuture.push({ snapshot: currentSnapshot(), label: historyEntryLabel(entry) });
     markDocumentDirty();
-    void restoreFromSnapshot(historyPast.pop());
+    void restoreFromSnapshot(historyEntrySnapshot(entry));
     postHistoryChanged();
   }
 
   function redo() {
     if (!historyFuture.length) return;
     resetHistoryCoalescing();
-    historyPast.push(currentSnapshot());
+    const entry = historyFuture.pop();
+    historyPast.push({ snapshot: currentSnapshot(), label: historyEntryLabel(entry) });
     markDocumentDirty();
-    void restoreFromSnapshot(historyFuture.pop());
+    void restoreFromSnapshot(historyEntrySnapshot(entry));
     postHistoryChanged();
   }
 
@@ -931,7 +953,7 @@
     if (shouldDragGroup && deckGroupHasLocked(dragGroupId)) return;
 
     event.preventDefault();
-    pushHistory();
+    pushHistory({ label: "移动对象" });
 
     if (shouldDragGroup) {
       const startRect = deckGroupBounds(dragGroupId);
@@ -993,7 +1015,7 @@
 
     event.preventDefault();
     event.stopPropagation();
-    pushHistory();
+    pushHistory({ label: "调整大小" });
 
     const startRect = rectOf(element);
     activeGesture = {
@@ -1114,7 +1136,7 @@
     const elements = deckGroupElements(groupId);
     if (!elements.length || deckGroupHasLocked(groupId)) return false;
 
-    if (options.history !== false) pushHistory(options.historyOptions || {});
+    if (options.history !== false) pushHistory({ label: "移动对象", ...(options.historyOptions || {}) });
     for (const element of elements) {
       element.x = Math.round((Number(element.x) || 0) + dx);
       element.y = Math.round((Number(element.y) || 0) + dy);
@@ -1138,7 +1160,7 @@
     const scaleX = startBounds.w ? nextBounds.w / startBounds.w : 1;
     const scaleY = startBounds.h ? nextBounds.h / startBounds.h : 1;
 
-    if (options.history !== false) pushHistory(options.historyOptions || {});
+    if (options.history !== false) pushHistory({ label: "调整大小", ...(options.historyOptions || {}) });
     for (const element of elements) {
       const startRect = startRectMap.get(element.id) || rectOf(element);
       element.x = Math.round(nextBounds.x + (startRect.x - startBounds.x) * scaleX);
@@ -1180,7 +1202,7 @@
     const anchor = deckGroupAnchorElement(groupId);
     if (!anchor) return false;
 
-    pushHistory();
+    pushHistory({ label: "统一尺寸" });
     for (const element of elements) {
       if (mode === "width") element.w = Math.max(1, Math.round(anchor.w));
       if (mode === "height") element.h = Math.max(1, Math.round(anchor.h));
@@ -1209,7 +1231,7 @@
     const totalSize = sorted.reduce((sum, element) => sum + (horizontal ? element.w : element.h), 0);
     const gap = (end - start - totalSize) / (sorted.length - 1);
 
-    pushHistory();
+    pushHistory({ label: "分布对象" });
     let cursor = start;
     for (const element of sorted) {
       if (horizontal) element.x = Math.round(cursor);
@@ -1456,7 +1478,7 @@
     if (!element || element.locked) return;
 
     selectElement(id);
-    pushHistory();
+    pushHistory({ label: "修改文字" });
     content.contentEditable = "true";
     content.focus();
     document.execCommand("selectAll", false, null);
@@ -1499,7 +1521,7 @@
     const index = elements.findIndex((element) => element.id === nextElement.id);
     if (index < 0) return;
 
-    pushHistory();
+    pushHistory({ label: "调整对象" });
     elements[index] = { ...elements[index], ...nextElement };
     selectedId = nextElement.id;
     clearDeckGroupSelection();
@@ -1685,7 +1707,7 @@
       const groupId = selectedDeckGroupId;
       const ids = new Set(deckGroupElements(groupId).map((element) => element.id));
       if (!ids.size) return;
-      pushHistory();
+      pushHistory({ label: "删除对象" });
       currentSlide().elements = currentSlide().elements.filter((element) => !ids.has(element.id));
       clearSelection();
       render();
@@ -1693,7 +1715,7 @@
     }
 
     if (!selectedId) return;
-    pushHistory();
+    pushHistory({ label: "删除对象" });
     currentSlide().elements = currentSlide().elements.filter((element) => element.id !== selectedId);
     clearSelection();
     render();
@@ -1710,7 +1732,7 @@
       const elements = deckGroupElements(groupId);
       if (!elements.length) return;
 
-      pushHistory();
+      pushHistory({ label: "复制对象" });
       const nextGroupId = uniqueDeckGroupId(`${groupId}-copy`);
       const nextZ = Math.max(...currentSlide().elements.map((item) => item.z), 0) + 1;
       const copies = elements.map((element, index) => {
@@ -1733,7 +1755,7 @@
     const element = selectedElement();
     if (!element) return;
 
-    pushHistory();
+    pushHistory({ label: "复制对象" });
     const copy = clone(element);
     copy.id = uniqueDeckElementId(`${element.id}-copy`);
     copy.x = Math.round(copy.x + 18);
@@ -1777,7 +1799,7 @@
     if (isDeckGroupSelection()) {
       const elements = deckGroupElements(selectedDeckGroupId);
       if (!elements.length) return;
-      pushHistory();
+      pushHistory({ label: "调整层级" });
       const allElements = currentSlide().elements;
       const zValues = allElements.map((item) => item.z);
       const minZ = Math.min(...zValues);
@@ -1798,7 +1820,7 @@
     const element = selectedElement();
     if (!element) return;
 
-    pushHistory();
+    pushHistory({ label: "调整层级" });
     const elements = currentSlide().elements;
     const zValues = elements.map((item) => item.z);
     const minZ = Math.min(...zValues);
@@ -1826,7 +1848,7 @@
       const elements = deckGroupElements(selectedDeckGroupId);
       if (!elements.length) return;
       const nextLocked = !elements.every((element) => element.locked);
-      pushHistory();
+      pushHistory({ label: "锁定对象" });
       for (const element of elements) element.locked = nextLocked;
       render();
       postSelectionChanged();
@@ -1836,7 +1858,7 @@
     const element = selectedElement();
     if (!element) return;
 
-    pushHistory();
+    pushHistory({ label: "锁定对象" });
     element.locked = !element.locked;
     render();
     postSelectionChanged();
@@ -1868,7 +1890,7 @@
     const element = selectedElement();
     if (!element || element.locked) return;
 
-    pushHistory();
+    pushHistory({ label: "对齐对象" });
     const canvas = deck.canvas;
     if (edge === "left") element.x = 0;
     if (edge === "center") element.x = Math.round((canvas.width - element.w) / 2);
@@ -1907,7 +1929,7 @@
     const element = selectedElement();
     if (!element || element.locked) return;
 
-    pushHistory();
+    pushHistory({ label: "适配尺寸" });
     const canvas = deck.canvas;
     if (mode === "width" || mode === "page") {
       element.x = 0;
@@ -1955,7 +1977,7 @@
 
     const element = selectedElement();
     if (!element || element.locked) return;
-    pushHistory();
+    pushHistory({ label: "吸附网格" });
     element.x = snapNumber(element.x, grid);
     element.y = snapNumber(element.y, grid);
     element.w = Math.max(MIN_SIZE, snapNumber(element.w, grid));
@@ -1972,7 +1994,7 @@
     if (editorMode === "html") {
       const nodes = directSelectionNodes();
       if (!nodes.length) return;
-      pushHistory();
+      pushHistory({ label: "移动对象" });
       for (const node of nodes) {
         const rect = directNodeRect(node);
         rect.x += dx;
@@ -1991,7 +2013,7 @@
 
     const element = selectedElement();
     if (!element || element.locked) return;
-    pushHistory();
+    pushHistory({ label: "移动对象" });
     element.x = Math.round(element.x + dx);
     element.y = Math.round(element.y + dy);
     render();
@@ -3622,7 +3644,7 @@
       selectDirectNode(node);
     }
 
-    pushHistory();
+    pushHistory({ label: "移动对象" });
     const nodes = directSelectionNodes().length > 1 && isDirectSelected(node) ? [...directSelectionNodes()] : [node];
     const startRect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(node);
     const gestureContext = buildDirectGestureContext(nodes);
@@ -3651,7 +3673,7 @@
     if (event.button !== 0 || !directSelectedNode) return;
     event.preventDefault();
     event.stopPropagation();
-    pushHistory();
+    pushHistory({ label: "调整大小" });
     const nodes = directSelectionNodes();
     const startRect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(directSelectedNode);
     const gestureContext = buildDirectGestureContext(nodes);
@@ -3980,7 +4002,7 @@
     if (!node || !directNodeAllowsTextEdit(node)) return null;
     pendingDirectTextEditNode = null;
     selectDirectNode(node);
-    pushHistory();
+    pushHistory({ label: "修改文字" });
     activeDirectTextEditNode = node;
     const unlockTypography = lockDirectEditTypography(node);
     node.setAttribute("contenteditable", "true");
@@ -4049,7 +4071,7 @@
     }
 
     if (!directSelectedNode || !directSelectedNode.isConnected) return;
-    pushHistory({ coalesceKey: directHistoryCoalesceKey("direct-update", nodes), interval: 800 });
+    pushHistory({ label: "调整对象", coalesceKey: directHistoryCoalesceKey("direct-update", nodes), interval: 800 });
     applyDirectRect(directSelectedNode, nextElement);
     applyDirectStyle(directSelectedNode, nextElement.style || {});
     applyDirectImageMetadata(directSelectedNode, nextElement);
@@ -4061,7 +4083,7 @@
   function updateDirectGroupElement(nodes, nextElement) {
     if (!nodes.length) return;
 
-    pushHistory({ coalesceKey: directHistoryCoalesceKey("direct-group-update", nodes), interval: 800 });
+    pushHistory({ label: "调整对象组", coalesceKey: directHistoryCoalesceKey("direct-group-update", nodes), interval: 800 });
     const currentRect = directNodesBounds(nodes);
     const nextRect = {
       x: Number.isFinite(nextElement.x) ? nextElement.x : currentRect.x,
@@ -4178,7 +4200,7 @@
     const image = selectedImageNode();
     if (!image) return null;
 
-    pushHistory();
+    pushHistory({ label: "替换图片" });
     image.setAttribute("src", src);
     selectDirectNode(image);
     scheduleHTMLTreeChanged();
@@ -4206,7 +4228,7 @@
   function styleSelectedImage(style) {
     const image = selectedImageNode();
     if (!image) return null;
-    pushHistory();
+    pushHistory({ label: "调整图片" });
     image.style.width = "100%";
     image.style.height = "100%";
     image.style.objectFit = objectFitValue(style.objectFit, "contain");
@@ -4221,7 +4243,7 @@
     const context = directTableContext();
     if (!context?.row) return null;
 
-    pushHistory();
+    pushHistory({ label: "添加表格行" });
     const row = cloneTableRow(context);
     context.row.insertAdjacentElement("afterend", row);
     const target = row.cells[Math.min(context.columnIndex, Math.max(0, row.cells.length - 1))] || row;
@@ -4234,7 +4256,7 @@
     const context = directTableContext();
     if (!context?.row || context.rows.length <= 1) return null;
 
-    pushHistory();
+    pushHistory({ label: "删除表格行" });
     const currentIndex = context.rows.indexOf(context.row);
     const targetRow = context.rows[currentIndex + 1] || context.rows[currentIndex - 1] || null;
     context.row.remove();
@@ -4254,7 +4276,7 @@
     const context = directTableContext();
     if (!context?.table || !context.rows.length) return null;
 
-    pushHistory();
+    pushHistory({ label: "添加表格列" });
     let selectedCell = null;
     const insertAfterColumn = context.columnIndex;
     const grid = tableGrid(context.table);
@@ -4292,7 +4314,7 @@
     const context = directTableContext();
     if (!context?.table || maxTableColumns(context.table) <= 1) return null;
 
-    pushHistory();
+    pushHistory({ label: "删除表格列" });
     let nextSelection = null;
     const grid = tableGrid(context.table);
     const touched = new Set();
@@ -4320,7 +4342,7 @@
     const context = directTableContext();
     if (!context?.cell) return null;
 
-    pushHistory();
+    pushHistory({ label: "修改文字" });
     applyDirectStyle(context.cell, style);
     selectDirectNode(context.cell);
     scheduleHTMLTreeChanged();
@@ -4467,7 +4489,7 @@
   function deleteDirectSelected() {
     const nodes = topLevelDirectNodes(directSelectionNodes());
     if (!nodes.length) return false;
-    pushHistory();
+    pushHistory({ label: "删除对象" });
     for (const node of nodes) {
       node.remove();
     }
@@ -4484,7 +4506,7 @@
     const nodes = topLevelDirectNodes(directSelectionNodes());
     if (!nodes.length) return false;
 
-    pushHistory();
+    pushHistory({ label: "复制对象" });
     const copies = [];
     for (const node of nodes) {
       const copy = node.cloneNode(true);
@@ -4507,7 +4529,7 @@
   function alignDirectSelected(edge) {
     const nodes = directSelectionNodes();
     if (!nodes.length) return;
-    pushHistory();
+    pushHistory({ label: "对齐对象" });
     const rect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(directSelectedNode);
     const frame = directAlignmentFrame(directSelectedNode);
     const original = { ...rect };
@@ -4538,7 +4560,7 @@
     const reference = nodes.includes(directSelectedNode) ? directSelectedNode : nodes[0];
     const referenceRect = directNodeRect(reference);
 
-    pushHistory();
+    pushHistory({ label: "统一尺寸" });
     for (const node of nodes) {
       const rect = directNodeRect(node);
       if (mode === "width") rect.w = referenceRect.w;
@@ -4566,7 +4588,7 @@
     const span = axis === "horizontal" ? bounds.w : bounds.h;
     const gap = (span - totalSize) / Math.max(1, rects.length - 1);
 
-    pushHistory();
+    pushHistory({ label: "分布对象" });
     let cursor = axis === "horizontal" ? bounds.x : bounds.y;
     for (const item of rects) {
       const nextRect = { ...item.rect };
@@ -4590,7 +4612,7 @@
     const nodes = directSelectionNodes();
     if (!nodes.length) return;
 
-    pushHistory();
+    pushHistory({ label: "适配尺寸" });
     const rect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(directSelectedNode);
     const original = { ...rect };
     const frame = directAlignmentFrame(directSelectedNode);
@@ -4616,7 +4638,7 @@
     const nodes = directSelectionNodes();
     if (!nodes.length) return;
 
-    pushHistory();
+    pushHistory({ label: "吸附网格" });
     const rect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(directSelectedNode);
     const original = { ...rect };
     rect.x = snapNumber(rect.x, grid);
@@ -4711,7 +4733,7 @@
   function arrangeDirectSelected(mode) {
     const nodes = directSelectionNodes();
     if (!nodes.length) return false;
-    pushHistory();
+    pushHistory({ label: "调整层级" });
     for (const node of nodes) {
       const style = node.ownerDocument.defaultView.getComputedStyle(node);
       const current = parseInt(style.zIndex, 10);
@@ -6630,7 +6652,7 @@ ${htmlSlides}
 
   function setSelectedHTMLText(text) {
     if (editorMode !== "html" || !directSelectedNode) return null;
-    pushHistory();
+    pushHistory({ label: "修改文字" });
     directSelectedNode.textContent = text;
     updateSelectionBox();
     scheduleHTMLTreeChanged();

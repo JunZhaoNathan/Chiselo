@@ -67,12 +67,14 @@ struct ChiseloApp: App {
                 }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!model.hasOpenDocument || !model.canUndoEdit)
+                .help(model.nextUndoLabel.map { "撤销：\($0)" } ?? "没有可撤销的编辑")
 
                 Button("重做") {
                     model.editorCommand("redo")
                 }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!model.hasOpenDocument || !model.canRedoEdit)
+                .help(model.nextRedoLabel.map { "重做：\($0)" } ?? "没有可重做的编辑")
             }
 
             CommandGroup(after: .undoRedo) {

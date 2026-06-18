@@ -112,6 +112,8 @@ struct BridgeHistoryMessage: Decodable, Equatable {
     var canRedo: Bool
     var undoDepth: Int?
     var redoDepth: Int?
+    var nextUndoLabel: String?
+    var nextRedoLabel: String?
 }
 
 struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {

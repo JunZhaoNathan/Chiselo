@@ -61,14 +61,14 @@ final class HistoryStateTest: NSObject, WKNavigationDelegate, WKScriptMessageHan
                 const originalText = selected.text;
                 editor.setSelectedHTMLText('CHISELO_HISTORY_TEST');
                 await sleep(120);
-                expectState('afterTextEdit', { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 });
+                expectState('afterTextEdit', { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0, nextUndoLabel: '修改文字' });
                 if (!editor.exportHTML().includes('CHISELO_HISTORY_TEST')) {
                   throw new Error('Edited text was not present before undo.');
                 }
 
                 editor.command('undo');
                 await sleep(180);
-                expectState('afterUndo', { canUndo: false, canRedo: true, undoDepth: 0, redoDepth: 1 });
+                expectState('afterUndo', { canUndo: false, canRedo: true, undoDepth: 0, redoDepth: 1, nextRedoLabel: '修改文字' });
                 const afterUndo = editor.selectHTML('h1');
                 if (!afterUndo || afterUndo.text !== originalText) {
                   throw new Error(`Undo did not restore original text: ${afterUndo && afterUndo.text}`);
@@ -76,7 +76,7 @@ final class HistoryStateTest: NSObject, WKNavigationDelegate, WKScriptMessageHan
 
                 editor.command('redo');
                 await sleep(180);
-                expectState('afterRedo', { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 });
+                expectState('afterRedo', { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0, nextUndoLabel: '修改文字' });
                 const afterRedo = editor.selectHTML('h1');
                 if (!afterRedo || afterRedo.text !== 'CHISELO_HISTORY_TEST') {
                   throw new Error(`Redo did not restore edited text: ${afterRedo && afterRedo.text}`);

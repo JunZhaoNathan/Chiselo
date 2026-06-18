@@ -386,14 +386,14 @@ private struct AppToolbar: View {
                 ToolbarIconButton(icon: "arrow.uturn.backward", title: "撤销") {
                     model.editorCommand("undo")
                 }
-                .disabled(!model.hasOpenDocument)
-                .help("撤销上一步")
+                .disabled(!model.hasOpenDocument || !model.canUndoEdit)
+                .help(model.nextUndoLabel.map { "撤销：\($0)" } ?? "没有可撤销的编辑")
 
                 ToolbarIconButton(icon: "arrow.uturn.forward", title: "重做") {
                     model.editorCommand("redo")
                 }
-                .disabled(!model.hasOpenDocument)
-                .help("重做上一步")
+                .disabled(!model.hasOpenDocument || !model.canRedoEdit)
+                .help(model.nextRedoLabel.map { "重做：\($0)" } ?? "没有可重做的编辑")
             }
 
             MaterialDivider()
