@@ -2151,7 +2151,7 @@
     if (!shouldRebuildChrome) {
       if (activeGesture?.mode === "html") return;
       collapseDirectQuickActions();
-      const chip = selectionBox.querySelector(".quick-chip");
+      const chip = selectionBox.querySelector(".quick-action-menu .quick-chip");
       if (chip) chip.textContent = directQuickLabel(nodes, rect);
       const bar = selectionBox.querySelector(".quick-action-bar");
       if (bar) requestAnimationFrame(() => placeDirectQuickActions(bar, rect));
@@ -2401,6 +2401,15 @@
     doc.addEventListener("click", (event) => {
       const link = event.target.closest?.("a");
       if (link) event.preventDefault();
+    }, true);
+
+    doc.addEventListener("contextmenu", (event) => {
+      if (event.target.closest?.("[contenteditable='true']")) return;
+      const node = directSelectionTargetFromEvent(event);
+      if (!node) return;
+      event.preventDefault();
+      event.stopPropagation();
+      selectDirectNode(node);
     }, true);
 
     doc.addEventListener("pointerdown", (event) => {
@@ -3137,11 +3146,10 @@
     const tag = node.tagName.toLowerCase();
     const size = `${Math.round(rect.w)} x ${Math.round(rect.h)}`;
     const resource = directResourceStatus(node);
-    if (isImageLikeNode(node)) return `IMG ${size}${resource ? ` - ${resource}` : ""} - drag, resize, replace`;
-    if (node.closest?.("td, th")) return `CELL ${size} - click, drag, edit table`;
-    if (node.matches?.("table")) return `TABLE ${size} - click, drag, edit rows/cols`;
-    if (normalizedText(node)) return `${tag.toUpperCase()} ${size} - double-click text`;
-    return `${tag.toUpperCase()} ${size} - click, drag, resize`;
+    if (isImageLikeNode(node)) return `IMG ${size}${resource ? ` - ${resource}` : ""}`;
+    if (node.closest?.("td, th")) return `CELL ${size}`;
+    if (node.matches?.("table")) return `TABLE ${size}`;
+    return `${tag.toUpperCase()} ${size}`;
   }
 
   function appendDirectQuickActions(nodes, rect) {
@@ -3152,15 +3160,10 @@
       event.stopPropagation();
     });
 
-    const chip = document.createElement("span");
-    chip.className = "quick-chip";
-    chip.textContent = directQuickLabel(nodes, rect);
-    bar.appendChild(chip);
-
     const menuButton = document.createElement("button");
     menuButton.type = "button";
     menuButton.className = "quick-action-menu-toggle";
-    menuButton.textContent = "...";
+    menuButton.textContent = "";
     menuButton.title = "显示快捷操作";
     menuButton.setAttribute("aria-label", "显示快捷操作");
     menuButton.setAttribute("aria-expanded", "false");
@@ -3169,6 +3172,11 @@
     const menu = document.createElement("div");
     menu.className = "quick-action-menu";
     menu.hidden = true;
+
+    const chip = document.createElement("span");
+    chip.className = "quick-chip";
+    chip.textContent = directQuickLabel(nodes, rect);
+    menu.appendChild(chip);
 
     const setMenuOpen = (open) => {
       bar.classList.toggle("is-open", open);

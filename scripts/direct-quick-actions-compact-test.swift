@@ -78,11 +78,14 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                 }
 
                 const quickBar = document.querySelector('#selectionBox .quick-action-bar');
-                const quickChip = quickBar && quickBar.querySelector(':scope > .quick-chip');
+                const collapsedChip = quickBar && quickBar.querySelector(':scope > .quick-chip');
                 const quickMenu = quickBar && quickBar.querySelector(':scope > .quick-action-menu');
                 const quickToggle = quickBar && quickBar.querySelector(':scope > .quick-action-menu-toggle');
-                if (!quickBar || !quickChip || !quickMenu || !quickToggle) {
+                if (!quickBar || !quickMenu || !quickToggle) {
                   throw new Error('Compact quick actions chrome is incomplete.');
+                }
+                if (collapsedChip) {
+                  throw new Error('Object label should stay hidden until quick actions are opened.');
                 }
                 if (!quickMenu.hidden || quickBar.classList.contains('is-open')) {
                   throw new Error('Quick actions should be collapsed by default.');
@@ -92,14 +95,29 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                 }
 
                 const collapsedRect = quickBar.getBoundingClientRect();
-                if (collapsedRect.width > 280 || collapsedRect.height > 48) {
+                if (collapsedRect.width > 48 || collapsedRect.height > 40) {
                   throw new Error(`Collapsed quick actions are too large: ${collapsedRect.width}x${collapsedRect.height}`);
+                }
+                const contextEvent = new win.MouseEvent('contextmenu', {
+                  bubbles: true,
+                  cancelable: true,
+                  button: 2,
+                  clientX: x,
+                  clientY: y
+                });
+                const contextAllowed = target.dispatchEvent(contextEvent);
+                if (contextAllowed || !contextEvent.defaultPrevented) {
+                  throw new Error('Direct HTML object right-click should not open the browser context menu.');
                 }
 
                 quickToggle.click();
                 await sleep(40);
                 if (quickMenu.hidden || !quickBar.classList.contains('is-open') || !quickMenu.querySelector('.quick-action')) {
                   throw new Error('Quick actions menu did not expand on demand.');
+                }
+                const quickChip = quickMenu.querySelector(':scope > .quick-chip');
+                if (!quickChip || !quickChip.textContent.trim()) {
+                  throw new Error('Quick actions menu did not reveal the selected object label on demand.');
                 }
                 const quickPath = quickMenu.querySelector('.quick-path');
                 const pathButtons = quickPath ? [...quickPath.querySelectorAll('.quick-path-item')] : [];

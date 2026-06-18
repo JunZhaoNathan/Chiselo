@@ -498,23 +498,33 @@ img[data-chiselo-broken-resource] {
   top: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  max-width: min(260px, calc(100vw - 80px));
+  justify-content: center;
+  gap: 0;
+  width: 28px;
   min-height: 26px;
-  padding: 3px;
+  padding: 2px;
   border-radius: 999px;
-  border: 1px solid var(--hairline);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(10, 132, 255, 0.18);
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.10);
   -webkit-backdrop-filter: blur(22px) saturate(1.32);
   backdrop-filter: blur(22px) saturate(1.32);
+  opacity: 0.68;
   pointer-events: auto;
   transform: scale(var(--overlay-scale));
   transform-origin: top left;
+  transition: opacity 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.quick-action-bar:hover,
+.quick-action-bar:focus-within {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
 }
 
 .quick-action-bar.is-open {
-  max-width: min(300px, calc(100vw - 80px));
+  opacity: 1;
   border-radius: var(--radius-medium);
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
@@ -532,6 +542,7 @@ img[data-chiselo-broken-resource] {
 }
 
 .quick-chip {
+  grid-column: 1 / -1;
   display: inline-flex;
   align-items: center;
   max-width: 170px;
@@ -558,8 +569,19 @@ img[data-chiselo-broken-resource] {
   width: 24px;
   padding: 0;
   color: var(--accent);
-  background: rgba(10, 132, 255, 0.10);
+  background: rgba(10, 132, 255, 0.08);
   letter-spacing: 0;
+}
+
+.quick-action-menu-toggle::before {
+  content: "";
+  display: block;
+  width: 3px;
+  height: 3px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: -6px 0 0 currentColor, 6px 0 0 currentColor;
 }
 
 .quick-action-menu {
