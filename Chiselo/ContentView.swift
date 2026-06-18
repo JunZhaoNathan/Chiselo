@@ -4704,6 +4704,10 @@ private struct InspectorPanel: View {
                     if !(element.sourceSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         let validation = sourceDraftValidation(for: element)
 
+                        if let ancestorItems = element.sourceAncestorItems, ancestorItems.count > 1 {
+                            sourceAncestorNavigationGroup(ancestorItems, selectedID: element.id)
+                        }
+
                         ScrollView(.horizontal, showsIndicators: true) {
                             TextEditor(text: $sourceDraft)
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -4761,7 +4765,63 @@ private struct InspectorPanel: View {
         }
     }
 
-    private func sourceChildNavigationGroup(_ items: [EditorSourceChildItem]) -> some View {
+    private func sourceAncestorNavigationGroup(_ items: [EditorSourceNodeItem], selectedID: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                Text("源码路径")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Spacer(minLength: 0)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 8, weight: .heavy))
+                                .foregroundStyle(MaterialTheme.muted.opacity(0.70))
+                        }
+
+                        sourceAncestorNavigationButton(item, isSelected: item.id == selectedID)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(8)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private func sourceAncestorNavigationButton(_ item: EditorSourceNodeItem, isSelected: Bool) -> some View {
+        Button {
+            model.selectHTMLNode(id: item.id)
+        } label: {
+            Text(item.label.isEmpty ? item.tagName.uppercased() : item.label)
+                .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                .foregroundStyle(isSelected ? Color.white : MaterialTheme.primaryDark)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(isSelected ? MaterialTheme.primary : Color.white.opacity(0.48), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isSelected ? Color.clear : MaterialTheme.separator, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(item.path)
+    }
+
+    private func sourceChildNavigationGroup(_ items: [EditorSourceNodeItem]) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: "list.bullet.indent")
@@ -4801,7 +4861,7 @@ private struct InspectorPanel: View {
         )
     }
 
-    private func sourceChildNavigationRow(_ item: EditorSourceChildItem) -> some View {
+    private func sourceChildNavigationRow(_ item: EditorSourceNodeItem) -> some View {
         Button {
             model.selectHTMLNode(id: item.id)
         } label: {

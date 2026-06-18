@@ -33,7 +33,8 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var sourceKind: String?
     var sourceSnippet: String?
     var sourceSnippetLineCount: Int?
-    var sourceChildItems: [EditorSourceChildItem]?
+    var sourceAncestorItems: [EditorSourceNodeItem]?
+    var sourceChildItems: [EditorSourceNodeItem]?
     var editability: String?
     var fidelity: String?
     var captureNote: String?
@@ -52,7 +53,7 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var style: EditorElementStyle?
 }
 
-struct EditorSourceChildItem: Codable, Identifiable, Equatable {
+struct EditorSourceNodeItem: Codable, Identifiable, Equatable {
     var id: String
     var tagName: String
     var label: String

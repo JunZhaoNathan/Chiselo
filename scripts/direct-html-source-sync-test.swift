@@ -40,14 +40,21 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           if (!selected) throw new Error('Could not select source sync fixture.');
           const snippet = String(selected.sourceSnippet || '');
           const lineCount = Number(selected.sourceSnippetLineCount || 0);
+          const ancestorItems = Array.isArray(selected.sourceAncestorItems) ? selected.sourceAncestorItems : [];
           const childItems = Array.isArray(selected.sourceChildItems) ? selected.sourceChildItems : [];
           const sourceHasTag = snippet.includes('<article') && snippet.includes('id="sourceTarget"');
           const sourceHasChildren = snippet.includes('<h2>Synced title</h2>') && snippet.includes('<strong>real source</strong>');
           const sourceClean = !snippet.includes('data-chiselo') && !snippet.includes('__chiselo') && !snippet.includes('chiselo-edit');
           const sourceFormatted = snippet.includes('\\n  <h2>');
+          const ancestorTags = ancestorItems.map(item => String(item && item.tagName || '').toLowerCase());
+          const ancestorPaths = ancestorItems.map(item => String(item && item.path || ''));
+          const sourceAncestorItemsVisible = ancestorItems.length >= 3 && ancestorTags[0] === 'body' && ancestorTags.includes('main') && ancestorTags.includes('article') && ancestorPaths.every(path => path.length > 0);
           const childItemTags = childItems.map(item => String(item && item.tagName || '').toLowerCase());
           const childItemPaths = childItems.map(item => String(item && item.path || ''));
           const sourceChildItemsVisible = childItems.length >= 3 && childItemTags.includes('h2') && childItemTags.includes('p') && childItemTags.includes('strong') && childItemPaths.every(path => path.includes('sourceTarget'));
+          const selectedArticleItem = ancestorItems.find(item => String(item && item.tagName || '').toLowerCase() === 'article');
+          const articleSelection = selectedArticleItem ? editor.selectHTMLById(selectedArticleItem.id) : null;
+          const articleSelectionOk = !!articleSelection && articleSelection.tagName === 'article' && String(articleSelection.sourceSnippet || '').includes('sourceTarget');
           const selectedH2Item = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
           const selectedStrongItem = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
           const h2Selection = selectedH2Item ? editor.selectHTMLById(selectedH2Item.id) : null;
@@ -77,13 +84,16 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceChildItemsVisible || !h2SelectionOk || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
               sourceClean,
               sourceFormatted,
               lineCount,
+              sourceAncestorItemsVisible,
+              ancestorItems,
+              articleSelectionOk,
               sourceChildItemsVisible,
               childItems,
               h2SelectionOk,
@@ -113,7 +123,9 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             type: 'result',
             id: selected.id,
             lineCount,
+            sourceAncestorItemsVisible,
             sourceChildItemsVisible,
+            articleSelectionOk,
             h2SelectionOk,
             strongSelectionOk,
             warningDetected,

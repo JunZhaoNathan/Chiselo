@@ -2132,6 +2132,7 @@
     if (node.matches?.("img")) payloadStyle.objectFit = objectFitValue(style.objectFit, "fill");
     Object.assign(payloadStyle, directStyleWritebackPreview(node));
     const sourceSnippet = directSourceSnippetForNode(node);
+    const sourceAncestorItems = directSourceAncestorItemsForNode(node);
     const sourceChildItems = directSourceChildItemsForNode(node);
 
     return {
@@ -2144,6 +2145,7 @@
       sourceKind: "html-source",
       sourceSnippet: sourceSnippet.text,
       sourceSnippetLineCount: sourceSnippet.lineCount,
+      sourceAncestorItems,
       sourceChildItems,
       layoutMode: directLayoutMode,
       imageSource: node.matches?.("img") ? (node.currentSrc || node.getAttribute("src") || "") : null,
@@ -2417,6 +2419,27 @@
 
     visit(node, 1);
     return items;
+  }
+
+  function directSourceAncestorItemsForNode(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return [];
+
+    const nodes = [];
+    const maxItems = 20;
+    let current = node;
+    while (current && current.nodeType === Node.ELEMENT_NODE && current !== current.ownerDocument.documentElement) {
+      nodes.unshift(current);
+      current = current.parentElement;
+    }
+
+    const visibleNodes = nodes.length > maxItems ? nodes.slice(nodes.length - maxItems) : nodes;
+    return visibleNodes.map((current, depth) => ({
+      id: ensureDirectId(current),
+      tagName: current.tagName.toLowerCase(),
+      label: directNodeToken(current),
+      path: directNodePath(current),
+      depth
+    }));
   }
 
   function formatHTMLSnippet(html) {
