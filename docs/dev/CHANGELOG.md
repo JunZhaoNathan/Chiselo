@@ -37,6 +37,7 @@ All notable changes to Chiselo will be documented here.
 - Added selected-object source writeback hints so users can see whether style edits will update a CSS rule or inline style before changing HTML.
 - Added a selected-object source sync panel that shows, edits, applies, copies, and re-locates a clean HTML snippet for the visual selection.
 - Added source-snippet structure validation so dangerous tags/handlers are blocked and tag, ID, or class changes are called out before applying visual-source edits.
+- Added a compact source-draft change summary so users can see changed, added, or removed snippet lines before applying edits.
 - Added a restore action for source snippet drafts so users can return to the current selected object's clean original snippet before applying edits.
 - Added a clickable source-path breadcrumb for selected HTML objects so parent containers can be reselected from the source sync panel.
 - Added source-sibling navigation so neighboring objects under the same parent can be reselected from the source sync panel.

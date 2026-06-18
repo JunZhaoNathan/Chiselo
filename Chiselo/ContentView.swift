@@ -5375,6 +5375,13 @@ private struct SourceDraftValidationBadge: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(MaterialTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                if let changeSummary = validation.changeSummary {
+                    Text(changeSummary)
+                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(validation.color)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(8)
@@ -5392,16 +5399,19 @@ private struct SourceDraftValidation: Equatable {
 
     var severity: Severity
     var messages: [String]
+    var changeSummary: String?
 
     init(original: String, draft: String, originalTagName: String?) {
         let originalText = original.trimmingCharacters(in: .whitespacesAndNewlines)
         let draftText = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         var messages: [String] = []
         var severity: Severity = .ok
+        let changeSummary = Self.changeSummary(original: originalText, draft: draftText)
 
         if draftText.isEmpty {
             self.severity = .error
             self.messages = ["源码片段为空。"]
+            self.changeSummary = changeSummary
             return
         }
 
@@ -5455,6 +5465,7 @@ private struct SourceDraftValidation: Equatable {
 
         self.severity = severity
         self.messages = Array(NSOrderedSet(array: messages)).compactMap { $0 as? String }
+        self.changeSummary = changeSummary
     }
 
     var title: String {
@@ -5513,6 +5524,35 @@ private struct SourceDraftValidation: Equatable {
             .filter { !$0.hasPrefix("chiselo") }
             .sorted()
             .joined(separator: " ")
+    }
+
+    private static func changeSummary(original: String, draft: String) -> String? {
+        guard original != draft else { return nil }
+
+        let originalLines = normalizedLines(original)
+        let draftLines = normalizedLines(draft)
+        let sharedCount = min(originalLines.count, draftLines.count)
+        let changed = (0..<sharedCount).reduce(0) { total, index in
+            total + (originalLines[index] == draftLines[index] ? 0 : 1)
+        }
+        let added = max(0, draftLines.count - originalLines.count)
+        let removed = max(0, originalLines.count - draftLines.count)
+
+        var parts: [String] = []
+        if changed > 0 { parts.append("改动 \(changed) 行") }
+        if added > 0 { parts.append("新增 \(added) 行") }
+        if removed > 0 { parts.append("删除 \(removed) 行") }
+
+        if parts.isEmpty {
+            parts.append("空白或缩进变化")
+        }
+        return parts.joined(separator: "，")
+    }
+
+    private static func normalizedLines(_ text: String) -> [String] {
+        text
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 }
 
