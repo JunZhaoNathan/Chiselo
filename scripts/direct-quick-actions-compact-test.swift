@@ -101,10 +101,25 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                 if (quickMenu.hidden || !quickBar.classList.contains('is-open') || !quickMenu.querySelector('.quick-action')) {
                   throw new Error('Quick actions menu did not expand on demand.');
                 }
+                const quickPath = quickMenu.querySelector('.quick-path');
+                const pathButtons = quickPath ? [...quickPath.querySelectorAll('.quick-path-item')] : [];
+                const currentPathButton = pathButtons.find((button) => button.getAttribute('aria-current') === 'true');
+                const headerPathButton = pathButtons.find((button) => button.textContent.startsWith('header'));
+                if (!quickPath || !currentPathButton || !currentPathButton.textContent.startsWith('h1')) {
+                  throw new Error('Quick actions menu did not include a current-object HTML path.');
+                }
+                if (!headerPathButton) {
+                  throw new Error('Quick actions path did not include the wrapping header.');
+                }
                 const parentAction = [...quickMenu.querySelectorAll('.quick-action')]
                   .find((button) => button.textContent === '父级');
+                const childrenAction = [...quickMenu.querySelectorAll('.quick-action')]
+                  .find((button) => button.textContent === '子组');
                 if (!parentAction) {
                   throw new Error('Quick actions menu did not include parent selection.');
+                }
+                if (!childrenAction) {
+                  throw new Error('Quick actions menu did not include visible-children selection.');
                 }
 
                 quickToggle.click();
@@ -115,17 +130,67 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
 
                 quickToggle.click();
                 await sleep(40);
-                parentAction.click();
+                headerPathButton.click();
                 await sleep(80);
                 const parentSelection = window.ChiseloEditor.getSelection();
                 if (!parentSelection || parentSelection.tagName !== 'header') {
-                  throw new Error(`Parent quick action did not select the wrapping header: ${parentSelection && parentSelection.tagName}`);
+                  throw new Error(`HTML path quick action did not select the wrapping header: ${parentSelection && parentSelection.tagName}`);
+                }
+
+                const nextQuickBar = document.querySelector('#selectionBox .quick-action-bar');
+                const nextQuickToggle = nextQuickBar && nextQuickBar.querySelector(':scope > .quick-action-menu-toggle');
+                const nextQuickMenu = nextQuickBar && nextQuickBar.querySelector(':scope > .quick-action-menu');
+                if (!nextQuickToggle || !nextQuickMenu) {
+                  throw new Error('Quick actions were not rebuilt after parent selection.');
+                }
+                nextQuickToggle.click();
+                await sleep(40);
+                const rebuiltChildrenAction = [...nextQuickMenu.querySelectorAll('.quick-action')]
+                  .find((button) => button.textContent === '子组');
+                if (!rebuiltChildrenAction) {
+                  throw new Error('Parent selection menu did not include visible-children selection.');
+                }
+                rebuiltChildrenAction.click();
+                await sleep(80);
+                const childGroupSelection = window.ChiseloEditor.getSelection();
+                if (!childGroupSelection || childGroupSelection.type !== 'html-group' || !childGroupSelection.text.includes('已选中')) {
+                  throw new Error(`Visible children quick action did not create an HTML group: ${JSON.stringify(childGroupSelection)}`);
+                }
+
+                const firstListItem = doc.querySelector('li:nth-child(1)');
+                const secondListItem = doc.querySelector('li:nth-child(2)');
+                if (!firstListItem || !secondListItem) {
+                  throw new Error('List item siblings were not available for sibling selection test.');
+                }
+                window.ChiseloEditor.selectHTML('li:nth-child(1)');
+                await sleep(80);
+                const siblingQuickBar = document.querySelector('#selectionBox .quick-action-bar');
+                const siblingQuickToggle = siblingQuickBar && siblingQuickBar.querySelector(':scope > .quick-action-menu-toggle');
+                const siblingQuickMenu = siblingQuickBar && siblingQuickBar.querySelector(':scope > .quick-action-menu');
+                if (!siblingQuickToggle || !siblingQuickMenu) {
+                  throw new Error('Quick actions were not available for sibling selection.');
+                }
+                siblingQuickToggle.click();
+                await sleep(40);
+                const nextSiblingAction = [...siblingQuickMenu.querySelectorAll('.quick-action')]
+                  .find((button) => button.textContent === '后项');
+                if (!nextSiblingAction) {
+                  throw new Error('Quick actions menu did not include next sibling selection.');
+                }
+                nextSiblingAction.click();
+                await sleep(80);
+                const siblingSelection = window.ChiseloEditor.getSelection();
+                if (!siblingSelection || siblingSelection.text !== secondListItem.textContent.trim()) {
+                  throw new Error(`Next sibling quick action selected the wrong object: ${JSON.stringify(siblingSelection)}`);
                 }
 
                 window.webkit.messageHandlers.quickActions.postMessage({
                   type: 'result',
                   selectedTag: selected.tagName,
                   parentSelectedTag: parentSelection.tagName,
+                  childGroupType: childGroupSelection.type,
+                  siblingSelectedText: siblingSelection.text,
+                  pathText: quickPath.textContent || '',
                   collapsedWidth: collapsedRect.width,
                   collapsedHeight: collapsedRect.height,
                   chipText: quickChip.textContent || ''

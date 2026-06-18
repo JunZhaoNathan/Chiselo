@@ -579,6 +579,57 @@ img[data-chiselo-broken-resource] {
   backdrop-filter: blur(22px) saturate(1.26);
 }
 
+.quick-path {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 260px;
+  min-height: 22px;
+  padding: 2px;
+  border-radius: var(--radius-small);
+  background: rgba(15, 23, 42, 0.045);
+  overflow: hidden;
+}
+
+.quick-path-separator {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.quick-path-item {
+  appearance: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 92px;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--accent-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-path-item:hover {
+  background: rgba(10, 132, 255, 0.10);
+  color: var(--accent);
+}
+
+.quick-path-item[aria-current="true"] {
+  background: rgba(10, 132, 255, 0.14);
+  color: var(--accent);
+}
+
 .quick-action-menu[hidden] {
   display: none;
 }

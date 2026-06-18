@@ -2499,7 +2499,9 @@
       return targetNode;
     }
 
-    return directSelectableElementAtPoint(event, targetNode) || targetNode;
+    const resolvedNode = directSelectableElementAtPoint(event, targetNode);
+    if (resolvedNode) return resolvedNode;
+    return isSelectionPassThroughCandidate(targetNode) ? null : targetNode;
   }
 
   function shouldResolveSelectionTargetFromPoint(node) {
@@ -3143,6 +3145,7 @@
     });
 
     const actions = directQuickActions(nodes);
+    if (nodes.length === 1) appendDirectQuickPath(menu, nodes[0], setMenuOpen);
     for (const item of actions) {
       const button = document.createElement("button");
       button.type = "button";
@@ -3161,6 +3164,74 @@
     bar.appendChild(menu);
     selectionBox.appendChild(bar);
     requestAnimationFrame(() => placeDirectQuickActions(bar, rect));
+  }
+
+  function appendDirectQuickPath(menu, node, setMenuOpen) {
+    const items = directQuickPathItems(node);
+    if (items.length < 2) return;
+
+    const path = document.createElement("div");
+    path.className = "quick-path";
+    path.title = directNodePath(node);
+
+    items.forEach((item, index) => {
+      if (index > 0) {
+        const separator = document.createElement("span");
+        separator.className = "quick-path-separator";
+        separator.textContent = ">";
+        path.appendChild(separator);
+      }
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-path-item";
+      button.textContent = item.label;
+      button.title = item.path;
+      button.setAttribute("aria-current", item.node === node ? "true" : "false");
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setMenuOpen(false);
+        selectDirectNode(item.node);
+      });
+      path.appendChild(button);
+    });
+
+    menu.appendChild(path);
+  }
+
+  function directQuickPathItems(node) {
+    const doc = node?.ownerDocument;
+    if (!doc) return [];
+
+    const items = [];
+    let current = node;
+    while (current && current.nodeType === Node.ELEMENT_NODE && current !== doc.documentElement) {
+      items.unshift({
+        node: current,
+        label: directNodeToken(current),
+        path: directNodePath(current)
+      });
+      current = current.parentElement;
+    }
+
+    if (items.length <= 5) return items;
+    return [
+      items[0],
+      { ...items[items.length - 4], label: "..." },
+      ...items.slice(-3)
+    ];
+  }
+
+  function directNodeToken(node) {
+    const tag = node.tagName.toLowerCase();
+    const id = node.id ? `#${node.id}` : "";
+    const className = [...node.classList || []]
+      .filter((name) => !name.startsWith("chiselo"))
+      .slice(0, 1)
+      .map((name) => `.${name}`)
+      .join("");
+    return `${tag}${id}${className}`;
   }
 
   function collapseDirectQuickActions() {
@@ -3217,14 +3288,7 @@
     if (nodes.length > 1) return `${nodes.length} items ${Math.round(rect.w)} x ${Math.round(rect.h)}`;
     const node = nodes[0];
     if (!node) return "Selection";
-    const tag = node.tagName.toLowerCase();
-    const id = node.id ? `#${node.id}` : "";
-    const className = [...node.classList || []]
-      .filter((name) => !name.startsWith("chiselo"))
-      .slice(0, 1)
-      .map((name) => `.${name}`)
-      .join("");
-    return `${tag}${id}${className} ${Math.round(rect.w)} x ${Math.round(rect.h)}`;
+    return `${directNodeToken(node)} ${Math.round(rect.w)} x ${Math.round(rect.h)}`;
   }
 
   function directQuickActions(nodes) {
@@ -3251,6 +3315,9 @@
       actions.push(
         { action: "selectParent", label: "父级", title: "选择外层对象" },
         { action: "selectChild", label: "子级", title: "选择第一个可见子对象" },
+        { action: "selectChildren", label: "子组", title: "选择全部可见子对象" },
+        { action: "selectPrevious", label: "前项", title: "选择前一个同级对象" },
+        { action: "selectNext", label: "后项", title: "选择后一个同级对象" },
         { action: "selectSameClass", label: "同类", title: "选择同一组同类对象" }
       );
     }
@@ -3291,6 +3358,15 @@
         return;
       case "selectChild":
         selectDirectRelative("child");
+        return;
+      case "selectChildren":
+        selectDirectVisibleChildren();
+        return;
+      case "selectPrevious":
+        selectDirectRelative("previous");
+        return;
+      case "selectNext":
+        selectDirectRelative("next");
         return;
       case "selectSameClass":
         selectDirectSameClass();
@@ -6501,8 +6577,7 @@ ${htmlSlides}
     const doc = directFrame?.contentDocument;
     if (!doc) return null;
 
-    const target = directTopSelectableTargetAtPoint(doc, x, y) || doc.elementFromPoint(x, y) || doc.body;
-    const node = directSelectionTargetFromEvent({ target, clientX: x, clientY: y });
+    const node = directTopSelectableTargetAtPoint(doc, x, y) || doc.body;
     if (!node) return null;
 
     const selectionPayload = directElementPayloadForNode(node, directNodeRect(node));
@@ -6521,13 +6596,8 @@ ${htmlSlides}
   }
 
   function directTopSelectableTargetAtPoint(doc, x, y) {
-    const elements = doc.elementsFromPoint?.(x, y) || [];
-    for (const element of elements) {
-      const node = directEditableTarget(element);
-      if (!node || node === doc.body || isSelectionPassThroughCandidate(node) || isDecorativeDirectNode(node)) continue;
-      return node;
-    }
-    return null;
+    const target = doc.elementFromPoint(x, y) || doc.body;
+    return directSelectableElementAtPoint({ target, clientX: x, clientY: y });
   }
 
   function cssEscape(value) {
