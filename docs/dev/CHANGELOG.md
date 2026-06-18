@@ -7,6 +7,7 @@ All notable changes to Chiselo will be documented here.
 - Added a first-edit backup reminder for real local HTML and Chiselo project files so users confirm the original file backup before continuing precision edits.
 - Surfaced the `.chiselo-backup` filename after opening a real file and kept save-time `.chiselo-history` snapshots in place.
 - Kept direct-selection quick actions compact by default, with action buttons tucked behind an on-demand menu so selected text stays visible.
+- Added parent, child, and same-class selection correction actions to the compact quick-action menu for nested HTML.
 - Added compact quick-action regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.
 

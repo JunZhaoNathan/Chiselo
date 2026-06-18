@@ -3247,6 +3247,14 @@
       actions.push({ action: "addColumn", label: "+列", title: "在选区后添加表格列" });
     }
 
+    if (single) {
+      actions.push(
+        { action: "selectParent", label: "父级", title: "选择外层对象" },
+        { action: "selectChild", label: "子级", title: "选择第一个可见子对象" },
+        { action: "selectSameClass", label: "同类", title: "选择同一组同类对象" }
+      );
+    }
+
     actions.push(
       { action: "duplicate", label: "复制", title: "复制选中对象" },
       { action: "fitWidth", label: "等宽", title: "适配页面宽度" },
@@ -3277,6 +3285,15 @@
         return;
       case "addColumn":
         tableAddColumnAfter();
+        return;
+      case "selectParent":
+        selectDirectRelative("parent");
+        return;
+      case "selectChild":
+        selectDirectRelative("child");
+        return;
+      case "selectSameClass":
+        selectDirectSameClass();
         return;
       case "duplicate":
         duplicateSelected();

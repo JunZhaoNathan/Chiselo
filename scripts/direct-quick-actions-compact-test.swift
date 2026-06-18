@@ -101,6 +101,11 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                 if (quickMenu.hidden || !quickBar.classList.contains('is-open') || !quickMenu.querySelector('.quick-action')) {
                   throw new Error('Quick actions menu did not expand on demand.');
                 }
+                const parentAction = [...quickMenu.querySelectorAll('.quick-action')]
+                  .find((button) => button.textContent === '父级');
+                if (!parentAction) {
+                  throw new Error('Quick actions menu did not include parent selection.');
+                }
 
                 quickToggle.click();
                 await sleep(40);
@@ -108,9 +113,19 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                   throw new Error('Quick actions menu did not collapse after toggling.');
                 }
 
+                quickToggle.click();
+                await sleep(40);
+                parentAction.click();
+                await sleep(80);
+                const parentSelection = window.ChiseloEditor.getSelection();
+                if (!parentSelection || parentSelection.tagName !== 'header') {
+                  throw new Error(`Parent quick action did not select the wrapping header: ${parentSelection && parentSelection.tagName}`);
+                }
+
                 window.webkit.messageHandlers.quickActions.postMessage({
                   type: 'result',
                   selectedTag: selected.tagName,
+                  parentSelectedTag: parentSelection.tagName,
                   collapsedWidth: collapsedRect.width,
                   collapsedHeight: collapsedRect.height,
                   chipText: quickChip.textContent || ''
