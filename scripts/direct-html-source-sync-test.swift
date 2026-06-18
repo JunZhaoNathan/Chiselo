@@ -59,6 +59,8 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const articleSelectionOk = !!articleSelection && articleSelection.tagName === 'article' && String(articleSelection.sourceSnippet || '').includes('sourceTarget');
           const selectedH2Item = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
           const selectedStrongItem = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const originalH2Id = String(selectedH2Item && selectedH2Item.id || '');
+          const originalStrongId = String(selectedStrongItem && selectedStrongItem.id || '');
           const h2Selection = selectedH2Item ? editor.selectHTMLById(selectedH2Item.id) : null;
           const h2Snippet = String(h2Selection?.sourceSnippet || '');
           const h2SelectionOk = !!h2Selection && h2Selection.tagName === 'h2' && h2Snippet.includes('<h2') && h2Snippet.includes('Synced title');
@@ -83,6 +85,10 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const applyResult = editor.applySelectedHTMLSource(nextSource);
           const applied = applyResult && applyResult.ok === true && applyResult.element && applyResult.element.id === selected.id;
           const appliedSnippet = String(applyResult?.element?.sourceSnippet || '');
+          const appliedChildItems = Array.isArray(applyResult?.element?.sourceChildItems) ? applyResult.element.sourceChildItems : [];
+          const appliedH2Item = appliedChildItems.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
+          const appliedStrongItem = appliedChildItems.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const childIdsStable = !!appliedH2Item && !!appliedStrongItem && appliedH2Item.id === originalH2Id && appliedStrongItem.id === originalStrongId;
           const exported = editor.exportHTML();
           const diagnostics = editor.getImportDiagnostics();
           const sourceApplied = appliedSnippet.includes('Edited from source') && exported.includes('Edited from source') && exported.includes('source editor');
@@ -92,7 +98,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -121,6 +127,11 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               dangerousRejected,
               applyResult,
               applied,
+              childIdsStable,
+              originalH2Id,
+              appliedH2Item,
+              originalStrongId,
+              appliedStrongItem,
               sourceApplied,
               exportClean,
               undoRestored,
@@ -146,6 +157,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             warningDetected,
             dangerousRejected,
             applied,
+            childIdsStable,
             sourceApplied,
             cleanExport: diagnostics.cleanExport,
             undoRestored,

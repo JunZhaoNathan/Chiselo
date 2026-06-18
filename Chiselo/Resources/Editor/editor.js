@@ -2596,6 +2596,7 @@
     const replacement = validation.element;
     const previousId = ensureDirectId(directSelectedNode);
     if (!replacement.dataset.chiseloId) replacement.dataset.chiseloId = previousId;
+    preserveDirectSourceChildIds(directSelectedNode, replacement);
     prepareDirectSubtree(replacement);
 
     const parent = directSelectedNode.parentElement;
@@ -2610,6 +2611,41 @@
     scheduleHTMLDiagnosticsChanged();
     postSelectionChanged({ immediate: true });
     return { ok: true, element: selectedElement(), sourceSnippet: replacement.outerHTML || "", warnings: validation.warnings || [] };
+  }
+
+  function preserveDirectSourceChildIds(previousRoot, replacementRoot) {
+    if (!previousRoot || !replacementRoot) return;
+
+    const previousByKey = new Map();
+    for (const node of previousRoot.querySelectorAll?.("*") || []) {
+      const key = directRelativeElementKey(previousRoot, node);
+      const id = node.dataset?.chiseloId || "";
+      if (key && id && !previousByKey.has(key)) previousByKey.set(key, id);
+    }
+
+    for (const node of replacementRoot.querySelectorAll?.("*") || []) {
+      if (node.dataset?.chiseloId) continue;
+      const key = directRelativeElementKey(replacementRoot, node);
+      const id = key ? previousByKey.get(key) : "";
+      if (id) node.dataset.chiseloId = id;
+    }
+  }
+
+  function directRelativeElementKey(root, node) {
+    if (!root || !node || node === root) return "";
+
+    const parts = [];
+    let current = node;
+    while (current && current !== root && current.parentElement) {
+      const siblings = [...current.parentElement.children]
+        .filter((child) => child.tagName === current.tagName);
+      const index = siblings.indexOf(current);
+      if (index < 0) return "";
+      parts.unshift(`${current.tagName.toLowerCase()}:${index}`);
+      current = current.parentElement;
+    }
+
+    return current === root ? parts.join(">") : "";
   }
 
   function normalizeDirectHTMLSource(input) {
