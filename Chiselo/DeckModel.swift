@@ -127,6 +127,10 @@ struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
     var writebackKind: String? = nil
     var writebackLabel: String? = nil
     var writebackTarget: String? = nil
+    var responsiveReason: String? = nil
+    var responsiveReviewWidths: [Int]? = nil
+    var responsiveRuleCount: Int? = nil
+    var responsiveLayoutKind: String? = nil
     var canRevert: Bool? = nil
     var revertReason: String? = nil
     var x: Int
@@ -205,6 +209,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var revertableVisualChangeCount: Int?
     var responsiveRuleCount: Int?
     var responsiveLayoutRiskCount: Int?
+    var responsiveReviewWidths: [Int]?
     var responsiveChangeCount: Int?
     var responsiveChangeElementId: String?
     var responsiveChangeElementIds: [String]?
@@ -276,6 +281,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         revertableVisualChangeCount: 0,
         responsiveRuleCount: 0,
         responsiveLayoutRiskCount: 0,
+        responsiveReviewWidths: [],
         responsiveChangeCount: 0,
         responsiveChangeElementId: nil,
         responsiveChangeElementIds: [],

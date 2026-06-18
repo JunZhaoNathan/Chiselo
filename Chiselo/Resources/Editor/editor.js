@@ -6202,6 +6202,7 @@ ${htmlSlides}
         revertableVisualChangeCount: 0,
         responsiveRuleCount: 0,
         responsiveLayoutRiskCount: 0,
+        responsiveReviewWidths: [],
         responsiveChangeCount: 0,
         responsiveChangeElementId: null,
         responsiveChangeElementIds: [],
@@ -6345,6 +6346,7 @@ ${htmlSlides}
       revertableVisualChangeCount: visualDiffDiagnostics.revertableVisualChangeCount,
       responsiveRuleCount: sourceMaturityDiagnostics.responsiveRuleCount,
       responsiveLayoutRiskCount: sourceMaturityDiagnostics.responsiveLayoutRiskCount,
+      responsiveReviewWidths: sourceMaturityDiagnostics.responsiveReviewWidths,
       responsiveChangeCount: sourceMaturityDiagnostics.responsiveChangeCount,
       responsiveChangeElementId: sourceMaturityDiagnostics.responsiveChangeElementId,
       responsiveChangeElementIds: sourceMaturityDiagnostics.responsiveChangeElementIds,
@@ -6833,10 +6835,12 @@ ${htmlSlides}
     const styleNodes = [...doc.querySelectorAll("style")].filter((node) => !node.hasAttribute("data-chiselo-style"));
     const stylesheetLinks = [...doc.querySelectorAll("link[rel~='stylesheet'][href]")];
     const responsiveRuleCount = countResponsiveRules(doc, styleNodes);
+    const responsiveReviewWidths = collectResponsiveReviewWidths(doc, styleNodes);
     const responsiveLayoutRiskCount = responsiveRuleCount + countResponsiveLayoutNodes(doc);
     const responsiveChangeDiagnostics = collectResponsiveChangeDiagnostics(doc, visualDiffDiagnostics, {
       responsiveRuleCount,
-      responsiveLayoutRiskCount
+      responsiveLayoutRiskCount,
+      responsiveReviewWidths
     });
     const stylesheetCount = styleNodes.length + stylesheetLinks.length;
     const externalStylesheetCount = stylesheetLinks.filter((node) => isExternalResource(node.getAttribute("href") || "", doc)).length;
@@ -6853,8 +6857,8 @@ ${htmlSlides}
         severity: "warning",
         title: "多宽度复核",
         detail: affected > 0
-          ? `${affected} 个已修改对象处在响应式布局影响链里，建议重点检查窄屏和宽屏`
-          : `检测到 ${responsiveRuleCount} 条响应式规则或网格/弹性布局，修改后建议在窄屏和宽屏各预览一次`,
+          ? `${affected} 个已修改对象处在响应式布局影响链里，建议重点检查${responsiveWidthSummary(responsiveReviewWidths)}`
+          : `检测到 ${responsiveRuleCount} 条响应式规则或网格/弹性布局，修改后建议检查${responsiveWidthSummary(responsiveReviewWidths)}`,
         elementId: responsiveChangeDiagnostics.responsiveChangeElementId
       });
     }
@@ -6890,6 +6894,7 @@ ${htmlSlides}
     return {
       responsiveRuleCount,
       responsiveLayoutRiskCount,
+      responsiveReviewWidths,
       responsiveChangeCount: responsiveChangeDiagnostics.responsiveChangeCount,
       responsiveChangeElementId: responsiveChangeDiagnostics.responsiveChangeElementId,
       responsiveChangeElementIds: responsiveChangeDiagnostics.responsiveChangeElementIds,
@@ -6975,7 +6980,8 @@ ${htmlSlides}
 
       const node = doc.querySelector(`[data-chiselo-id="${cssEscape(elementId)}"]`);
       if (!node) continue;
-      const reason = responsiveInfluenceReason(node, context);
+      const influence = responsiveInfluence(node, context);
+      const reason = influence.reason;
       if (!reason) continue;
 
       output.responsiveChangeCount += 1;
@@ -6992,8 +6998,13 @@ ${htmlSlides}
         });
         output.responsiveChangeItems.push({
           ...item,
-          detail: `${item.detail || "对象发生变化。"} ${reason}，请在不同宽度下复核。`,
-          afterValue: reason
+          detail: `${item.detail || "对象发生变化。"} ${reason}，请检查${responsiveWidthSummary(context.responsiveReviewWidths)}。`,
+          beforeValue: influence.reviewWidths.length ? `建议宽度 ${influence.reviewWidths.join(" / ")}px` : item.beforeValue,
+          afterValue: reason,
+          responsiveReason: reason,
+          responsiveReviewWidths: influence.reviewWidths,
+          responsiveRuleCount: context.responsiveRuleCount || 0,
+          responsiveLayoutKind: influence.layoutKind
         });
       }
     }
@@ -7002,13 +7013,19 @@ ${htmlSlides}
     return output;
   }
 
-  function responsiveInfluenceReason(node, context) {
+  function responsiveInfluence(node, context) {
     const rulePart = context.responsiveRuleCount > 0 ? `${context.responsiveRuleCount} 条 @media/@container 规则` : "";
     const chainReason = responsiveLayoutChainReason(node);
-    if (rulePart && chainReason) return `${rulePart}，且位于${chainReason}内`;
-    if (chainReason) return `位于${chainReason}内`;
-    if (rulePart && nodeLikelyMatchesResponsiveSelector(node)) return `匹配页面中的${rulePart}`;
-    return null;
+    const matchesResponsiveRule = rulePart && nodeLikelyMatchesResponsiveSelector(node);
+    let reason = null;
+    if (rulePart && chainReason) reason = `${rulePart}，且位于${chainReason}内`;
+    else if (chainReason) reason = `位于${chainReason}内`;
+    else if (matchesResponsiveRule) reason = `匹配页面中的${rulePart}`;
+    return {
+      reason,
+      layoutKind: chainReason,
+      reviewWidths: context.responsiveReviewWidths || []
+    };
   }
 
   function responsiveLayoutChainReason(node) {
@@ -7055,6 +7072,51 @@ ${htmlSlides}
       }
     }
     return count;
+  }
+
+  function collectResponsiveReviewWidths(doc, styleNodes) {
+    const widths = [];
+    const addWidth = (value) => {
+      const rounded = Math.round(Number(value));
+      if (Number.isFinite(rounded) && rounded >= 240 && rounded <= 3840) widths.push(rounded);
+    };
+
+    const collectFromText = (text) => {
+      const source = String(text || "");
+      for (const match of source.matchAll(/@\b(?:media|container)\b[^{]*\((min|max)-width\s*:\s*([0-9.]+)px\)/gi)) {
+        const kind = String(match[1] || "").toLowerCase();
+        const width = Number(match[2]);
+        if (!Number.isFinite(width)) continue;
+        addWidth(width);
+        addWidth(width - 1);
+        addWidth(width + 1);
+      }
+    };
+
+    for (const node of styleNodes) {
+      collectFromText(node.textContent || "");
+    }
+
+    for (const sheet of doc.styleSheets || []) {
+      if (styleNodes.includes(sheet.ownerNode)) continue;
+      try {
+        for (const rule of sheet.cssRules || []) {
+          if (rule.type === CSSRule.MEDIA_RULE || rule.type === CSSRule.CONTAINER_RULE) {
+            collectFromText(rule.conditionText || rule.cssText || "");
+          }
+        }
+      } catch {
+        // Cross-origin stylesheet rules are not readable; external links are reported separately.
+      }
+    }
+
+    return [...new Set(widths)].sort((left, right) => left - right).slice(0, 6);
+  }
+
+  function responsiveWidthSummary(widths) {
+    const usable = (widths || []).filter((width) => Number.isFinite(Number(width)) && Number(width) > 0);
+    if (!usable.length) return "窄屏和宽屏";
+    return `断点附近宽度（${usable.slice(0, 4).join(" / ")}px）`;
   }
 
   function countResponsiveLayoutNodes(doc) {

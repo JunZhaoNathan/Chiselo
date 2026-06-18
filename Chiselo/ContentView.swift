@@ -1149,6 +1149,21 @@ private struct ResponsiveChangeReviewCard: View {
                 .foregroundStyle(MaterialTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if !diagnostics.responsiveReviewWidthText.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "ruler")
+                        .font(.system(size: 10, weight: .heavy))
+                    Text(diagnostics.responsiveReviewWidthText)
+                        .font(.system(size: 10, weight: .heavy))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+                .foregroundStyle(color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+            }
+
             if !items.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(items.prefix(5)) { item in
@@ -1174,6 +1189,13 @@ private struct ResponsiveChangeReviewCard: View {
                                         .foregroundStyle(MaterialTheme.muted)
                                         .lineLimit(2)
                                         .minimumScaleFactor(0.82)
+                                    if let responsiveHint = responsiveHint(for: item) {
+                                        Text(responsiveHint)
+                                            .font(.system(size: 9, weight: .heavy))
+                                            .foregroundStyle(color)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.75)
+                                    }
                                 }
 
                                 Spacer(minLength: 0)
@@ -1226,6 +1248,18 @@ private struct ResponsiveChangeReviewCard: View {
         if item.kind.contains("位置") || item.kind.contains("尺寸") { return "arrow.up.left.and.arrow.down.right" }
         if item.kind.contains("样式") { return "paintbrush" }
         return "scope"
+    }
+
+    private func responsiveHint(for item: HTMLVisualChangeItem) -> String? {
+        var parts: [String] = []
+        if let layoutKind = item.responsiveLayoutKind?.trimmingCharacters(in: .whitespacesAndNewlines), !layoutKind.isEmpty {
+            parts.append(layoutKind)
+        }
+        let widths = (item.responsiveReviewWidths ?? []).prefix(4)
+        if !widths.isEmpty {
+            parts.append("宽度 \(widths.map { "\($0)" }.joined(separator: "/"))px")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
@@ -2826,16 +2860,23 @@ private extension HTMLDiagnostics {
         let responsiveRules = responsiveRuleCount ?? 0
         let responsiveRisks = responsiveLayoutRiskCount ?? 0
         let responsiveChanges = responsiveChangeCount ?? 0
+        let widthSuffix = responsiveReviewWidthText.isEmpty ? "窄屏和宽屏" : responsiveReviewWidthText
         if responsiveChanges > 0 {
-            return "\(responsiveChanges) 个已修改对象处在响应式规则、弹性/网格或粘性布局影响链里，导出前建议检查窄屏和宽屏。"
+            return "\(responsiveChanges) 个已修改对象处在响应式规则、弹性/网格或粘性布局影响链里，导出前建议检查\(widthSuffix)。"
         }
         if responsiveRisks == 0 {
             return "未检测到明显响应式规则，常规宽度复核即可。"
         }
         if responsiveRules > 0 {
-            return "\(responsiveRules) 条响应式规则或容器规则，修改后建议检查窄屏和宽屏。"
+            return "\(responsiveRules) 条响应式规则或容器规则，修改后建议检查\(widthSuffix)。"
         }
         return "\(responsiveRisks) 个弹性/网格/粘性布局对象，修改后建议做多宽度预览。"
+    }
+
+    var responsiveReviewWidthText: String {
+        let widths = (responsiveReviewWidths ?? []).filter { $0 > 0 }.prefix(4)
+        guard !widths.isEmpty else { return "" }
+        return "断点附近宽度 \(widths.map { "\($0)" }.joined(separator: " / "))px"
     }
 
     var sourcePollutionReviewCount: Int {

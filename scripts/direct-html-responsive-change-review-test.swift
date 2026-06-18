@@ -54,15 +54,19 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
           const diagnostics = editor.getImportDiagnostics();
           const targetIds = diagnostics.responsiveChangeElementIds || [];
           const items = diagnostics.responsiveChangeItems || [];
+          const reviewWidths = diagnostics.responsiveReviewWidths || [];
           const issue = (diagnostics.issues || []).find(item => item.kind === 'responsive-review');
           const item = items[0] || {};
           const matchedTarget = targetIds.includes(target.id) && diagnostics.responsiveChangeElementId === target.id;
-          const hasReason = String(item.detail || '').includes('不同宽度') && String(item.afterValue || '').includes('布局');
+          const hasBreakpointWidths = [619, 620, 621].every(width => reviewWidths.includes(width));
+          const hasStructuredReason = String(item.responsiveReason || '').includes('布局') && String(item.responsiveLayoutKind || '').includes('布局') && Array.isArray(item.responsiveReviewWidths) && item.responsiveReviewWidths.includes(620);
+          const hasReason = String(item.detail || '').includes('断点附近宽度') && String(item.afterValue || '').includes('布局') && hasStructuredReason && hasBreakpointWidths;
 
           if ((diagnostics.responsiveRuleCount || 0) < 1 || (diagnostics.responsiveLayoutRiskCount || 0) < 1 || (diagnostics.responsiveChangeCount || 0) < 1 || !matchedTarget || items.length < 1 || !hasReason || !issue || issue.elementId !== target.id) {
             throw new Error(JSON.stringify({
               responsiveRuleCount: diagnostics.responsiveRuleCount,
               responsiveLayoutRiskCount: diagnostics.responsiveLayoutRiskCount,
+              responsiveReviewWidths: reviewWidths,
               responsiveChangeCount: diagnostics.responsiveChangeCount,
               responsiveChangeElementId: diagnostics.responsiveChangeElementId,
               targetId: target.id,
@@ -76,6 +80,7 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
             type: 'result',
             responsiveRuleCount: diagnostics.responsiveRuleCount,
             responsiveLayoutRiskCount: diagnostics.responsiveLayoutRiskCount,
+            responsiveReviewWidths: reviewWidths,
             responsiveChangeCount: diagnostics.responsiveChangeCount,
             responsiveChangeElementIds: targetIds,
             issueElementId: issue.elementId,

@@ -2093,6 +2093,7 @@ final class EditorModel: ObservableObject {
         let visualChangeCount = diagnostics.visualChangeCount ?? 0
         let locatedCount = saveReviewVisualChangeTargetIds(diagnostics).count
         let previewKinds = saveReviewVisualChangeKinds(diagnostics)
+        let responsiveWidthText = saveReviewResponsiveWidths(diagnostics)
         let issueLine = diagnostics.issueCount > 0
             ? "预检问题：\(diagnostics.issueCount) 项需要处理"
             : "预检问题：未发现阻断保存的问题"
@@ -2104,9 +2105,9 @@ final class EditorModel: ObservableObject {
             : "本次变更：未检测到明显对象级视觉变化"
         let responsiveLine: String?
         if (diagnostics.responsiveChangeCount ?? 0) > 0 {
-            responsiveLine = "多宽度复核：\(diagnostics.responsiveChangeCount ?? 0) 个已修改对象受响应式布局影响，保存前建议检查窄屏和宽屏"
+            responsiveLine = "多宽度复核：\(diagnostics.responsiveChangeCount ?? 0) 个已修改对象受响应式布局影响，保存前建议检查\(responsiveWidthText)"
         } else if (diagnostics.responsiveLayoutRiskCount ?? 0) > 0 {
-            responsiveLine = "多宽度复核：\(diagnostics.responsiveRuleCount ?? 0) 条响应式规则或 \(diagnostics.responsiveLayoutRiskCount ?? 0) 个弹性/网格对象，保存后建议检查窄屏和宽屏"
+            responsiveLine = "多宽度复核：\(diagnostics.responsiveRuleCount ?? 0) 条响应式规则或 \(diagnostics.responsiveLayoutRiskCount ?? 0) 个弹性/网格对象，保存后建议检查\(responsiveWidthText)"
         } else {
             responsiveLine = nil
         }
@@ -2152,6 +2153,12 @@ final class EditorModel: ObservableObject {
             return "样式表复核：\(externalAffectedChanges) 个已修改对象可能受 \(externalSheets) 个外部样式表影响，建议保存前复核宽度和 class 效果"
         }
         return nil
+    }
+
+    private func saveReviewResponsiveWidths(_ diagnostics: HTMLDiagnostics) -> String {
+        let widths = (diagnostics.responsiveReviewWidths ?? []).filter { $0 > 0 }.prefix(4)
+        guard !widths.isEmpty else { return "窄屏和宽屏" }
+        return "断点附近宽度 \(widths.map { "\($0)" }.joined(separator: " / "))px"
     }
 
     private func saveReviewVisualChangeTargetIds(_ diagnostics: HTMLDiagnostics) -> [String] {
