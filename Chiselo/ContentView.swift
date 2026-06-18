@@ -518,8 +518,8 @@ private struct ExportMenu: View {
                 model.exportHTML()
             } label: {
                 ExportMenuItemLabel(
-                    title: "干净 HTML",
-                    subtitle: "移除编辑器痕迹，适合发布",
+                    title: "导出 HTML",
+                    subtitle: "保持源码洁净，适合继续修改",
                     icon: "doc.text"
                 )
             }
@@ -684,10 +684,10 @@ private struct ExportPreflightPanel: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ExportTargetScoreCard(
                     title: "HTML",
-                    subtitle: diagnostics.cleanExport ? "干净导出" : "需清理",
+                    subtitle: "源码洁净度 \(diagnostics.sourceCleanlinessPercent)%",
                     score: diagnostics.htmlReadinessScore,
                     icon: "doc.text",
-                    detail: diagnostics.cleanExport ? "无编辑器临时标记，适合交付或继续二次编辑。" : "导出内容仍含临时标记，需要先处理。",
+                    detail: diagnostics.sourceCleanlinessDetail,
                     color: scoreColor(diagnostics.htmlReadinessScore)
                 )
 
@@ -3004,8 +3004,8 @@ private struct HTMLDeliveryCheckCard: View {
 
                 DeliveryCheckRow(
                     icon: diagnostics.cleanExport ? "checkmark.seal" : "exclamationmark.triangle",
-                    title: "干净 HTML",
-                    detail: diagnostics.cleanExport ? "无编辑器临时标记" : "导出仍含临时标记",
+                    title: "源码洁净度",
+                    detail: diagnostics.sourceCleanlinessDetail,
                     color: diagnostics.cleanExport ? successColor : MaterialTheme.accentDanger,
                     isClickable: false
                 )

@@ -29,6 +29,15 @@
   const DIRECT_FORMATTING_INLINE_SELECTOR = "strong,em,b,i,u,small,code,mark,time,sub,sup";
   const DIRECT_TEXT_INLINE_SELECTOR = `${DIRECT_SAFE_INLINE_SELECTOR},${DIRECT_FORMATTING_INLINE_SELECTOR}`;
   const DIRECT_TEXT_SELECTOR = `${DIRECT_TEXT_BLOCK_SELECTOR},${DIRECT_TEXT_INLINE_SELECTOR},div,section,article,header,footer,aside`;
+  const DIRECT_EDIT_MISSING_ATTR = "__chiselo_missing__";
+  const DIRECT_EDIT_STYLE_VARS = [
+    "--chiselo-edit-font-family",
+    "--chiselo-edit-font-size",
+    "--chiselo-edit-font-weight",
+    "--chiselo-edit-line-height",
+    "--chiselo-edit-letter-spacing",
+    "--chiselo-edit-color"
+  ];
 
   let deck = sampleDeck();
   let editorMode = "deck";
@@ -1645,6 +1654,9 @@
         return;
       case "selectSameClass":
         selectDirectSameClass();
+        return;
+      case "editText":
+        if (editorMode === "html" && directSelectedNode) beginDirectTextEdit(directSelectedNode);
         return;
       case "clearSelection":
         clearSelection();
@@ -4018,6 +4030,8 @@
     pushHistory({ label: "修改文字" });
     activeDirectTextEditNode = node;
     const unlockTypography = lockDirectEditTypography(node);
+    markDirectEditAttribute(node, "contenteditable", "data-chiselo-edit-contenteditable");
+    markDirectEditAttribute(node, "spellcheck", "data-chiselo-edit-spellcheck");
     node.setAttribute("contenteditable", "true");
     node.setAttribute("spellcheck", "true");
     node.focus();
@@ -4032,8 +4046,8 @@
 
     const finish = () => {
       if (activeDirectTextEditNode === node) activeDirectTextEditNode = null;
-      node.removeAttribute("contenteditable");
-      node.removeAttribute("spellcheck");
+      restoreDirectEditAttribute(node, "contenteditable", "data-chiselo-edit-contenteditable");
+      restoreDirectEditAttribute(node, "spellcheck", "data-chiselo-edit-spellcheck");
       unlockTypography();
       node.removeEventListener("blur", finish);
       node.removeEventListener("keydown", handleEditingKeydown);
@@ -4057,6 +4071,29 @@
     node.addEventListener("keydown", handleEditingKeydown);
     postSelectionChanged();
     return node;
+  }
+
+  function markDirectEditAttribute(node, attributeName, markerName) {
+    if (node.hasAttribute(markerName)) return;
+    const previousValue = node.hasAttribute(attributeName)
+      ? node.getAttribute(attributeName)
+      : DIRECT_EDIT_MISSING_ATTR;
+    node.setAttribute(markerName, previousValue ?? "");
+  }
+
+  function restoreDirectEditAttribute(node, attributeName, markerName) {
+    if (!node.hasAttribute(markerName)) {
+      node.removeAttribute(attributeName);
+      return;
+    }
+
+    const previousValue = node.getAttribute(markerName);
+    node.removeAttribute(markerName);
+    if (previousValue === DIRECT_EDIT_MISSING_ATTR) {
+      node.removeAttribute(attributeName);
+    } else {
+      node.setAttribute(attributeName, previousValue ?? "");
+    }
   }
 
   function scheduleDirectTextEdit(node) {
@@ -5806,16 +5843,32 @@ ${htmlSlides}
       node.remove();
     }
     for (const node of [cloneRoot, ...cloneRoot.querySelectorAll("*")]) {
+      cleanDirectExportNode(node);
       stripChiseloAttributes(node);
-    }
-    for (const node of cloneRoot.querySelectorAll("[contenteditable]")) {
-      node.removeAttribute("contenteditable");
-    }
-    for (const node of cloneRoot.querySelectorAll("[spellcheck]")) {
-      node.removeAttribute("spellcheck");
     }
 
     return `${directHadDoctype ? "<!doctype html>\n" : ""}${cloneRoot.outerHTML}`;
+  }
+
+  function cleanDirectExportNode(node) {
+    restoreDirectExportAttribute(node, "contenteditable", "data-chiselo-edit-contenteditable");
+    restoreDirectExportAttribute(node, "spellcheck", "data-chiselo-edit-spellcheck");
+    for (const name of DIRECT_EDIT_STYLE_VARS) {
+      node.style?.removeProperty?.(name);
+    }
+    if (node.hasAttribute?.("style") && !node.getAttribute("style").trim()) {
+      node.removeAttribute("style");
+    }
+  }
+
+  function restoreDirectExportAttribute(node, attributeName, markerName) {
+    if (!node.hasAttribute?.(markerName)) return;
+    const previousValue = node.getAttribute(markerName);
+    if (previousValue === DIRECT_EDIT_MISSING_ATTR) {
+      node.removeAttribute(attributeName);
+    } else {
+      node.setAttribute(attributeName, previousValue ?? "");
+    }
   }
 
   function stripChiseloAttributes(node) {
@@ -5885,6 +5938,8 @@ ${htmlSlides}
         pptxReviewElementIds: [],
         pptxFallbackElementIds: [],
         cleanExport: true,
+        sourceCleanlinessScore: 100,
+        exportArtifactCount: 0,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
         overlapCount: 0,
@@ -5912,6 +5967,7 @@ ${htmlSlides}
     const svgImageNodes = images.filter((image) => (image.getAttribute("src") || "").startsWith("data:image/svg"));
     const svgCount = svgNodes.length + svgImageNodes.length;
     const exported = exportDirectHTML();
+    const exportCleanliness = collectExportCleanlinessDiagnostics(exported);
     const issues = [];
     const runtimeDiagnostics = collectRuntimeCompatibilityDiagnostics(doc, issues);
     const brokenImageNodes = images.filter((image) => image.dataset.chiseloResourceState === "broken");
@@ -5919,7 +5975,7 @@ ${htmlSlides}
     const spanTables = tables.filter((table) => table.querySelector("[rowspan], [colspan]"));
     const tableTargetElementId = optionalDirectId(spanTables[0] || tables[0] || null);
     const svgTargetElementId = optionalDirectId(svgNodes[0] || svgImageNodes[0] || null);
-    const cleanExport = !exported.includes("data-chiselo");
+    const cleanExport = exportCleanliness.exportArtifactCount === 0;
 
     for (const image of brokenImageNodes) {
       addDiagnosticIssue(issues, {
@@ -5956,7 +6012,7 @@ ${htmlSlides}
         kind: "dirty-export",
         severity: "error",
         title: "导出不干净",
-        detail: "HTML 中仍包含编辑器临时标记"
+        detail: "HTML 中仍包含编辑器临时标记或编辑态变量"
       });
     }
 
@@ -6016,6 +6072,8 @@ ${htmlSlides}
       pptxReviewElementIds: pptxMappingDiagnostics.pptxReviewElementIds,
       pptxFallbackElementIds: pptxMappingDiagnostics.pptxFallbackElementIds,
       cleanExport,
+      sourceCleanlinessScore: exportCleanliness.sourceCleanlinessScore,
+      exportArtifactCount: exportCleanliness.exportArtifactCount,
       textOverflowCount: layoutDiagnostics.textOverflowCount,
       outOfBoundsCount: layoutDiagnostics.outOfBoundsCount,
       overlapCount: layoutDiagnostics.overlapCount,
@@ -6033,6 +6091,21 @@ ${htmlSlides}
       visualChangeCanvasWidth: canvas.width,
       visualChangeCanvasHeight: canvas.height,
       issues
+    };
+  }
+
+  function collectExportCleanlinessDiagnostics(exported) {
+    const text = String(exported || "");
+    const artifactCount = [
+      /\sdata-chiselo[\w-]*=/gi,
+      /data-chiselo-base/gi,
+      /data-chiselo-style/gi,
+      /--chiselo-edit-[\w-]+/gi
+    ].reduce((total, pattern) => total + ((text.match(pattern) || []).length), 0);
+
+    return {
+      exportArtifactCount: artifactCount,
+      sourceCleanlinessScore: Math.max(0, 100 - Math.min(100, artifactCount * 25))
     };
   }
 

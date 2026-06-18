@@ -24,6 +24,7 @@ swift scripts/import-smoke-test.swift
 swift scripts/html-delivery-diagnostics-test.swift
 swift scripts/html-diagnostics-webpage-flow-test.swift
 swift scripts/html-visual-snapshot-test.swift
+swift scripts/direct-html-source-cleanliness-test.swift
 swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
 swift scripts/generated-runtime-compatibility-test.swift

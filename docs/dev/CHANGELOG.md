@@ -6,6 +6,9 @@ All notable changes to Chiselo will be documented here.
 
 - Added a first-edit backup reminder for real local HTML and Chiselo project files so users confirm the original file backup before continuing precision edits.
 - Surfaced the `.chiselo-backup` filename after opening a real file and kept save-time `.chiselo-history` snapshots in place.
+- Added source-cleanliness scoring to HTML preflight and save review so export checks report whether editor-only markers or temporary edit variables would leak into the saved HTML.
+- Preserved original `contenteditable` and `spellcheck` attributes while direct text editing, including clean export during an active text edit.
+- Added direct HTML source-cleanliness regression coverage to release preflight.
 - Kept direct-selection quick actions compact by default, with action buttons tucked behind an on-demand menu so selected text stays visible.
 - Quieted direct-selection chrome further: selected objects now show only a small on-demand action button, object labels stay inside the menu, hover labels avoid instruction text, and object right-clicks no longer open the browser menu outside text editing.
 - Added parent, child, children-group, previous/next sibling, and same-class selection correction actions to the compact quick-action menu for nested HTML.

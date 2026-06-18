@@ -221,6 +221,8 @@ struct HTMLDiagnostics: Codable, Equatable {
     var pptxReviewElementIds: [String]?
     var pptxFallbackElementIds: [String]?
     var cleanExport: Bool
+    var sourceCleanlinessScore: Int?
+    var exportArtifactCount: Int?
     var textOverflowCount: Int?
     var outOfBoundsCount: Int?
     var overlapCount: Int?
@@ -281,6 +283,8 @@ struct HTMLDiagnostics: Codable, Equatable {
         pptxReviewElementIds: [],
         pptxFallbackElementIds: [],
         cleanExport: true,
+        sourceCleanlinessScore: 100,
+        exportArtifactCount: 0,
         textOverflowCount: 0,
         outOfBoundsCount: 0,
         overlapCount: 0,
@@ -320,6 +324,21 @@ struct HTMLDiagnostics: Codable, Equatable {
         if (pptxEffectRiskCount ?? 0) > 0 { count += 1 }
         if (visualChangeCount ?? 0) > 0 { count += 1 }
         return count
+    }
+
+    var sourceCleanlinessPercent: Int {
+        min(100, max(0, sourceCleanlinessScore ?? (cleanExport ? 100 : 0)))
+    }
+
+    var sourceCleanlinessDetail: String {
+        if cleanExport {
+            return "未检测到编辑器临时标记，适合交付或继续二次编辑。"
+        }
+        let count = exportArtifactCount ?? 0
+        if count > 0 {
+            return "\(count) 处编辑器临时标记仍在导出内容中，需要先处理。"
+        }
+        return "导出内容仍含临时标记，需要先处理。"
     }
 }
 
