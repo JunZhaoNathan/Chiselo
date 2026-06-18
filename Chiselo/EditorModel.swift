@@ -120,6 +120,10 @@ final class EditorModel: ObservableObject {
     @Published var isHistoryBrowserPresented: Bool = false
     @Published var historySnapshots: [SafeFileHistory.VersionSnapshot] = []
     @Published var selectedHistorySnapshotID: String?
+    @Published var canUndoEdit: Bool = false
+    @Published var canRedoEdit: Bool = false
+    @Published var undoDepth: Int = 0
+    @Published var redoDepth: Int = 0
 
     var hasOpenDocument: Bool {
         activeTabID != nil && !tabs.isEmpty
@@ -691,6 +695,18 @@ final class EditorModel: ObservableObject {
                 let data = try JSONSerialization.data(withJSONObject: body, options: [])
                 let message = try JSONDecoder().decode(BridgeHTMLDiagnosticsMessage.self, from: data)
                 updatePublished(\.htmlDiagnostics, to: message.diagnostics)
+
+            case "historyChanged":
+                guard hasOpenDocument else {
+                    resetEditorHistoryState()
+                    return
+                }
+                let data = try JSONSerialization.data(withJSONObject: body, options: [])
+                let message = try JSONDecoder().decode(BridgeHistoryMessage.self, from: data)
+                updatePublished(\.canUndoEdit, to: message.canUndo)
+                updatePublished(\.canRedoEdit, to: message.canRedo)
+                updatePublished(\.undoDepth, to: max(0, message.undoDepth ?? 0))
+                updatePublished(\.redoDepth, to: max(0, message.redoDepth ?? 0))
 
             case "documentDirty":
                 markActiveTabNeedsSnapshot()
@@ -2072,6 +2088,7 @@ final class EditorModel: ObservableObject {
         selectionPath = nil
         htmlTree = []
         htmlDiagnostics = .empty
+        resetEditorHistoryState()
         resetHTMLVisualSnapshots()
         refreshDocumentStats()
         status = "打开项目或拖入 HTML 文件开始"
@@ -2087,6 +2104,7 @@ final class EditorModel: ObservableObject {
         openedURL = tab.url
         selectedElement = nil
         selectionPath = nil
+        resetEditorHistoryState()
 
         if tab.mode == "html" {
             importHTML(tab.content, from: tab.url)
@@ -2095,6 +2113,13 @@ final class EditorModel: ObservableObject {
         }
 
         isSwitchingTabs = false
+    }
+
+    private func resetEditorHistoryState() {
+        updatePublished(\.canUndoEdit, to: false)
+        updatePublished(\.canRedoEdit, to: false)
+        updatePublished(\.undoDepth, to: 0)
+        updatePublished(\.redoDepth, to: 0)
     }
 
     private func canOpenURL(_ url: URL) -> Bool {

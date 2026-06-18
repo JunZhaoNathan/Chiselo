@@ -66,13 +66,13 @@ struct ChiseloApp: App {
                     model.editorCommand("undo")
                 }
                 .keyboardShortcut("z", modifiers: .command)
-                .disabled(!model.hasOpenDocument)
+                .disabled(!model.hasOpenDocument || !model.canUndoEdit)
 
                 Button("重做") {
                     model.editorCommand("redo")
                 }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
-                .disabled(!model.hasOpenDocument)
+                .disabled(!model.hasOpenDocument || !model.canRedoEdit)
             }
 
             CommandGroup(after: .undoRedo) {

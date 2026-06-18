@@ -10,6 +10,7 @@ All notable changes to Chiselo will be documented here.
 - Added parent, child, children-group, previous/next sibling, and same-class selection correction actions to the compact quick-action menu for nested HTML.
 - Added a compact HTML path inside the quick-action menu so nested objects can jump directly to an ancestor without leaving the canvas.
 - Hardened direct HTML point selection through transparent overlays so review navigation and canvas clicks keep finding the real object underneath.
+- Added live undo/redo availability from the editor runtime to the macOS menu and preserved redo state across direct HTML undo restores.
 - Added compact quick-action regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.
 

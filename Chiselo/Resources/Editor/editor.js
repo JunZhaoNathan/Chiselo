@@ -398,6 +398,19 @@
     }, 32);
   }
 
+  function historyState() {
+    return {
+      canUndo: historyPast.length > 0,
+      canRedo: historyFuture.length > 0,
+      undoDepth: historyPast.length,
+      redoDepth: historyFuture.length
+    };
+  }
+
+  function postHistoryChanged() {
+    postMessage("historyChanged", historyState());
+  }
+
   function postHTMLTreeChanged() {
     if (editorMode !== "html") return;
     const tree = buildHTMLTree();
@@ -504,6 +517,7 @@
     historyPast.push(currentSnapshot());
     if (historyPast.length > 100) historyPast.shift();
     historyFuture = [];
+    postHistoryChanged();
   }
 
   function resetHistoryCoalescing() {
@@ -535,7 +549,7 @@
     const parsed = JSON.parse(snapshot);
 
     if (parsed.mode === "html") {
-      await loadDirectHTML(parsed.html, parsed.baseHref || directBaseHref, { resetView: false, preserveDirty: true, preserveBaseline: true });
+      await loadDirectHTML(parsed.html, parsed.baseHref || directBaseHref, { resetView: false, preserveDirty: true, preserveBaseline: true, preserveHistory: true });
     } else {
       deck = parsed.deck || parsed;
       editorMode = "deck";
@@ -549,6 +563,7 @@
     }
 
     suppressHistory = false;
+    postHistoryChanged();
   }
 
   function undo() {
@@ -557,6 +572,7 @@
     historyFuture.push(currentSnapshot());
     markDocumentDirty();
     void restoreFromSnapshot(historyPast.pop());
+    postHistoryChanged();
   }
 
   function redo() {
@@ -565,6 +581,7 @@
     historyPast.push(currentSnapshot());
     markDocumentDirty();
     void restoreFromSnapshot(historyFuture.pop());
+    postHistoryChanged();
   }
 
   function fitStage(options = {}) {
@@ -2154,6 +2171,11 @@
       directVisualBaseline = null;
     }
     resetHistoryCoalescing();
+    if (!options.preserveHistory) {
+      historyPast = [];
+      historyFuture = [];
+      postHistoryChanged();
+    }
     directSelectedNode = null;
     directSelectedNodes = [];
     selectedId = null;
@@ -4723,6 +4745,7 @@
     historyPast = [];
     historyFuture = [];
     clearDirty();
+    postHistoryChanged();
     render();
     postSelectionChanged();
   }
@@ -6838,6 +6861,7 @@ ${htmlSlides}
       h: frame.rect.h
     })),
     getVisualReviewSnapshotRect,
+    getHistoryState: historyState,
     prepareVisualReviewSnapshot,
     scrollVisualReviewSnapshotTo,
     restoreVisualReviewSnapshot,

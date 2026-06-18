@@ -106,6 +106,14 @@ struct BridgeHTMLDiagnosticsMessage: Decodable {
     var diagnostics: HTMLDiagnostics
 }
 
+struct BridgeHistoryMessage: Decodable, Equatable {
+    var type: String
+    var canUndo: Bool
+    var canRedo: Bool
+    var undoDepth: Int?
+    var redoDepth: Int?
+}
+
 struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
     var elementId: String?
     var label: String
