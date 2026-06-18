@@ -4274,6 +4274,9 @@ private struct InspectorPanel: View {
                     .padding(9)
                     .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
                 }
+                if let writeback = element.style?.writebackStatus {
+                    SourceWritebackStatusBadge(status: writeback)
+                }
                 if element.groupLabel != nil || element.groupId != nil {
                     GroupMembershipBadge(element: element, compact: false)
                     if element.type != "deck-group" {
@@ -4434,12 +4437,22 @@ private struct InspectorPanel: View {
 
     @ViewBuilder
     private func styleGroups(for element: EditorElement) -> some View {
+        if let writeback = element.style?.writebackStatus {
+            styleWritebackGroup(writeback)
+        }
+
         if supportsTextControls(element) {
             textStyleGroup
         }
 
         if supportsImageControls(element) {
             imageInfoGroup
+        }
+    }
+
+    private func styleWritebackGroup(_ status: EditorElementStyle.WritebackStatus) -> some View {
+        GroupBox("源码写回") {
+            SourceWritebackStatusBadge(status: status)
         }
     }
 
@@ -4930,6 +4943,43 @@ private struct InspectorSelectionHeader: View {
 
     private var iconName: String {
         element.chiseloIconName
+    }
+}
+
+private struct SourceWritebackStatusBadge: View {
+    var status: EditorElementStyle.WritebackStatus
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: status.icon)
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(status.color)
+                .frame(width: 18, height: 18)
+                .background(status.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(status.title)
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    if let target = status.target {
+                        Text(target)
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(status.color)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                Text(status.detail)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(status.color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
     }
 }
 
@@ -5527,6 +5577,41 @@ private struct StyleTextField: View {
 }
 
 private extension EditorElementStyle {
+    typealias WritebackStatus = (title: String, detail: String, target: String?, icon: String, color: Color)
+
+    var writebackStatus: WritebackStatus? {
+        guard let kind = writebackKind?.trimmingCharacters(in: .whitespacesAndNewlines), !kind.isEmpty else {
+            return nil
+        }
+
+        let target = writebackTarget?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedTarget = target?.isEmpty == false ? target : nil
+        let detail = writebackDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if kind == "stylesheet-rule" {
+            let selector = normalizedTarget ?? "CSS 规则"
+            return (
+                "写回 CSS 规则",
+                detail?.isEmpty == false ? detail! : "安全样式修改会优先写回 \(selector)。",
+                selector,
+                "curlybraces",
+                Color(red: 0.06, green: 0.52, blue: 0.26)
+            )
+        }
+
+        if kind == "inline-style" {
+            return (
+                "写入对象 style",
+                detail?.isEmpty == false ? detail! : "样式修改会写在当前对象的 inline style 上。",
+                normalizedTarget,
+                "paintbrush.pointed",
+                Color(red: 0.78, green: 0.47, blue: 0.06)
+            )
+        }
+
+        return nil
+    }
+
     static var empty: EditorElementStyle {
         EditorElementStyle(
             fontFamily: nil,
@@ -5540,7 +5625,11 @@ private extension EditorElementStyle {
             radius: nil,
             shadow: nil,
             textAlign: nil,
-            objectFit: nil
+            objectFit: nil,
+            writebackKind: nil,
+            writebackLabel: nil,
+            writebackTarget: nil,
+            writebackDetail: nil
         )
     }
 }

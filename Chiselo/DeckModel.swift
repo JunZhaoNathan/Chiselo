@@ -70,6 +70,10 @@ struct EditorElementStyle: Codable, Equatable {
     var shadow: String?
     var textAlign: String?
     var objectFit: String?
+    var writebackKind: String?
+    var writebackLabel: String?
+    var writebackTarget: String?
+    var writebackDetail: String?
 }
 
 struct BridgeSelectionMessage: Decodable {

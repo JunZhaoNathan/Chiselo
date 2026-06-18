@@ -2130,6 +2130,7 @@
     const shadow = shadowValue(style.boxShadow);
     if (shadow !== "none") payloadStyle.shadow = shadow;
     if (node.matches?.("img")) payloadStyle.objectFit = objectFitValue(style.objectFit, "fill");
+    Object.assign(payloadStyle, directStyleWritebackPreview(node));
 
     return {
       id: ensureDirectId(node),
@@ -4282,6 +4283,39 @@
     if (!node || !style || !shouldPreferStylesheetWriteback(node, style)) return null;
     const match = uniqueDirectStylesheetRule(node);
     return match ? { style: match.rule.style, selector: match.selector } : null;
+  }
+
+  function directStyleWritebackPreview(node) {
+    if (!node || !node.isConnected) return {};
+    if (node.getAttribute("style")) {
+      return {
+        writebackKind: "inline-style",
+        writebackLabel: "inline style",
+        writebackTarget: "style",
+        writebackDetail: "当前对象已有 inline style，样式修改会继续写在该对象上。"
+      };
+    }
+
+    const selector = uniqueDirectStylesheetRule(node)?.selector || null;
+    if (selector) {
+      return {
+        writebackKind: "stylesheet-rule",
+        writebackLabel: "CSS 规则",
+        writebackTarget: selector,
+        writebackDetail: `安全样式修改会优先写回本地 CSS 规则 ${selector}。`
+      };
+    }
+
+    const classCount = node.classList?.length || 0;
+    const id = node.getAttribute("id") || "";
+    return {
+      writebackKind: "inline-style",
+      writebackLabel: "inline style",
+      writebackTarget: "style",
+      writebackDetail: classCount > 0 || id
+        ? "未找到只命中当前对象的本地 CSS 规则，样式修改会写在对象 inline style 上，避免误改同类对象。"
+        : "当前对象没有稳定的唯一 CSS 规则，样式修改会写在对象 inline style 上。"
+    };
   }
 
   function shouldPreferStylesheetWriteback(node, style) {

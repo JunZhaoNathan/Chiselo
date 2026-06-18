@@ -818,7 +818,11 @@ final class EditorModel: ObservableObject {
             radius: bridgeDouble(object["radius"]),
             shadow: bridgeString(object["shadow"]),
             textAlign: bridgeString(object["textAlign"]),
-            objectFit: bridgeString(object["objectFit"])
+            objectFit: bridgeString(object["objectFit"]),
+            writebackKind: bridgeString(object["writebackKind"]),
+            writebackLabel: bridgeString(object["writebackLabel"]),
+            writebackTarget: bridgeString(object["writebackTarget"]),
+            writebackDetail: bridgeString(object["writebackDetail"])
         )
     }
 

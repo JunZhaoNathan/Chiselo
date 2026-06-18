@@ -34,6 +34,7 @@ All notable changes to Chiselo will be documented here.
 - Added one-click rollback buttons to source-review rows so inline style and CSS-rule writebacks can be reverted directly from export preflight.
 - Added responsive-layout and source-writeback review signals so save/export preflight can flag multi-width checks and inline-style changes on stylesheet-backed HTML.
 - Added breakpoint-aware responsive review hints so changed HTML objects show nearby widths to check before save or export.
+- Added selected-object source writeback hints so users can see whether style edits will update a CSS rule or inline style before changing HTML.
 - Added compact quick-action regression coverage to release preflight.
 - Added visual-change rollback regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.

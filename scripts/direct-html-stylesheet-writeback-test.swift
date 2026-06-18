@@ -38,6 +38,7 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
 
           const title = editor.selectHTML('.hero-title');
           if (!title) throw new Error('Could not select unique class title.');
+          const titleWritebackOk = title.style?.writebackKind === 'stylesheet-rule' && title.style?.writebackTarget === '.hero-title' && String(title.style?.writebackDetail || '').includes('CSS');
           editor.updateElement({
             id: title.id,
             x: title.x,
@@ -100,6 +101,7 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
 
           const shared = editor.selectHTML('.shared-card');
           if (!shared) throw new Error('Could not select shared class card.');
+          const sharedWritebackOk = shared.style?.writebackKind === 'inline-style' && shared.style?.writebackTarget === 'style' && String(shared.style?.writebackDetail || '').includes('误改同类对象');
           editor.updateElement({
             id: shared.id,
             x: shared.x,
@@ -127,8 +129,12 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
           const writebackSelectors = diagnostics.stylesheetRuleWritebackSelectors || [];
           const selectorTargetsDetected = ['.hero-title', 'button.cta-button', '.hero .scoped-copy', '#idOnly'].every(selector => writebackSelectors.includes(selector));
 
-          if (titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !tagClassWritten || !descendantWritten || !idRuleWritten || !complexTargetsHaveNoInline || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 4 || !selectorTargetsDetected || (diagnostics.inlineStyleChangeCount || 0) < 1) {
+          if (!titleWritebackOk || !sharedWritebackOk || titleHasInlineStyle || !ruleColorWritten || !ruleFillWritten || !ruleFontWritten || !tagClassWritten || !descendantWritten || !idRuleWritten || !complexTargetsHaveNoInline || !sharedInlineFallback || (diagnostics.stylesheetRuleWritebackCount || 0) < 4 || !selectorTargetsDetected || (diagnostics.inlineStyleChangeCount || 0) < 1) {
             throw new Error(JSON.stringify({
+              titleWriteback: title.style,
+              titleWritebackOk,
+              sharedWriteback: shared.style,
+              sharedWritebackOk,
               titleHasInlineStyle,
               ruleColorWritten,
               ruleFillWritten,
@@ -148,6 +154,8 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
 
           window.webkit.messageHandlers.stylesheetWriteback.postMessage({
             type: 'result',
+            titleWriteback: title.style,
+            sharedWriteback: shared.style,
             stylesheetRuleWritebackCount: diagnostics.stylesheetRuleWritebackCount,
             stylesheetRuleWritebackSelectors: diagnostics.stylesheetRuleWritebackSelectors,
             inlineStyleChangeCount: diagnostics.inlineStyleChangeCount,
