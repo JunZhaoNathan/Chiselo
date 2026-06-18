@@ -205,6 +205,7 @@ struct HTMLDiagnostics: Codable, Equatable {
     var stylesheetCount: Int?
     var externalStylesheetCount: Int?
     var inlineStyleChangeCount: Int?
+    var stylesheetRuleWritebackCount: Int?
     var pptxTextObjectCount: Int?
     var pptxImageObjectCount: Int?
     var pptxShapeObjectCount: Int?
@@ -267,6 +268,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         stylesheetCount: 0,
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
+        stylesheetRuleWritebackCount: 0,
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,

@@ -2128,8 +2128,15 @@ final class EditorModel: ObservableObject {
 
     private func saveReviewSourcePollutionLine(_ diagnostics: HTMLDiagnostics) -> String? {
         let inlineChanges = diagnostics.inlineStyleChangeCount ?? 0
+        let ruleWrites = diagnostics.stylesheetRuleWritebackCount ?? 0
         let stylesheets = diagnostics.stylesheetCount ?? 0
         let externalSheets = diagnostics.externalStylesheetCount ?? 0
+        if ruleWrites > 0 && inlineChanges == 0 {
+            return "源码写回：\(ruleWrites) 次样式修改已写入本地 class 规则"
+        }
+        if ruleWrites > 0 && inlineChanges > 0 {
+            return "源码写回：\(ruleWrites) 次写入 class 规则，\(inlineChanges) 个对象写入 inline style"
+        }
         if inlineChanges > 0 && stylesheets > 0 {
             return "源码写回：\(inlineChanges) 个对象改动 inline style；原稿含 \(stylesheets) 个样式表，建议保存前抽查源码"
         }

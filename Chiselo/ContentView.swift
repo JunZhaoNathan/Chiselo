@@ -2486,13 +2486,20 @@ private extension HTMLDiagnostics {
     }
 
     var sourcePollutionReviewCount: Int {
-        max(0, inlineStyleChangeCount ?? 0) + max(0, externalStylesheetCount ?? 0)
+        max(0, inlineStyleChangeCount ?? 0) + max(0, externalStylesheetCount ?? 0) + max(0, stylesheetRuleWritebackCount ?? 0)
     }
 
     var sourcePollutionReviewDetail: String {
         let inlineChanges = inlineStyleChangeCount ?? 0
+        let ruleWrites = stylesheetRuleWritebackCount ?? 0
         let stylesheets = stylesheetCount ?? 0
         let externalSheets = externalStylesheetCount ?? 0
+        if ruleWrites > 0 && inlineChanges == 0 {
+            return "\(ruleWrites) 次样式修改已写入本地 class 规则，源码更易继续维护。"
+        }
+        if ruleWrites > 0 && inlineChanges > 0 {
+            return "\(ruleWrites) 次写入 class 规则，\(inlineChanges) 个对象仍写入 inline style。"
+        }
         if inlineChanges > 0 && stylesheets > 0 {
             return "\(inlineChanges) 个变化写入 inline style；原稿含 \(stylesheets) 个样式表，保存前建议抽查源码。"
         }

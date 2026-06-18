@@ -57,6 +57,7 @@ swift scripts/html-visual-snapshot-test.swift
 swift scripts/visual-change-revert-test.swift
 swift scripts/deck-gesture-smoothness-test.swift
 swift scripts/direct-html-source-cleanliness-test.swift
+swift scripts/direct-html-stylesheet-writeback-test.swift
 swift scripts/direct-quick-actions-compact-test.swift
 run_with_retry 2 swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift

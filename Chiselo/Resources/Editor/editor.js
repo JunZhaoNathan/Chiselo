@@ -38,6 +38,20 @@
     "--chiselo-edit-letter-spacing",
     "--chiselo-edit-color"
   ];
+  const DIRECT_STYLESHEET_STYLE_KEYS = new Set([
+    "fontFamily",
+    "fontSize",
+    "fontWeight",
+    "lineHeight",
+    "color",
+    "textAlign",
+    "fill",
+    "stroke",
+    "strokeWidth",
+    "radius",
+    "shadow",
+    "objectFit"
+  ]);
 
   let deck = sampleDeck();
   let editorMode = "deck";
@@ -62,6 +76,7 @@
   let pendingDirectHoverNode = null;
   let lastHTMLTreeSignature = "";
   let lastHTMLDiagnosticsSignature = "";
+  let directStylesheetWritebackCount = 0;
   let directVisualBaseline = null;
   let directVisualBaselineTimer = null;
   let htmlTreeTextCache = null;
@@ -2197,6 +2212,7 @@
     directBaseHref = baseHref || directBaseHref || "";
     lastHTMLTreeSignature = "";
     lastHTMLDiagnosticsSignature = "";
+    directStylesheetWritebackCount = 0;
     directMutationRefreshPending = false;
     directTreeRefreshPending = false;
     activeDirectTextEditNode = null;
@@ -4122,7 +4138,9 @@
 
     if (!directSelectedNode || !directSelectedNode.isConnected) return;
     pushHistory({ label: "调整对象", coalesceKey: directHistoryCoalesceKey("direct-update", nodes), interval: 800 });
-    applyDirectRect(directSelectedNode, nextElement);
+    if (directElementHasGeometryUpdate(directSelectedNode, nextElement)) {
+      applyDirectRect(directSelectedNode, nextElement);
+    }
     applyDirectStyle(directSelectedNode, nextElement.style || {});
     applyDirectImageMetadata(directSelectedNode, nextElement);
     updateSelectionBox();
@@ -4141,8 +4159,10 @@
       w: Number.isFinite(nextElement.w) ? nextElement.w : currentRect.w,
       h: Number.isFinite(nextElement.h) ? nextElement.h : currentRect.h
     };
-    const startRects = nodes.map((node) => ({ node, rect: directNodeRect(node) }));
-    applyDirectGroupRects(startRects, currentRect, nextRect);
+    if (directRectChanged(currentRect, nextRect)) {
+      const startRects = nodes.map((node) => ({ node, rect: directNodeRect(node) }));
+      applyDirectGroupRects(startRects, currentRect, nextRect);
+    }
 
     if (nextElement.style) {
       for (const node of nodes) {
@@ -4155,28 +4175,118 @@
     postSelectionChanged();
   }
 
+  function directElementHasGeometryUpdate(node, nextElement) {
+    if (!node || !nextElement) return false;
+    const hasGeometryInput = ["x", "y", "w", "h"].some((key) => Number.isFinite(Number(nextElement[key])));
+    if (!hasGeometryInput) return false;
+    const currentRect = directNodeRect(node);
+    const nextRect = {
+      x: Number.isFinite(Number(nextElement.x)) ? Number(nextElement.x) : currentRect.x,
+      y: Number.isFinite(Number(nextElement.y)) ? Number(nextElement.y) : currentRect.y,
+      w: Number.isFinite(Number(nextElement.w)) ? Number(nextElement.w) : currentRect.w,
+      h: Number.isFinite(Number(nextElement.h)) ? Number(nextElement.h) : currentRect.h
+    };
+    return directRectChanged(currentRect, nextRect);
+  }
+
+  function directRectChanged(left, right) {
+    return Math.abs((left?.x || 0) - (right?.x || 0)) > 0.5
+      || Math.abs((left?.y || 0) - (right?.y || 0)) > 0.5
+      || Math.abs((left?.w || 0) - (right?.w || 0)) > 0.5
+      || Math.abs((left?.h || 0) - (right?.h || 0)) > 0.5;
+  }
+
   function applyDirectStyle(node, style) {
-    if (style.fontFamily) node.style.fontFamily = style.fontFamily;
-    if (Number.isFinite(style.fontSize)) node.style.fontSize = `${style.fontSize}px`;
-    if (Number.isFinite(style.fontWeight)) node.style.fontWeight = `${style.fontWeight}`;
-    if (Number.isFinite(style.lineHeight)) node.style.lineHeight = `${style.lineHeight}`;
-    if (style.color) node.style.color = style.color;
-    if (style.textAlign) node.style.textAlign = style.textAlign;
-    if (style.fill) node.style.background = style.fill;
+    const styleTarget = directStylesheetWriteTarget(node, style);
+    const targetStyle = styleTarget?.style || node.style;
+    if (styleTarget?.style) directStylesheetWritebackCount += 1;
+
+    if (style.fontFamily) targetStyle.fontFamily = style.fontFamily;
+    if (Number.isFinite(style.fontSize)) targetStyle.fontSize = `${style.fontSize}px`;
+    if (Number.isFinite(style.fontWeight)) targetStyle.fontWeight = `${style.fontWeight}`;
+    if (Number.isFinite(style.lineHeight)) targetStyle.lineHeight = `${style.lineHeight}`;
+    if (style.color) targetStyle.color = style.color;
+    if (style.textAlign) targetStyle.textAlign = style.textAlign;
+    if (style.fill) targetStyle.background = style.fill;
 
     if (Number.isFinite(style.strokeWidth)) {
       const color = style.stroke || node.ownerDocument.defaultView.getComputedStyle(node).borderTopColor || "transparent";
-      node.style.border = `${Math.max(0, style.strokeWidth)}px solid ${color}`;
+      targetStyle.border = `${Math.max(0, style.strokeWidth)}px solid ${color}`;
     } else if (style.stroke) {
-      node.style.borderColor = style.stroke;
+      targetStyle.borderColor = style.stroke;
     }
 
-    if (Number.isFinite(style.radius)) node.style.borderRadius = `${Math.max(0, style.radius)}px`;
-    if (style.shadow) node.style.boxShadow = shadowValue(style.shadow);
+    if (Number.isFinite(style.radius)) targetStyle.borderRadius = `${Math.max(0, style.radius)}px`;
+    if (style.shadow) targetStyle.boxShadow = shadowValue(style.shadow);
 
     if (style.objectFit) {
       const image = node.matches?.("img") ? node : node.querySelector?.("img");
-      if (image) image.style.objectFit = objectFitValue(style.objectFit, "cover");
+      if (image) {
+        const imageTarget = directStylesheetWriteTarget(image, { objectFit: style.objectFit });
+        if (imageTarget?.style) directStylesheetWritebackCount += 1;
+        (imageTarget?.style || image.style).objectFit = objectFitValue(style.objectFit, "cover");
+      }
+    }
+  }
+
+  function directStylesheetWriteTarget(node, style) {
+    if (!node || !style || !shouldPreferStylesheetWriteback(node, style)) return null;
+    const match = uniqueDirectClassRule(node);
+    return match ? { style: match.rule.style, selector: match.selector } : null;
+  }
+
+  function shouldPreferStylesheetWriteback(node, style) {
+    if (!node?.classList?.length) return false;
+    if (node.getAttribute("style")) return false;
+    if (styleHasLayoutWrite(style)) return false;
+    const keys = Object.keys(style).filter((key) => style[key] !== undefined && style[key] !== null && style[key] !== "");
+    return keys.length > 0 && keys.every((key) => DIRECT_STYLESHEET_STYLE_KEYS.has(key));
+  }
+
+  function styleHasLayoutWrite(style) {
+    return ["x", "y", "w", "h", "rotation"].some((key) => style[key] !== undefined);
+  }
+
+  function uniqueDirectClassRule(node) {
+    const classes = [...node.classList || []].filter((name) => !name.startsWith("chiselo"));
+    if (!classes.length) return null;
+
+    const matches = [];
+    for (const className of classes) {
+      const selector = `.${cssEscape(className)}`;
+      for (const rule of localDirectStyleRules(node.ownerDocument)) {
+        if (rule.selectorText?.trim() !== selector) continue;
+        const scopedMatches = [...node.ownerDocument.querySelectorAll(selector)].filter((item) => item.matches(selector));
+        if (scopedMatches.length === 1 && scopedMatches[0] === node) {
+          matches.push({ rule, selector });
+        }
+      }
+    }
+
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  function localDirectStyleRules(doc) {
+    const output = [];
+    for (const sheet of doc.styleSheets || []) {
+      if (!sheet.ownerNode || sheet.ownerNode.hasAttribute?.("data-chiselo-style")) continue;
+      if (sheet.ownerNode.tagName?.toLowerCase() !== "style") continue;
+      collectDirectStyleRules(sheet, output);
+    }
+    return output;
+  }
+
+  function collectDirectStyleRules(container, output) {
+    let rules = [];
+    try {
+      rules = [...(container.cssRules || [])];
+    } catch {
+      return;
+    }
+    for (const rule of rules) {
+      if (rule.type === CSSRule.STYLE_RULE) {
+        output.push(rule);
+      }
     }
   }
 
@@ -5842,12 +5952,33 @@ ${htmlSlides}
     for (const node of cloneRoot.querySelectorAll("[data-chiselo-style], base[data-chiselo-base]")) {
       node.remove();
     }
+    if (directStylesheetWritebackCount > 0) {
+      syncDirectStylesheetTextForExport(doc, cloneRoot);
+    }
     for (const node of [cloneRoot, ...cloneRoot.querySelectorAll("*")]) {
       cleanDirectExportNode(node);
       stripChiseloAttributes(node);
     }
 
     return `${directHadDoctype ? "<!doctype html>\n" : ""}${cloneRoot.outerHTML}`;
+  }
+
+  function syncDirectStylesheetTextForExport(doc, cloneRoot) {
+    const sourceStyles = [...doc.querySelectorAll("style")].filter((node) => !node.hasAttribute("data-chiselo-style"));
+    const cloneStyles = [...cloneRoot.querySelectorAll("style")].filter((node) => !node.hasAttribute("data-chiselo-style"));
+    sourceStyles.forEach((node, index) => {
+      const text = serializedDirectStylesheet(node.sheet);
+      if (!text || !cloneStyles[index]) return;
+      cloneStyles[index].textContent = `\n${text}\n`;
+    });
+  }
+
+  function serializedDirectStylesheet(sheet) {
+    try {
+      return [...(sheet?.cssRules || [])].map((rule) => rule.cssText).join("\n");
+    } catch {
+      return "";
+    }
   }
 
   function cleanDirectExportNode(node) {
@@ -5922,6 +6053,7 @@ ${htmlSlides}
         stylesheetCount: 0,
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
+        stylesheetRuleWritebackCount: 0,
         pptxTextObjectCount: 0,
         pptxImageObjectCount: 0,
         pptxShapeObjectCount: 0,
@@ -6056,6 +6188,7 @@ ${htmlSlides}
       stylesheetCount: sourceMaturityDiagnostics.stylesheetCount,
       externalStylesheetCount: sourceMaturityDiagnostics.externalStylesheetCount,
       inlineStyleChangeCount: visualDiffDiagnostics.inlineStyleChangeCount,
+      stylesheetRuleWritebackCount: sourceMaturityDiagnostics.stylesheetRuleWritebackCount,
       pptxTextObjectCount: pptxMappingDiagnostics.pptxTextObjectCount,
       pptxImageObjectCount: pptxMappingDiagnostics.pptxImageObjectCount,
       pptxShapeObjectCount: pptxMappingDiagnostics.pptxShapeObjectCount,
@@ -6508,6 +6641,7 @@ ${htmlSlides}
     const externalStylesheetCount = stylesheetLinks.filter((node) => isExternalResource(node.getAttribute("href") || "", doc)).length;
     const changedObjects = Number(visualDiffDiagnostics.visualChangeCount || 0);
     const inlineStyleChangeCount = Number(visualDiffDiagnostics.inlineStyleChangeCount || 0);
+    const stylesheetRuleWritebackCount = Number(directStylesheetWritebackCount || 0);
 
     if (changedObjects > 0 && responsiveLayoutRiskCount > 0) {
       addDiagnosticIssue(issues, {
@@ -6527,6 +6661,15 @@ ${htmlSlides}
       });
     }
 
+    if (stylesheetRuleWritebackCount > 0) {
+      addDiagnosticIssue(issues, {
+        kind: "stylesheet-rule-writeback",
+        severity: "info",
+        title: "样式表写回",
+        detail: `${stylesheetRuleWritebackCount} 次样式修改已写入本地 class 规则，源码比 inline style 更易维护`
+      });
+    }
+
     if (changedObjects > 0 && externalStylesheetCount > 0) {
       addDiagnosticIssue(issues, {
         kind: "stylesheet-edit-review",
@@ -6540,7 +6683,8 @@ ${htmlSlides}
       responsiveRuleCount,
       responsiveLayoutRiskCount,
       stylesheetCount,
-      externalStylesheetCount
+      externalStylesheetCount,
+      stylesheetRuleWritebackCount
     };
   }
 
