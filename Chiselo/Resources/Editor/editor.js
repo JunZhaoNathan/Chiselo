@@ -2132,6 +2132,7 @@
     if (node.matches?.("img")) payloadStyle.objectFit = objectFitValue(style.objectFit, "fill");
     Object.assign(payloadStyle, directStyleWritebackPreview(node));
     const sourceSnippet = directSourceSnippetForNode(node);
+    const sourceChildItems = directSourceChildItemsForNode(node);
 
     return {
       id: ensureDirectId(node),
@@ -2143,6 +2144,7 @@
       sourceKind: "html-source",
       sourceSnippet: sourceSnippet.text,
       sourceSnippetLineCount: sourceSnippet.lineCount,
+      sourceChildItems,
       layoutMode: directLayoutMode,
       imageSource: node.matches?.("img") ? (node.currentSrc || node.getAttribute("src") || "") : null,
       imageAlt: node.matches?.("img") ? (node.getAttribute("alt") || "") : null,
@@ -2384,6 +2386,37 @@
       text = `${text}\n...`;
     }
     return { text, lineCount: lines.length };
+  }
+
+  function directSourceChildItemsForNode(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return [];
+
+    const items = [];
+    const maxItems = 24;
+    const maxDepth = 4;
+    const blockedTags = new Set(["script", "style", "meta", "link", "base", "title", "noscript"]);
+
+    const visit = (current, depth) => {
+      if (!current || depth > maxDepth || items.length >= maxItems) return;
+      for (const child of current.children || []) {
+        if (items.length >= maxItems) break;
+        const tagName = child.tagName?.toLowerCase?.() || "";
+        if (!tagName || blockedTags.has(tagName) || child.hasAttribute?.("data-chiselo-style")) continue;
+
+        items.push({
+          id: ensureDirectId(child),
+          tagName,
+          label: htmlTreeLabel(child),
+          path: directNodePath(child),
+          depth
+        });
+
+        visit(child, depth + 1);
+      }
+    };
+
+    visit(node, 1);
+    return items;
   }
 
   function formatHTMLSnippet(html) {

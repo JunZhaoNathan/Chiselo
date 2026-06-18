@@ -40,10 +40,23 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           if (!selected) throw new Error('Could not select source sync fixture.');
           const snippet = String(selected.sourceSnippet || '');
           const lineCount = Number(selected.sourceSnippetLineCount || 0);
+          const childItems = Array.isArray(selected.sourceChildItems) ? selected.sourceChildItems : [];
           const sourceHasTag = snippet.includes('<article') && snippet.includes('id="sourceTarget"');
           const sourceHasChildren = snippet.includes('<h2>Synced title</h2>') && snippet.includes('<strong>real source</strong>');
           const sourceClean = !snippet.includes('data-chiselo') && !snippet.includes('__chiselo') && !snippet.includes('chiselo-edit');
           const sourceFormatted = snippet.includes('\\n  <h2>');
+          const childItemTags = childItems.map(item => String(item && item.tagName || '').toLowerCase());
+          const childItemPaths = childItems.map(item => String(item && item.path || ''));
+          const sourceChildItemsVisible = childItems.length >= 3 && childItemTags.includes('h2') && childItemTags.includes('p') && childItemTags.includes('strong') && childItemPaths.every(path => path.includes('sourceTarget'));
+          const selectedH2Item = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
+          const selectedStrongItem = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const h2Selection = selectedH2Item ? editor.selectHTMLById(selectedH2Item.id) : null;
+          const h2Snippet = String(h2Selection?.sourceSnippet || '');
+          const h2SelectionOk = !!h2Selection && h2Selection.tagName === 'h2' && h2Snippet.includes('<h2') && h2Snippet.includes('Synced title');
+          const strongSelection = selectedStrongItem ? editor.selectHTMLById(selectedStrongItem.id) : null;
+          const strongSnippet = String(strongSelection?.sourceSnippet || '');
+          const strongSelectionOk = !!strongSelection && strongSelection.tagName === 'strong' && strongSnippet.includes('<strong') && strongSnippet.includes('real source');
+          editor.selectHTMLById(selected.id);
           const reselected = editor.selectHTMLById(selected.id);
           const reselectedSame = reselected && reselected.id === selected.id && String(reselected.sourceSnippet || '').includes('Synced title');
           const nextSource = snippet.replace('Synced title', 'Edited from source').replace('real source', 'source editor');
@@ -64,13 +77,19 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceChildItemsVisible || !h2SelectionOk || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
               sourceClean,
               sourceFormatted,
               lineCount,
+              sourceChildItemsVisible,
+              childItems,
+              h2SelectionOk,
+              h2Snippet,
+              strongSelectionOk,
+              strongSnippet,
               reselectedSame,
               warningPreview,
               warningDetected,
@@ -94,6 +113,9 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             type: 'result',
             id: selected.id,
             lineCount,
+            sourceChildItemsVisible,
+            h2SelectionOk,
+            strongSelectionOk,
             warningDetected,
             dangerousRejected,
             applied,

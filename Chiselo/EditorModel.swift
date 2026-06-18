@@ -768,6 +768,7 @@ final class EditorModel: ObservableObject {
             sourceKind: bridgeString(object["sourceKind"]),
             sourceSnippet: bridgeString(object["sourceSnippet"]),
             sourceSnippetLineCount: bridgeInt(object["sourceSnippetLineCount"]),
+            sourceChildItems: bridgeSourceChildItems(object["sourceChildItems"]),
             editability: bridgeString(object["editability"]),
             fidelity: bridgeString(object["fidelity"]),
             captureNote: bridgeString(object["captureNote"]),
@@ -785,6 +786,28 @@ final class EditorModel: ObservableObject {
             text: bridgeString(object["text"]),
             style: bridgeStyle(object["style"])
         )
+    }
+
+    private func bridgeSourceChildItems(_ value: Any?) -> [EditorSourceChildItem]? {
+        guard let values = value as? [[String: Any]] else { return nil }
+        let items = values.compactMap { object -> EditorSourceChildItem? in
+            guard let id = bridgeString(object["id"]),
+                  let tagName = bridgeString(object["tagName"]),
+                  let label = bridgeString(object["label"]),
+                  let path = bridgeString(object["path"]) else {
+                return nil
+            }
+
+            return EditorSourceChildItem(
+                id: id,
+                tagName: tagName,
+                label: label,
+                path: path,
+                depth: bridgeInt(object["depth"])
+            )
+        }
+
+        return items.isEmpty ? nil : items
     }
 
     private func bridgeElementFrame(_ value: Any?) -> EditorElementFrame? {

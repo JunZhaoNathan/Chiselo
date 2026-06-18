@@ -4721,6 +4721,10 @@ private struct InspectorPanel: View {
 
                         SourceDraftValidationBadge(validation: validation)
 
+                        if let childItems = element.sourceChildItems, !childItems.isEmpty {
+                            sourceChildNavigationGroup(childItems)
+                        }
+
                         HStack(spacing: 8) {
                             Button {
                                 copySourceSnippet(sourceDraft)
@@ -4755,6 +4759,90 @@ private struct InspectorPanel: View {
                 }
             }
         }
+    }
+
+    private func sourceChildNavigationGroup(_ items: [EditorSourceChildItem]) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "list.bullet.indent")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                Text("源码子对象")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text("\(items.count)")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(MaterialTheme.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+                Spacer(minLength: 0)
+            }
+
+            LazyVStack(spacing: 5) {
+                ForEach(items.prefix(8)) { item in
+                    sourceChildNavigationRow(item)
+                }
+
+                if items.count > 8 {
+                    Text("另有 \(items.count - 8) 个子对象")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 1)
+                }
+            }
+        }
+        .padding(8)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private func sourceChildNavigationRow(_ item: EditorSourceChildItem) -> some View {
+        Button {
+            model.selectHTMLNode(id: item.id)
+        } label: {
+            HStack(spacing: 7) {
+                Text(item.tagName.uppercased())
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                    .frame(width: 38, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.label.isEmpty ? item.tagName : item.label)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(MaterialTheme.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Text(item.path)
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "scope")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+            }
+            .padding(.leading, CGFloat(max(0, (item.depth ?? 1) - 1)) * 8)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(MaterialTheme.separator, lineWidth: 1)
+        )
     }
 
     @ViewBuilder

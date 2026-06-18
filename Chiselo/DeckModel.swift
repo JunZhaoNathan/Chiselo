@@ -33,6 +33,7 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var sourceKind: String?
     var sourceSnippet: String?
     var sourceSnippetLineCount: Int?
+    var sourceChildItems: [EditorSourceChildItem]?
     var editability: String?
     var fidelity: String?
     var captureNote: String?
@@ -49,6 +50,14 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var locked: Bool?
     var text: String?
     var style: EditorElementStyle?
+}
+
+struct EditorSourceChildItem: Codable, Identifiable, Equatable {
+    var id: String
+    var tagName: String
+    var label: String
+    var path: String
+    var depth: Int?
 }
 
 struct EditorElementFrame: Codable, Equatable {
