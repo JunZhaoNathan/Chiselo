@@ -2293,6 +2293,7 @@
       text,
       imageSource: image ? (image.getAttribute("src") || image.currentSrc || "") : "",
       styleAttr: node.getAttribute("style") || "",
+      stylesheetRule: directVisualStylesheetRuleSnapshot(node),
       rect: {
         x: Math.round(rect.x),
         y: Math.round(rect.y),
@@ -4388,7 +4389,14 @@
       selectDirectNode(image);
       settleDirectImageNode(image);
     } else if (kind === "位置/尺寸" || kind === "样式") {
-      restoreDirectStyleAttribute(node, before.styleAttr || "");
+      if (before.styleAttr !== after.styleAttr) {
+        restoreDirectStyleAttribute(node, before.styleAttr || "");
+      }
+      if (visualStylesheetRuleDiffers(before, after)) {
+        if (!restoreDirectStylesheetRule(node, before, after)) {
+          return { ok: false, reason: "样式表规则已变化或不再唯一命中当前对象，未自动回退。" };
+        }
+      }
       selectDirectNode(node);
     }
 
@@ -4398,6 +4406,40 @@
     scheduleHTMLDiagnosticsChanged();
     postSelectionChanged({ immediate: true });
     return { ok: true, elementId: selectedId, kind };
+  }
+
+  function directVisualStylesheetRuleSnapshot(node) {
+    const match = uniqueDirectStylesheetRule(node);
+    if (!match?.rule?.style) return null;
+    return {
+      selector: match.selector,
+      styleText: match.rule.style.cssText || ""
+    };
+  }
+
+  function visualStylesheetRuleDiffers(before, after) {
+    const beforeRule = before?.stylesheetRule;
+    const afterRule = after?.stylesheetRule;
+    return Boolean(
+      beforeRule?.selector
+      && afterRule?.selector
+      && beforeRule.selector === afterRule.selector
+      && String(beforeRule.styleText || "") !== String(afterRule.styleText || "")
+    );
+  }
+
+  function restoreDirectStylesheetRule(node, before, after) {
+    const beforeRule = before?.stylesheetRule;
+    const afterRule = after?.stylesheetRule;
+    if (!beforeRule?.selector || !afterRule?.selector || beforeRule.selector !== afterRule.selector) {
+      return false;
+    }
+
+    const match = uniqueDirectStylesheetRule(node);
+    if (!match?.rule?.style || match.selector !== beforeRule.selector) return false;
+    match.rule.style.cssText = beforeRule.styleText || "";
+    directStylesheetWritebackCount += 1;
+    return true;
   }
 
   function nextFrame() {
@@ -6552,7 +6594,7 @@ ${htmlSlides}
     }
 
     if (kind === "位置/尺寸" || kind === "样式") {
-      return before.styleAttr !== after.styleAttr
+      return before.styleAttr !== after.styleAttr || visualStylesheetRuleDiffers(before, after)
         ? { canRevert: true, reason: null }
         : { canRevert: false, reason: "变化来自样式表、响应式规则或父级布局，先定位后手动复核更安全。" };
     }
@@ -6602,8 +6644,9 @@ ${htmlSlides}
     }
 
     const changedStyles = visualStyleDiffKeys(before.style, after.style);
+    const detailSuffix = visualStylesheetRuleDiffers(before, after) ? "（写回样式表规则）" : "";
     return {
-      detail: changedStyles.length ? `关键样式变化：${changedStyles.join("、")}` : "关键样式发生变化。",
+      detail: changedStyles.length ? `关键样式变化：${changedStyles.join("、")}${detailSuffix}` : `关键样式发生变化${detailSuffix}。`,
       beforeValue: visualStyleSummary(before.style, changedStyles),
       afterValue: visualStyleSummary(after.style, changedStyles)
     };

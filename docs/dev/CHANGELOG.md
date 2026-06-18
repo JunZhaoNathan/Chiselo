@@ -12,6 +12,7 @@ All notable changes to Chiselo will be documented here.
 - Added conservative stylesheet-rule writeback for unique local class rules so safe style edits can update CSS instead of adding inline style.
 - Expanded stylesheet-rule writeback to safe unique selectors such as `#id`, `tag.class`, and simple descendant selectors when they only target the selected object.
 - Added stylesheet writeback diagnostics and regression coverage, while shared-class edits still fall back to inline style to avoid changing multiple objects unexpectedly.
+- Added one-click visual rollback for safe stylesheet-rule writeback changes, restoring the original local CSS rule instead of leaving the object edited.
 - Added object-level responsive-change review so modified HTML objects inside media/container/flex/grid/sticky layout chains can be located before save or export.
 - Kept direct-selection quick actions compact by default, with action buttons tucked behind an on-demand menu so selected text stays visible.
 - Quieted direct-selection chrome further: selected objects now show only a small on-demand action button, object labels stay inside the menu, hover labels avoid instruction text, and object right-clicks no longer open the browser menu outside text editing.

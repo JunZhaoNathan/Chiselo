@@ -109,10 +109,55 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
             throw new Error('Style visual change did not revert in exported HTML.');
           }
 
+          const ruleTarget = editor.selectHTML('.rule-card');
+          if (!ruleTarget) throw new Error('Could not select stylesheet-backed rule card.');
+          editor.updateElement({
+            id: ruleTarget.id,
+            x: ruleTarget.x,
+            y: ruleTarget.y,
+            w: ruleTarget.w,
+            h: ruleTarget.h,
+            style: {
+              fill: 'rgb(254, 226, 226)',
+              color: 'rgb(127, 29, 29)',
+              radius: 24
+            }
+          });
+          await sleep(220);
+          diagnostics = editor.getImportDiagnostics();
+          const ruleItem = (diagnostics.visualChangeItems || []).find(item => item.kind === '样式' && item.elementId === ruleTarget.id);
+          if (!ruleItem || !ruleItem.changeKey || ruleItem.canRevert !== true || !String(ruleItem.detail || '').includes('样式表规则')) {
+            throw new Error(`Expected revertable stylesheet-rule visual change, got ${JSON.stringify(diagnostics.visualChangeItems)}`);
+          }
+          if ((diagnostics.stylesheetRuleWritebackCount || 0) < 1) {
+            throw new Error(`Expected stylesheet rule writeback count after rule edit, got ${diagnostics.stylesheetRuleWritebackCount}`);
+          }
+          let ruleExport = editor.exportHTML();
+          if (/<article[^>]*class="rule-card"[^>]*style=/i.test(ruleExport)) {
+            throw new Error('Stylesheet-backed visual change should not add inline style.');
+          }
+          if (!/\\.rule-card\\s*\\{[^}]*background:\\s*rgb\\(254, 226, 226\\)/i.test(ruleExport)) {
+            throw new Error('Stylesheet-backed visual change was not written into the CSS rule.');
+          }
+
+          const ruleRevertResult = editor.revertVisualChange(ruleItem.changeKey);
+          await sleep(220);
+          if (!ruleRevertResult || ruleRevertResult.ok !== true) {
+            throw new Error(`Expected successful stylesheet-rule revert, got ${JSON.stringify(ruleRevertResult)}`);
+          }
+          ruleExport = editor.exportHTML();
+          if (/rgb\\(254, 226, 226\\)/i.test(ruleExport) || /rgb\\(127, 29, 29\\)/i.test(ruleExport) || /border-radius:\\s*24px/i.test(ruleExport)) {
+            throw new Error('Stylesheet-rule visual change did not revert in exported CSS.');
+          }
+          if (!/\\.rule-card\\s*\\{[^}]*background:\\s*rgb\\(240, 253, 244\\)/i.test(ruleExport) || !/\\.rule-card\\s*\\{[^}]*color:\\s*rgb\\(20, 83, 45\\)/i.test(ruleExport) || !/\\.rule-card\\s*\\{[^}]*border-radius:\\s*12px/i.test(ruleExport)) {
+            throw new Error('Stylesheet-rule visual change did not restore original CSS rule values.');
+          }
+
           window.webkit.messageHandlers.visualRevert.postMessage({
             type: 'result',
             textItem,
             styleItem,
+            ruleItem,
             diagnostics: editor.getImportDiagnostics(),
             history: editor.getHistoryState()
           });
@@ -146,9 +191,11 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         main { display: flex; gap: 24px; width: 960px; min-height: 540px; padding: 64px; box-sizing: border-box; background: #f8fafc; }
         #card { width: 220px; height: 92px; padding: 16px; background: #dbeafe; border-radius: 14px; box-sizing: border-box; }
+        .rule-card { width: 180px; min-height: 92px; padding: 16px; background: rgb(240, 253, 244); color: rgb(20, 83, 45); border-radius: 12px; box-sizing: border-box; }
         @media (max-width: 700px) {
           main { width: 420px; flex-direction: column; }
           #card { width: 100%; }
+          .rule-card { width: 100%; }
         }
       </style>
     </head>
@@ -156,6 +203,7 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
       <main>
         <h1 id="title">Original title</h1>
         <div id="card">Card copy</div>
+        <article class="rule-card">Stylesheet rule card</article>
       </main>
     </body>
     </html>
