@@ -2136,6 +2136,7 @@ final class EditorModel: ObservableObject {
         let ruleWrites = diagnostics.stylesheetRuleWritebackCount ?? 0
         let stylesheets = diagnostics.stylesheetCount ?? 0
         let externalSheets = diagnostics.externalStylesheetCount ?? 0
+        let externalAffectedChanges = diagnostics.externalStylesheetAffectedChangeCount ?? 0
         let ruleTargets = diagnostics.stylesheetRuleWritebackTargets.prefix(3).joined(separator: "、")
         let ruleTargetSuffix = ruleTargets.isEmpty ? "" : "（\(ruleTargets)）"
         if ruleWrites > 0 && inlineChanges == 0 {
@@ -2147,8 +2148,8 @@ final class EditorModel: ObservableObject {
         if inlineChanges > 0 && stylesheets > 0 {
             return "源码写回：\(inlineChanges) 个对象改动 inline style；原稿含 \(stylesheets) 个样式表，建议保存前抽查源码"
         }
-        if externalSheets > 0 {
-            return "样式表复核：\(externalSheets) 个外部样式表影响 class 级样式，当前修改以对象级写回为主"
+        if externalAffectedChanges > 0 {
+            return "样式表复核：\(externalAffectedChanges) 个已修改对象可能受 \(externalSheets) 个外部样式表影响，建议保存前复核宽度和 class 效果"
         }
         return nil
     }

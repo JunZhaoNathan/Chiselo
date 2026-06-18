@@ -1235,6 +1235,7 @@ private struct SourceWritebackReviewCard: View {
         let inlineItems = diagnostics.inlineStyleChangeItems
         let ruleItems = diagnostics.stylesheetRuleChangeItems
         let ruleCount = diagnostics.stylesheetRuleWritebackCount ?? ruleItems.count
+        let externalAffectedChanges = diagnostics.externalStylesheetAffectedChangeCount ?? 0
         let ruleTargets = Array(diagnostics.stylesheetRuleWritebackTargets.prefix(6))
         let targetIds = diagnostics.sourceWritebackTargetIds
 
@@ -1247,10 +1248,10 @@ private struct SourceWritebackReviewCard: View {
                     .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("源码写回复核")
+                    Text("源码复核")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(MaterialTheme.ink)
-                    Text(sourceWritebackSubtitle(inlineCount: inlineItems.count, ruleCount: ruleCount))
+                    Text(sourceWritebackSubtitle(inlineCount: inlineItems.count, ruleCount: ruleCount, externalAffectedChanges: externalAffectedChanges))
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(color)
                 }
@@ -1280,9 +1281,9 @@ private struct SourceWritebackReviewCard: View {
 
             if !targetIds.isEmpty {
                 PPTXTargetNavigator(
-                    title: "源码写回",
+                    title: "源码复核",
                     icon: "curlybraces.square",
-                    count: inlineItems.count + ruleCount,
+                    count: inlineItems.count + ruleCount + externalAffectedChanges,
                     targetIds: targetIds,
                     color: color,
                     index: $targetIndex,
@@ -1298,11 +1299,12 @@ private struct SourceWritebackReviewCard: View {
         )
     }
 
-    private func sourceWritebackSubtitle(inlineCount: Int, ruleCount: Int) -> String {
+    private func sourceWritebackSubtitle(inlineCount: Int, ruleCount: Int, externalAffectedChanges: Int) -> String {
         var parts: [String] = []
         if ruleCount > 0 { parts.append("\(ruleCount) 处写入 CSS 规则") }
         if inlineCount > 0 { parts.append("\(inlineCount) 处写入 inline style") }
-        return parts.isEmpty ? "未检测到对象级源码写回" : parts.joined(separator: "，")
+        if externalAffectedChanges > 0 { parts.append("\(externalAffectedChanges) 处需复核外部 CSS") }
+        return parts.isEmpty ? "未检测到对象级源码风险" : parts.joined(separator: "，")
     }
 }
 
@@ -2808,7 +2810,9 @@ private extension HTMLDiagnostics {
     }
 
     var sourcePollutionReviewCount: Int {
-        max(0, inlineStyleChangeCount ?? 0) + max(0, externalStylesheetCount ?? 0) + max(0, stylesheetRuleWritebackCount ?? 0)
+        max(0, inlineStyleChangeCount ?? 0)
+            + max(0, externalStylesheetAffectedChangeCount ?? 0)
+            + max(0, stylesheetRuleWritebackCount ?? 0)
     }
 
     var sourcePollutionReviewDetail: String {
@@ -2816,6 +2820,7 @@ private extension HTMLDiagnostics {
         let ruleWrites = stylesheetRuleWritebackCount ?? 0
         let stylesheets = stylesheetCount ?? 0
         let externalSheets = externalStylesheetCount ?? 0
+        let externalAffectedChanges = externalStylesheetAffectedChangeCount ?? 0
         let ruleTargets = stylesheetRuleWritebackTargets.prefix(3).joined(separator: "、")
         let ruleTargetSuffix = ruleTargets.isEmpty ? "" : "（\(ruleTargets)）"
         if ruleWrites > 0 && inlineChanges == 0 {
@@ -2827,8 +2832,8 @@ private extension HTMLDiagnostics {
         if inlineChanges > 0 && stylesheets > 0 {
             return "\(inlineChanges) 个变化写入 inline style；原稿含 \(stylesheets) 个样式表，保存前建议抽查源码。"
         }
-        if externalSheets > 0 {
-            return "\(externalSheets) 个外部样式表影响 class 样式，当前以对象级写回为主。"
+        if externalAffectedChanges > 0 {
+            return "\(externalAffectedChanges) 个已修改对象可能受 \(externalSheets) 个外部样式表影响，建议保存前复核宽度和 class 效果。"
         }
         if inlineChanges > 0 {
             return "\(inlineChanges) 个对象发生 inline style 写回。"
@@ -3382,7 +3387,7 @@ private struct HTMLDeliveryCheckCard: View {
                 if diagnostics.sourcePollutionReviewCount > 0 {
                     DeliveryCheckRow(
                         icon: "curlybraces.square",
-                        title: "源码写回",
+                        title: "源码复核",
                         detail: diagnostics.sourcePollutionReviewDetail,
                         color: warningColor,
                         isClickable: !diagnostics.sourceWritebackTargetIds.isEmpty

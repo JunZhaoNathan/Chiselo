@@ -211,6 +211,9 @@ struct HTMLDiagnostics: Codable, Equatable {
     var responsiveChangeItems: [HTMLVisualChangeItem]?
     var stylesheetCount: Int?
     var externalStylesheetCount: Int?
+    var externalStylesheetAffectedChangeCount: Int?
+    var externalStylesheetAffectedChangeElementId: String?
+    var externalStylesheetAffectedChangeElementIds: [String]?
     var inlineStyleChangeCount: Int?
     var stylesheetRuleWritebackCount: Int?
     var stylesheetRuleWritebackSelectors: [String]?
@@ -279,6 +282,9 @@ struct HTMLDiagnostics: Codable, Equatable {
         responsiveChangeItems: [],
         stylesheetCount: 0,
         externalStylesheetCount: 0,
+        externalStylesheetAffectedChangeCount: 0,
+        externalStylesheetAffectedChangeElementId: nil,
+        externalStylesheetAffectedChangeElementIds: [],
         inlineStyleChangeCount: 0,
         stylesheetRuleWritebackCount: 0,
         stylesheetRuleWritebackSelectors: [],
@@ -404,7 +410,8 @@ extension HTMLDiagnostics {
 
     var sourceWritebackTargetIds: [String] {
         var seen = Set<String>()
-        return (inlineStyleChangeItems + stylesheetRuleChangeItems).compactMap(\.elementId).filter { id in
+        let externalTargetIds = normalizedTargetIds(externalStylesheetAffectedChangeElementIds, fallback: externalStylesheetAffectedChangeElementId)
+        return ((inlineStyleChangeItems + stylesheetRuleChangeItems).compactMap(\.elementId) + externalTargetIds).filter { id in
             guard !id.isEmpty, !seen.contains(id) else { return false }
             seen.insert(id)
             return true

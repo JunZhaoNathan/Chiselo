@@ -6144,6 +6144,9 @@ ${htmlSlides}
         responsiveChangeItems: [],
         stylesheetCount: 0,
         externalStylesheetCount: 0,
+        externalStylesheetAffectedChangeCount: 0,
+        externalStylesheetAffectedChangeElementId: null,
+        externalStylesheetAffectedChangeElementIds: [],
         inlineStyleChangeCount: 0,
         stylesheetRuleWritebackCount: 0,
         stylesheetRuleWritebackSelectors: [],
@@ -6284,6 +6287,9 @@ ${htmlSlides}
       responsiveChangeItems: sourceMaturityDiagnostics.responsiveChangeItems,
       stylesheetCount: sourceMaturityDiagnostics.stylesheetCount,
       externalStylesheetCount: sourceMaturityDiagnostics.externalStylesheetCount,
+      externalStylesheetAffectedChangeCount: sourceMaturityDiagnostics.externalStylesheetAffectedChangeCount,
+      externalStylesheetAffectedChangeElementId: sourceMaturityDiagnostics.externalStylesheetAffectedChangeElementId,
+      externalStylesheetAffectedChangeElementIds: sourceMaturityDiagnostics.externalStylesheetAffectedChangeElementIds,
       inlineStyleChangeCount: visualDiffDiagnostics.inlineStyleChangeCount,
       stylesheetRuleWritebackCount: sourceMaturityDiagnostics.stylesheetRuleWritebackCount,
       stylesheetRuleWritebackSelectors: sourceMaturityDiagnostics.stylesheetRuleWritebackSelectors,
@@ -6772,6 +6778,7 @@ ${htmlSlides}
     const inlineStyleChangeCount = Number(visualDiffDiagnostics.inlineStyleChangeCount || 0);
     const stylesheetRuleWritebackDiagnostics = currentStylesheetRuleWritebackDiagnostics(doc);
     const stylesheetRuleWritebackCount = stylesheetRuleWritebackDiagnostics.count;
+    const externalStylesheetAffectedChangeDiagnostics = collectExternalStylesheetAffectedChangeDiagnostics(doc, visualDiffDiagnostics, externalStylesheetCount);
 
     if (changedObjects > 0 && responsiveLayoutRiskCount > 0) {
       const affected = responsiveChangeDiagnostics.responsiveChangeCount;
@@ -6804,12 +6811,13 @@ ${htmlSlides}
       });
     }
 
-    if (changedObjects > 0 && externalStylesheetCount > 0) {
+    if (externalStylesheetAffectedChangeDiagnostics.count > 0) {
       addDiagnosticIssue(issues, {
         kind: "stylesheet-edit-review",
         severity: "warning",
         title: "外部样式表",
-        detail: `${externalStylesheetCount} 个外部样式表会影响 class 级样式，当前修改以对象级写回为主`
+        detail: `${externalStylesheetAffectedChangeDiagnostics.count} 个已修改对象可能受 ${externalStylesheetCount} 个外部样式表影响，保存前建议复核宽度和 class 效果`,
+        elementId: externalStylesheetAffectedChangeDiagnostics.elementId
       });
     }
 
@@ -6822,9 +6830,47 @@ ${htmlSlides}
       responsiveChangeItems: responsiveChangeDiagnostics.responsiveChangeItems,
       stylesheetCount,
       externalStylesheetCount,
+      externalStylesheetAffectedChangeCount: externalStylesheetAffectedChangeDiagnostics.count,
+      externalStylesheetAffectedChangeElementId: externalStylesheetAffectedChangeDiagnostics.elementId,
+      externalStylesheetAffectedChangeElementIds: externalStylesheetAffectedChangeDiagnostics.elementIds,
       stylesheetRuleWritebackCount,
       stylesheetRuleWritebackSelectors: stylesheetRuleWritebackDiagnostics.selectors
     };
+  }
+
+  function collectExternalStylesheetAffectedChangeDiagnostics(doc, visualDiffDiagnostics, externalStylesheetCount) {
+    if (!(externalStylesheetCount > 0)) {
+      return { count: 0, elementId: null, elementIds: [] };
+    }
+
+    const records = visualDiffDiagnostics?.visualChangeRecords || [];
+    if (!records.length) return { count: 0, elementId: null, elementIds: [] };
+
+    const elementIds = [];
+    const seen = new Set();
+    for (const record of records) {
+      const entry = record.after || record.before;
+      const elementId = entry?.elementId || null;
+      if (!elementId || seen.has(elementId)) continue;
+      const node = doc.querySelector(`[data-chiselo-id="${cssEscape(elementId)}"]`);
+      if (!node || !nodeMayBeStyledByExternalSheet(node)) continue;
+      seen.add(elementId);
+      elementIds.push(elementId);
+    }
+
+    return {
+      count: elementIds.length,
+      elementId: elementIds[0] || null,
+      elementIds
+    };
+  }
+
+  function nodeMayBeStyledByExternalSheet(node) {
+    if (!node || node === node.ownerDocument?.documentElement) return false;
+    if (node.id || (node.classList && node.classList.length > 0)) return true;
+    const tag = node.tagName?.toLowerCase?.() || "";
+    if (!tag) return false;
+    return !["html", "head", "body", "script", "style", "meta", "link", "title"].includes(tag);
   }
 
   function currentStylesheetRuleWritebackDiagnostics(doc) {

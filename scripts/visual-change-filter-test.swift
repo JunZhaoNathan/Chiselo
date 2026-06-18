@@ -27,6 +27,9 @@ struct VisualChangeFilterTest {
         diagnostics.visualChangeElementIds = ["text-1", "text-1", "image-1"]
         diagnostics.visualChangeItems = items
         diagnostics.stylesheetRuleWritebackSelectors = [".button", "#hero"]
+        diagnostics.externalStylesheetCount = 2
+        diagnostics.externalStylesheetAffectedChangeCount = 0
+        diagnostics.externalStylesheetAffectedChangeElementIds = ["external-1", "style-1", "external-1"]
 
         try expect(VisualChangeFilter.all.items(from: items).count == 6, "All filter should include every visual change.")
         try expect(VisualChangeFilter.text.items(from: items).map(\.elementId) == ["text-1"], "Text filter should match text changes.")
@@ -43,7 +46,8 @@ struct VisualChangeFilterTest {
         try expect(diagnostics.stylesheetRuleChangeItems.map(\.elementId) == ["style-1", "style-2"], "Stylesheet rule writeback items should be filtered from visual changes.")
         try expect(diagnostics.stylesheetRuleChangeItems.first?.writebackTarget == ".button", "Stylesheet rule writeback items should preserve the CSS selector target.")
         try expect(diagnostics.stylesheetRuleWritebackTargets == [".button", "#hero"], "Stylesheet rule writeback selectors should prefer diagnostics and deduplicate preview items.")
-        try expect(diagnostics.sourceWritebackTargetIds == ["box-1", "style-1", "style-2"], "Source writeback target ids should combine inline and stylesheet items.")
+        try expect(diagnostics.sourceWritebackTargetIds == ["box-1", "style-1", "style-2", "external-1"], "Source writeback target ids should combine inline, stylesheet, and external CSS review items.")
+        try expect(diagnostics.externalStylesheetAffectedChangeCount == 0, "External stylesheets alone should not imply changed-object stylesheet review.")
 
         print("Visual change filter test OK")
     }
