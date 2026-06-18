@@ -2102,9 +2102,14 @@ final class EditorModel: ObservableObject {
         let changeLine = visualChangeCount > 0
             ? "本次变更：\(visualChangeCount) 个对象发生变化，\(locatedCount) 个可定位\(previewKinds.isEmpty ? "" : "，主要是 \(previewKinds)")\(saveReviewRevertableSuffix(diagnostics))"
             : "本次变更：未检测到明显对象级视觉变化"
-        let responsiveLine = (diagnostics.responsiveLayoutRiskCount ?? 0) > 0
-            ? "多宽度复核：\(diagnostics.responsiveRuleCount ?? 0) 条响应式规则或 \(diagnostics.responsiveLayoutRiskCount ?? 0) 个弹性/网格对象，保存后建议检查窄屏和宽屏"
-            : nil
+        let responsiveLine: String?
+        if (diagnostics.responsiveChangeCount ?? 0) > 0 {
+            responsiveLine = "多宽度复核：\(diagnostics.responsiveChangeCount ?? 0) 个已修改对象受响应式布局影响，保存前建议检查窄屏和宽屏"
+        } else if (diagnostics.responsiveLayoutRiskCount ?? 0) > 0 {
+            responsiveLine = "多宽度复核：\(diagnostics.responsiveRuleCount ?? 0) 条响应式规则或 \(diagnostics.responsiveLayoutRiskCount ?? 0) 个弹性/网格对象，保存后建议检查窄屏和宽屏"
+        } else {
+            responsiveLine = nil
+        }
         let cleanlinessLine = "源码洁净度：\(diagnostics.sourceCleanlinessPercent)%\(diagnostics.cleanExport ? "，未检测到编辑器临时标记" : "，仍有 \(diagnostics.exportArtifactCount ?? 0) 处临时标记需处理")"
         let sourceLine = saveReviewSourcePollutionLine(diagnostics)
 

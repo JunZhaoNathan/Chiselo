@@ -202,6 +202,10 @@ struct HTMLDiagnostics: Codable, Equatable {
     var revertableVisualChangeCount: Int?
     var responsiveRuleCount: Int?
     var responsiveLayoutRiskCount: Int?
+    var responsiveChangeCount: Int?
+    var responsiveChangeElementId: String?
+    var responsiveChangeElementIds: [String]?
+    var responsiveChangeItems: [HTMLVisualChangeItem]?
     var stylesheetCount: Int?
     var externalStylesheetCount: Int?
     var inlineStyleChangeCount: Int?
@@ -265,6 +269,10 @@ struct HTMLDiagnostics: Codable, Equatable {
         revertableVisualChangeCount: 0,
         responsiveRuleCount: 0,
         responsiveLayoutRiskCount: 0,
+        responsiveChangeCount: 0,
+        responsiveChangeElementId: nil,
+        responsiveChangeElementIds: [],
+        responsiveChangeItems: [],
         stylesheetCount: 0,
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
@@ -325,6 +333,7 @@ struct HTMLDiagnostics: Codable, Equatable {
         if (runtimeRiskCount ?? 0) > 0 { count += 1 }
         if (pptxEffectRiskCount ?? 0) > 0 { count += 1 }
         if (visualChangeCount ?? 0) > 0 { count += 1 }
+        if (responsiveChangeCount ?? 0) > 0 { count += 1 }
         return count
     }
 
@@ -360,6 +369,14 @@ extension HTMLDiagnostics {
 
     var visualChangePreviewItems: [HTMLVisualChangeItem] {
         visualChangeItems ?? []
+    }
+
+    var responsiveChangeTargetIds: [String] {
+        normalizedTargetIds(responsiveChangeElementIds, fallback: responsiveChangeElementId)
+    }
+
+    var responsiveChangePreviewItems: [HTMLVisualChangeItem] {
+        responsiveChangeItems ?? []
     }
 
     func visualChangeTargetIds(for filter: VisualChangeFilter) -> [String] {

@@ -6067,6 +6067,10 @@ ${htmlSlides}
         revertableVisualChangeCount: 0,
         responsiveRuleCount: 0,
         responsiveLayoutRiskCount: 0,
+        responsiveChangeCount: 0,
+        responsiveChangeElementId: null,
+        responsiveChangeElementIds: [],
+        responsiveChangeItems: [],
         stylesheetCount: 0,
         externalStylesheetCount: 0,
         inlineStyleChangeCount: 0,
@@ -6202,6 +6206,10 @@ ${htmlSlides}
       revertableVisualChangeCount: visualDiffDiagnostics.revertableVisualChangeCount,
       responsiveRuleCount: sourceMaturityDiagnostics.responsiveRuleCount,
       responsiveLayoutRiskCount: sourceMaturityDiagnostics.responsiveLayoutRiskCount,
+      responsiveChangeCount: sourceMaturityDiagnostics.responsiveChangeCount,
+      responsiveChangeElementId: sourceMaturityDiagnostics.responsiveChangeElementId,
+      responsiveChangeElementIds: sourceMaturityDiagnostics.responsiveChangeElementIds,
+      responsiveChangeItems: sourceMaturityDiagnostics.responsiveChangeItems,
       stylesheetCount: sourceMaturityDiagnostics.stylesheetCount,
       externalStylesheetCount: sourceMaturityDiagnostics.externalStylesheetCount,
       inlineStyleChangeCount: visualDiffDiagnostics.inlineStyleChangeCount,
@@ -6407,6 +6415,7 @@ ${htmlSlides}
         visualChangeElementId: null,
         visualChangeElementIds: [],
         visualChangeItems: [],
+        visualChangeRecords: [],
         revertableVisualChangeCount: 0,
         inlineStyleChangeCount: 0
       };
@@ -6473,6 +6482,7 @@ ${htmlSlides}
       visualChangeElementId: firstElementId,
       visualChangeElementIds: [...new Set(targetElementIds)],
       visualChangeItems,
+      visualChangeRecords: filteredRecords,
       revertableVisualChangeCount,
       inlineStyleChangeCount
     };
@@ -6654,6 +6664,10 @@ ${htmlSlides}
     const stylesheetLinks = [...doc.querySelectorAll("link[rel~='stylesheet'][href]")];
     const responsiveRuleCount = countResponsiveRules(doc, styleNodes);
     const responsiveLayoutRiskCount = responsiveRuleCount + countResponsiveLayoutNodes(doc);
+    const responsiveChangeDiagnostics = collectResponsiveChangeDiagnostics(doc, visualDiffDiagnostics, {
+      responsiveRuleCount,
+      responsiveLayoutRiskCount
+    });
     const stylesheetCount = styleNodes.length + stylesheetLinks.length;
     const externalStylesheetCount = stylesheetLinks.filter((node) => isExternalResource(node.getAttribute("href") || "", doc)).length;
     const changedObjects = Number(visualDiffDiagnostics.visualChangeCount || 0);
@@ -6661,11 +6675,15 @@ ${htmlSlides}
     const stylesheetRuleWritebackCount = Number(directStylesheetWritebackCount || 0);
 
     if (changedObjects > 0 && responsiveLayoutRiskCount > 0) {
+      const affected = responsiveChangeDiagnostics.responsiveChangeCount;
       addDiagnosticIssue(issues, {
         kind: "responsive-review",
         severity: "warning",
         title: "多宽度复核",
-        detail: `检测到 ${responsiveRuleCount} 条响应式规则或网格/弹性布局，修改后建议在窄屏和宽屏各预览一次`
+        detail: affected > 0
+          ? `${affected} 个已修改对象处在响应式布局影响链里，建议重点检查窄屏和宽屏`
+          : `检测到 ${responsiveRuleCount} 条响应式规则或网格/弹性布局，修改后建议在窄屏和宽屏各预览一次`,
+        elementId: responsiveChangeDiagnostics.responsiveChangeElementId
       });
     }
 
@@ -6699,10 +6717,96 @@ ${htmlSlides}
     return {
       responsiveRuleCount,
       responsiveLayoutRiskCount,
+      responsiveChangeCount: responsiveChangeDiagnostics.responsiveChangeCount,
+      responsiveChangeElementId: responsiveChangeDiagnostics.responsiveChangeElementId,
+      responsiveChangeElementIds: responsiveChangeDiagnostics.responsiveChangeElementIds,
+      responsiveChangeItems: responsiveChangeDiagnostics.responsiveChangeItems,
       stylesheetCount,
       externalStylesheetCount,
       stylesheetRuleWritebackCount
     };
+  }
+
+  function collectResponsiveChangeDiagnostics(doc, visualDiffDiagnostics, context) {
+    const output = {
+      responsiveChangeCount: 0,
+      responsiveChangeElementId: null,
+      responsiveChangeElementIds: [],
+      responsiveChangeItems: []
+    };
+    const records = visualDiffDiagnostics?.visualChangeRecords || [];
+    if (!records.length || !(context.responsiveLayoutRiskCount > 0)) return output;
+
+    const seen = new Set();
+    const elementIds = [];
+    for (const record of records) {
+      const elementId = record?.after?.elementId || record?.before?.elementId;
+      if (!elementId || seen.has(elementId)) continue;
+      seen.add(elementId);
+
+      const node = doc.querySelector(`[data-chiselo-id="${cssEscape(elementId)}"]`);
+      if (!node) continue;
+      const reason = responsiveInfluenceReason(node, context);
+      if (!reason) continue;
+
+      output.responsiveChangeCount += 1;
+      elementIds.push(elementId);
+      if (!output.responsiveChangeElementId) output.responsiveChangeElementId = elementId;
+      if (output.responsiveChangeItems.length < MAX_VISUAL_CHANGE_PREVIEW_ITEMS) {
+        const revertInfo = visualChangeRevertInfo(record.kind, record.before, record.after);
+        const item = visualChangePreviewItem({
+          key: record.key,
+          kind: record.kind,
+          before: record.before,
+          after: record.after,
+          revertInfo
+        });
+        output.responsiveChangeItems.push({
+          ...item,
+          detail: `${item.detail || "对象发生变化。"} ${reason}，请在不同宽度下复核。`,
+          afterValue: reason
+        });
+      }
+    }
+
+    output.responsiveChangeElementIds = uniqueIds(elementIds);
+    return output;
+  }
+
+  function responsiveInfluenceReason(node, context) {
+    const rulePart = context.responsiveRuleCount > 0 ? `${context.responsiveRuleCount} 条 @media/@container 规则` : "";
+    const chainReason = responsiveLayoutChainReason(node);
+    if (rulePart && chainReason) return `${rulePart}，且位于${chainReason}内`;
+    if (chainReason) return `位于${chainReason}内`;
+    if (rulePart && nodeLikelyMatchesResponsiveSelector(node)) return `匹配页面中的${rulePart}`;
+    return null;
+  }
+
+  function responsiveLayoutChainReason(node) {
+    const doc = node.ownerDocument;
+    let current = node;
+    while (current && current !== doc.documentElement) {
+      const style = doc.defaultView.getComputedStyle(current);
+      if (style.display.includes("grid")) return current === node ? "网格布局对象" : "网格布局容器";
+      if (style.display.includes("flex")) return current === node ? "弹性布局对象" : "弹性布局容器";
+      if (style.position === "sticky") return current === node ? "粘性定位对象" : "粘性定位容器";
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function nodeLikelyMatchesResponsiveSelector(node) {
+    const id = node.id ? `#${cssEscape(node.id)}` : "";
+    const classes = [...(node.classList || [])].slice(0, 4).map((name) => `.${cssEscape(name)}`);
+    const tag = node.tagName?.toLowerCase?.() || "";
+    const selectors = [id, ...classes, tag].filter(Boolean);
+    if (!selectors.length) return false;
+    const styleText = [...node.ownerDocument.querySelectorAll("style")]
+      .filter((style) => !style.hasAttribute("data-chiselo-style"))
+      .map((style) => style.textContent || "")
+      .join("\n");
+    if (!/@media\b|@container\b/i.test(styleText)) return false;
+    return selectors.some((selector) => styleText.includes(selector));
   }
 
   function countResponsiveRules(doc, styleNodes) {

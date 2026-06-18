@@ -728,6 +728,12 @@ private struct ExportPreflightPanel: View {
                     }
                 )
             }
+            if (diagnostics.responsiveChangeCount ?? 0) > 0 {
+                ResponsiveChangeReviewCard(diagnostics: diagnostics) { elementId in
+                    dismiss()
+                    model.selectHTMLNode(id: elementId)
+                }
+            }
             PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
                 dismiss()
                 model.selectHTMLNode(id: elementId)
@@ -1090,6 +1096,124 @@ private struct VisualChangeReviewCard: View {
             return "\(changeCount) 处变化，\(targetPart)，\(revertableCount) 处可一键回退"
         }
         return "\(changeCount) 处变化，\(targetPart)"
+    }
+}
+
+private struct ResponsiveChangeReviewCard: View {
+    var diagnostics: HTMLDiagnostics
+    var onSelectTarget: (String) -> Void
+
+    @State private var targetIndex = 0
+
+    private let color = Color(red: 0.78, green: 0.47, blue: 0.06)
+
+    var body: some View {
+        let items = diagnostics.responsiveChangePreviewItems
+        let targetIds = diagnostics.responsiveChangeTargetIds
+        let count = diagnostics.responsiveChangeCount ?? targetIds.count
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.split.3x1")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(color)
+                    .frame(width: 22, height: 22)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("响应式变更复核")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
+                    Text("\(count) 个已修改对象受响应式布局影响")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(color)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Text(diagnostics.responsiveReviewDetail)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(items.prefix(5)) { item in
+                        Button {
+                            if let elementId = item.elementId {
+                                onSelectTarget(elementId)
+                            }
+                        } label: {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: responsiveIcon(for: item))
+                                    .font(.system(size: 10, weight: .heavy))
+                                    .foregroundStyle(color)
+                                    .frame(width: 18, height: 18)
+                                    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.label)
+                                        .font(.system(size: 11, weight: .heavy))
+                                        .foregroundStyle(MaterialTheme.ink)
+                                        .lineLimit(1)
+                                    Text(item.detail ?? item.kind)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(MaterialTheme.muted)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.82)
+                                }
+
+                                Spacer(minLength: 0)
+
+                                if item.elementId != nil {
+                                    Image(systemName: "scope")
+                                        .font(.system(size: 9, weight: .heavy))
+                                        .foregroundStyle(MaterialTheme.primary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(item.elementId == nil)
+                    }
+
+                    if count > items.prefix(5).count {
+                        Text("其余 \(count - items.prefix(5).count) 个响应式相关变化可通过定位器继续复核。")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                    }
+                }
+                .padding(10)
+                .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+            }
+
+            if !targetIds.isEmpty {
+                PPTXTargetNavigator(
+                    title: "响应式变化",
+                    icon: "rectangle.split.3x1",
+                    count: count,
+                    targetIds: targetIds,
+                    color: color,
+                    index: $targetIndex,
+                    onSelectTarget: onSelectTarget
+                )
+            }
+        }
+        .padding(14)
+        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func responsiveIcon(for item: HTMLVisualChangeItem) -> String {
+        if item.kind.contains("文字") { return "textformat" }
+        if item.kind.contains("图片") { return "photo" }
+        if item.kind.contains("位置") || item.kind.contains("尺寸") { return "arrow.up.left.and.arrow.down.right" }
+        if item.kind.contains("样式") { return "paintbrush" }
+        return "scope"
     }
 }
 
@@ -2476,6 +2600,10 @@ private extension HTMLDiagnostics {
     var responsiveReviewDetail: String {
         let responsiveRules = responsiveRuleCount ?? 0
         let responsiveRisks = responsiveLayoutRiskCount ?? 0
+        let responsiveChanges = responsiveChangeCount ?? 0
+        if responsiveChanges > 0 {
+            return "\(responsiveChanges) 个已修改对象处在响应式规则、弹性/网格或粘性布局影响链里，导出前建议检查窄屏和宽屏。"
+        }
         if responsiveRisks == 0 {
             return "未检测到明显响应式规则，常规宽度复核即可。"
         }
