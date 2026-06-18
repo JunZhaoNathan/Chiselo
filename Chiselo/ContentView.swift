@@ -4150,6 +4150,7 @@ private struct InspectorPanel: View {
     @State private var selectedTab: InspectorTab = .layout
     @State private var sourceDraft = ""
     @State private var sourceDraftElementID: String?
+    @State private var sourceDraftOriginalSnippet = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -4213,14 +4214,19 @@ private struct InspectorPanel: View {
     }
 
     private func syncSourceDraft(for element: EditorElement) {
+        let snippet = element.sourceSnippet ?? ""
         guard sourceDraftElementID != element.id else {
-            if sourceDraft.isEmpty, let snippet = element.sourceSnippet {
+            if sourceDraftOriginalSnippet != snippet {
+                sourceDraft = snippet
+                sourceDraftOriginalSnippet = snippet
+            } else if sourceDraft.isEmpty, !snippet.isEmpty {
                 sourceDraft = snippet
             }
             return
         }
         sourceDraftElementID = element.id
-        sourceDraft = element.sourceSnippet ?? ""
+        sourceDraftOriginalSnippet = snippet
+        sourceDraft = snippet
     }
 
     @ViewBuilder
@@ -5054,8 +5060,10 @@ private struct InspectorPanel: View {
     }
 
     private func restoreSourceDraft(for element: EditorElement) {
-        sourceDraft = element.sourceSnippet ?? ""
+        let snippet = element.sourceSnippet ?? ""
+        sourceDraft = snippet
         sourceDraftElementID = element.id
+        sourceDraftOriginalSnippet = snippet
         model.status = "已恢复为当前选中对象的原始源码片段"
     }
 
