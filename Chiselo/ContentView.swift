@@ -4702,6 +4702,8 @@ private struct InspectorPanel: View {
                     }
 
                     if !(element.sourceSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        let validation = sourceDraftValidation(for: element)
+
                         ScrollView(.horizontal, showsIndicators: true) {
                             TextEditor(text: $sourceDraft)
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -4716,6 +4718,8 @@ private struct InspectorPanel: View {
                             RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
                                 .stroke(MaterialTheme.hairline, lineWidth: 1)
                         )
+
+                        SourceDraftValidationBadge(validation: validation)
 
                         HStack(spacing: 8) {
                             Button {
@@ -4733,7 +4737,7 @@ private struct InspectorPanel: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MaterialButtonStyle(compact: true))
-                            .disabled(!canApplySourceDraft(for: element))
+                            .disabled(!canApplySourceDraft(for: element, validation: validation))
 
                             Button {
                                 model.selectHTMLNode(id: element.id)
@@ -4828,9 +4832,17 @@ private struct InspectorPanel: View {
     }
 
     private func canApplySourceDraft(for element: EditorElement) -> Bool {
+        canApplySourceDraft(for: element, validation: sourceDraftValidation(for: element))
+    }
+
+    private func canApplySourceDraft(for element: EditorElement, validation: SourceDraftValidation) -> Bool {
         let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !draft.isEmpty && draft != original
+        return !draft.isEmpty && draft != original && validation.severity != .error
+    }
+
+    private func sourceDraftValidation(for element: EditorElement) -> SourceDraftValidation {
+        SourceDraftValidation(original: element.sourceSnippet ?? "", draft: sourceDraft, originalTagName: element.tagName)
     }
 
     private func sourceSyncTitle(for element: EditorElement) -> String {
@@ -5107,6 +5119,166 @@ private struct SourceWritebackStatusBadge: View {
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(status.color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+}
+
+private struct SourceDraftValidationBadge: View {
+    var validation: SourceDraftValidation
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: validation.icon)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(validation.color)
+                .frame(width: 18, height: 18)
+                .background(validation.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(validation.title)
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text(validation.detail)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(validation.color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+}
+
+private struct SourceDraftValidation: Equatable {
+    enum Severity {
+        case ok
+        case warning
+        case error
+    }
+
+    var severity: Severity
+    var messages: [String]
+
+    init(original: String, draft: String, originalTagName: String?) {
+        let originalText = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let draftText = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        var messages: [String] = []
+        var severity: Severity = .ok
+
+        if draftText.isEmpty {
+            self.severity = .error
+            self.messages = ["源码片段为空。"]
+            return
+        }
+
+        let lowercasedDraft = draftText.lowercased()
+        let blockedPatterns = [
+            "<script",
+            "<style",
+            "<link",
+            "<meta",
+            "<base",
+            "<object",
+            "<embed",
+            " javascript:",
+            "\"javascript:",
+            "'javascript:",
+            " onload=",
+            " onclick=",
+            " onerror=",
+            " onmouseover="
+        ]
+        if blockedPatterns.contains(where: { lowercasedDraft.contains($0) }) {
+            severity = .error
+            messages.append("包含脚本、样式表、嵌入对象或事件属性，不能直接应用。")
+        }
+
+        let originalTag = Self.firstTagName(in: originalText)
+        let draftTag = Self.firstTagName(in: draftText)
+        if let originalTag, let draftTag, originalTag != draftTag {
+            severity = severity == .error ? .error : .warning
+            messages.append("顶层标签将从 <\(originalTag)> 变为 <\(draftTag)>。")
+        } else if let originalTagName, let draftTag, !originalTagName.isEmpty, originalTagName.lowercased() != draftTag {
+            severity = severity == .error ? .error : .warning
+            messages.append("顶层标签将从 <\(originalTagName.lowercased())> 变为 <\(draftTag)>。")
+        }
+
+        if Self.attributeValue("id", in: originalText) != Self.attributeValue("id", in: draftText) {
+            severity = severity == .error ? .error : .warning
+            messages.append("ID 将发生变化，可能影响 CSS 或脚本定位。")
+        }
+
+        if Self.normalizedClassValue(in: originalText) != Self.normalizedClassValue(in: draftText) {
+            severity = severity == .error ? .error : .warning
+            messages.append("class 将发生变化，可能影响样式命中。")
+        }
+
+        if originalText == draftText {
+            messages.append("源码片段未修改。")
+        } else if messages.isEmpty {
+            messages.append("结构校验通过，将替换当前选中对象。")
+        }
+
+        self.severity = severity
+        self.messages = Array(NSOrderedSet(array: messages)).compactMap { $0 as? String }
+    }
+
+    var title: String {
+        switch severity {
+        case .ok: return "源码校验通过"
+        case .warning: return "应用前复核"
+        case .error: return "不能应用"
+        }
+    }
+
+    var detail: String {
+        messages.prefix(3).joined(separator: " ")
+    }
+
+    var icon: String {
+        switch severity {
+        case .ok: return "checkmark.seal.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "xmark.octagon.fill"
+        }
+    }
+
+    var color: Color {
+        switch severity {
+        case .ok: return Color(red: 0.06, green: 0.52, blue: 0.26)
+        case .warning: return Color(red: 0.78, green: 0.47, blue: 0.06)
+        case .error: return MaterialTheme.accentDanger
+        }
+    }
+
+    private static func firstTagName(in html: String) -> String? {
+        guard let match = html.range(of: #"<\s*([a-zA-Z][a-zA-Z0-9-]*)"#, options: .regularExpression) else { return nil }
+        let token = String(html[match])
+        return token
+            .replacingOccurrences(of: "<", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ")
+            .first
+            .map { String($0).lowercased() }
+    }
+
+    private static func attributeValue(_ name: String, in html: String) -> String {
+        let pattern = #"\b"# + NSRegularExpression.escapedPattern(for: name) + #"\s*=\s*(['"])(.*?)\1"#
+        guard let match = html.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else { return "" }
+        let text = String(html[match])
+        guard let separator = text.firstIndex(of: "=") else { return "" }
+        return String(text[text.index(after: separator)...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+    }
+
+    private static func normalizedClassValue(in html: String) -> String {
+        attributeValue("class", in: html)
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
+            .filter { !$0.hasPrefix("chiselo") }
+            .sorted()
+            .joined(separator: " ")
     }
 }
 

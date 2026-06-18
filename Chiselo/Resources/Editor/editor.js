@@ -2433,7 +2433,67 @@
     return { ok: true, element };
   }
 
-  function applySelectedHTMLSource(html) {
+  function validateHTMLSourceReplacement(currentNode, replacement) {
+    const warnings = [];
+    const errors = [];
+
+    if (!currentNode || !replacement) {
+      return { ok: false, reason: "请先选中一个 HTML 对象。", warnings };
+    }
+
+    const forbiddenSelector = "script,style,link,meta,base,title,object,embed";
+    if (replacement.matches?.(forbiddenSelector) || replacement.querySelector?.(forbiddenSelector)) {
+      errors.push("源码片段包含脚本、样式表或嵌入对象，已阻止应用。");
+    }
+
+    const nodes = [replacement, ...(replacement.querySelectorAll?.("*") || [])];
+    for (const node of nodes) {
+      for (const attribute of [...node.attributes || []]) {
+        const name = attribute.name.toLowerCase();
+        const value = String(attribute.value || "").trim().toLowerCase();
+        if (name.startsWith("on")) {
+          errors.push("源码片段包含事件处理属性，已阻止应用。");
+        }
+        if (["href", "src", "xlink:href", "formaction"].includes(name) && value.startsWith("javascript:")) {
+          errors.push("源码片段包含 javascript: 链接，已阻止应用。");
+        }
+      }
+    }
+
+    const beforeTag = currentNode.tagName?.toLowerCase?.() || "";
+    const afterTag = replacement.tagName?.toLowerCase?.() || "";
+    if (beforeTag && afterTag && beforeTag !== afterTag) {
+      warnings.push(`顶层标签将从 <${beforeTag}> 变为 <${afterTag}>。`);
+    }
+
+    const beforeId = currentNode.getAttribute("id") || "";
+    const afterId = replacement.getAttribute("id") || "";
+    if (beforeId !== afterId) {
+      warnings.push(beforeId || afterId ? `ID 将从「${beforeId || "无"}」变为「${afterId || "无"}」。` : "ID 将发生变化。");
+    }
+
+    const beforeClass = normalizedClassList(currentNode);
+    const afterClass = normalizedClassList(replacement);
+    if (beforeClass !== afterClass) {
+      warnings.push(`class 将从「${beforeClass || "无"}」变为「${afterClass || "无"}」。`);
+    }
+
+    const uniqueErrors = [...new Set(errors)];
+    return {
+      ok: uniqueErrors.length === 0,
+      reason: uniqueErrors[0] || "",
+      warnings: [...new Set(warnings)]
+    };
+  }
+
+  function normalizedClassList(node) {
+    return [...node?.classList || []]
+      .filter((name) => !name.startsWith("chiselo"))
+      .sort()
+      .join(" ");
+  }
+
+  function validateSelectedHTMLSource(html) {
     if (editorMode !== "html") return { ok: false, reason: "当前不是 HTML 文档模式。" };
     if (!directSelectedNode || !directSelectedNode.isConnected) return { ok: false, reason: "请先选中一个 HTML 对象。" };
     if (directSelectionNodes().length > 1) return { ok: false, reason: "源码片段编辑暂不支持多选对象。" };
@@ -2442,8 +2502,19 @@
     const doc = directSelectedNode.ownerDocument;
     const parsed = parseSingleHTMLSourceElement(html, doc);
     if (!parsed.ok) return parsed;
+    const validation = validateHTMLSourceReplacement(directSelectedNode, parsed.element);
+    return {
+      ...validation,
+      element: parsed.element,
+      tagName: parsed.element.tagName?.toLowerCase?.() || ""
+    };
+  }
 
-    const replacement = parsed.element;
+  function applySelectedHTMLSource(html) {
+    const validation = validateSelectedHTMLSource(html);
+    if (!validation.ok) return validation;
+
+    const replacement = validation.element;
     const previousId = ensureDirectId(directSelectedNode);
     if (!replacement.dataset.chiseloId) replacement.dataset.chiseloId = previousId;
     prepareDirectSubtree(replacement);
@@ -2459,7 +2530,7 @@
     scheduleHTMLTreeChanged();
     scheduleHTMLDiagnosticsChanged();
     postSelectionChanged({ immediate: true });
-    return { ok: true, element: selectedElement(), sourceSnippet: replacement.outerHTML || "" };
+    return { ok: true, element: selectedElement(), sourceSnippet: replacement.outerHTML || "", warnings: validation.warnings || [] };
   }
 
   function normalizeDirectHTMLSource(input) {
@@ -8053,6 +8124,7 @@ ${htmlSlides}
     settleSelectedImage,
     setBackdropStyle,
     setSelectedHTMLText,
+    validateSelectedHTMLSource,
     updateElement
   };
 

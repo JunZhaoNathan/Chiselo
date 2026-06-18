@@ -47,6 +47,11 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const reselected = editor.selectHTMLById(selected.id);
           const reselectedSame = reselected && reselected.id === selected.id && String(reselected.sourceSnippet || '').includes('Synced title');
           const nextSource = snippet.replace('Synced title', 'Edited from source').replace('real source', 'source editor');
+          const warningPreview = editor.validateSelectedHTMLSource(nextSource.replace('class="source-card"', 'class="source-card changed-card"').replace('<article', '<section').replace('</article>', '</section>'));
+          const warningDetected = warningPreview.ok === true && Array.isArray(warningPreview.warnings) && warningPreview.warnings.some(item => String(item).includes('顶层标签')) && warningPreview.warnings.some(item => String(item).includes('class'));
+          const scriptRejected = editor.validateSelectedHTMLSource(nextSource.replace('</article>', '<script>alert(1)</script></article>'));
+          const handlerRejected = editor.applySelectedHTMLSource(nextSource.replace('<h2>', '<h2 onclick="alert(1)">'));
+          const dangerousRejected = scriptRejected.ok === false && handlerRejected.ok === false;
           const applyResult = editor.applySelectedHTMLSource(nextSource);
           const applied = applyResult && applyResult.ok === true && applyResult.element && applyResult.element.id === selected.id;
           const appliedSnippet = String(applyResult?.element?.sourceSnippet || '');
@@ -59,7 +64,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !reselectedSame || !applied || !sourceApplied || !exportClean || !undoRestored) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -67,6 +72,11 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               sourceFormatted,
               lineCount,
               reselectedSame,
+              warningPreview,
+              warningDetected,
+              scriptRejected,
+              handlerRejected,
+              dangerousRejected,
               applyResult,
               applied,
               sourceApplied,
@@ -84,6 +94,8 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             type: 'result',
             id: selected.id,
             lineCount,
+            warningDetected,
+            dangerousRejected,
             applied,
             sourceApplied,
             cleanExport: diagnostics.cleanExport,
