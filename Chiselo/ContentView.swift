@@ -1234,6 +1234,8 @@ private struct SourceWritebackReviewCard: View {
     var body: some View {
         let inlineItems = diagnostics.inlineStyleChangeItems
         let ruleItems = diagnostics.stylesheetRuleChangeItems
+        let ruleCount = diagnostics.stylesheetRuleWritebackCount ?? ruleItems.count
+        let ruleTargets = Array(diagnostics.stylesheetRuleWritebackTargets.prefix(6))
         let targetIds = diagnostics.sourceWritebackTargetIds
 
         VStack(alignment: .leading, spacing: 10) {
@@ -1248,7 +1250,7 @@ private struct SourceWritebackReviewCard: View {
                     Text("源码写回复核")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(MaterialTheme.ink)
-                    Text(sourceWritebackSubtitle(inlineCount: inlineItems.count, ruleCount: ruleItems.count))
+                    Text(sourceWritebackSubtitle(inlineCount: inlineItems.count, ruleCount: ruleCount))
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(color)
                 }
@@ -1272,11 +1274,15 @@ private struct SourceWritebackReviewCard: View {
                 .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
             }
 
+            if !ruleTargets.isEmpty {
+                SourceWritebackSelectorList(selectors: ruleTargets, totalCount: ruleCount, color: color)
+            }
+
             if !targetIds.isEmpty {
                 PPTXTargetNavigator(
                     title: "源码写回",
                     icon: "curlybraces.square",
-                    count: inlineItems.count + ruleItems.count,
+                    count: inlineItems.count + ruleCount,
                     targetIds: targetIds,
                     color: color,
                     index: $targetIndex,
@@ -1297,6 +1303,43 @@ private struct SourceWritebackReviewCard: View {
         if ruleCount > 0 { parts.append("\(ruleCount) 处写入 CSS 规则") }
         if inlineCount > 0 { parts.append("\(inlineCount) 处写入 inline style") }
         return parts.isEmpty ? "未检测到对象级源码写回" : parts.joined(separator: "，")
+    }
+}
+
+private struct SourceWritebackSelectorList: View {
+    var selectors: [String]
+    var totalCount: Int
+    var color: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "curlybraces")
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(Color(red: 0.06, green: 0.52, blue: 0.26))
+                .frame(width: 18, height: 18)
+                .background(Color(red: 0.06, green: 0.52, blue: 0.26).opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CSS 规则")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text(selectorDetail)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+
+    private var selectorDetail: String {
+        let visible = selectors.joined(separator: "、")
+        let hidden = max(0, totalCount - selectors.count)
+        return hidden > 0 ? "\(visible)，另 \(hidden) 条规则" : visible
     }
 }
 

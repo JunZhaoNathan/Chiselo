@@ -17,6 +17,7 @@ All notable changes to Chiselo will be documented here.
 - Added object-level source-writeback review so inline style edits and local CSS-rule writes can be listed and located before save or export.
 - Included the exact local CSS selector in source-writeback review rows so stylesheet edits show where they landed in the original HTML source.
 - Made stylesheet writeback diagnostics compare current CSS rules against the original baseline, so reverted rule edits no longer appear as active save/export changes.
+- Updated source-writeback review to use the active CSS-rule diagnostic count and show selector-only rows when a rule changed without a preview object row.
 - Kept direct-selection quick actions compact by default, with action buttons tucked behind an on-demand menu so selected text stays visible.
 - Quieted direct-selection chrome further: selected objects now show only a small on-demand action button, object labels stay inside the menu, hover labels avoid instruction text, and object right-clicks no longer open the browser menu outside text editing.
 - Added parent, child, children-group, previous/next sibling, and same-class selection correction actions to the compact quick-action menu for nested HTML.
