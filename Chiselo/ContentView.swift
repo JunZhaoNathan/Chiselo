@@ -4218,6 +4218,7 @@ private struct InspectorPanel: View {
             layerGroup
             alignmentGroup(for: element)
         case .html:
+            htmlSourceSyncGroup(element)
             htmlControlsGroup
         }
     }
@@ -4654,6 +4655,74 @@ private struct InspectorPanel: View {
     }
 
     @ViewBuilder
+    private func htmlSourceSyncGroup(_ element: EditorElement) -> some View {
+        if model.documentMode == "html" {
+            GroupBox("源码同步") {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(MaterialTheme.primary)
+                            .frame(width: 22, height: 22)
+                            .background(MaterialTheme.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: 7))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(sourceSyncTitle(for: element))
+                                .font(.system(size: 12, weight: .heavy))
+                                .foregroundStyle(MaterialTheme.ink)
+                            Text(sourceSyncDetail(for: element))
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(MaterialTheme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+
+                    if let snippet = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines), !snippet.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: true) {
+                            Text(snippet)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(MaterialTheme.ink)
+                                .textSelection(.enabled)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(minHeight: 72, maxHeight: 220, alignment: .topLeading)
+                        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                                .stroke(MaterialTheme.hairline, lineWidth: 1)
+                        )
+
+                        HStack(spacing: 8) {
+                            Button {
+                                copySourceSnippet(snippet)
+                            } label: {
+                                Label("复制片段", systemImage: "doc.on.doc")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(MaterialButtonStyle(compact: true))
+
+                            Button {
+                                model.selectHTMLNode(id: element.id)
+                            } label: {
+                                Label("定位对象", systemImage: "scope")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(MaterialButtonStyle(compact: true))
+                        }
+                    } else {
+                        Text("当前对象暂未生成可显示的源码片段。")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var htmlControlsGroup: some View {
         if model.documentMode == "html" {
             GroupBox("布局模式") {
@@ -4719,6 +4788,27 @@ private struct InspectorPanel: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(metrics.summary, forType: .string)
         model.status = "已复制几何复核信息"
+    }
+
+    private func copySourceSnippet(_ snippet: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(snippet, forType: .string)
+        model.status = "已复制选中对象源码片段"
+    }
+
+    private func sourceSyncTitle(for element: EditorElement) -> String {
+        let tag = element.tagName?.uppercased() ?? "HTML"
+        return "\(tag) 源码片段"
+    }
+
+    private func sourceSyncDetail(for element: EditorElement) -> String {
+        let lineCount = element.sourceSnippetLineCount ?? 0
+        let linePart = lineCount > 0 ? "\(lineCount) 行" : "当前对象"
+        let path = element.htmlPath ?? model.selectionPath
+        if let path, !path.isEmpty {
+            return "\(linePart)，与画面选中对象同步：\(path)"
+        }
+        return "\(linePart)，与画面选中对象同步。"
     }
 
     private func formatMetric(_ value: Double) -> String {

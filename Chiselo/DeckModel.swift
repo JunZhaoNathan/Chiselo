@@ -31,6 +31,8 @@ struct EditorElement: Codable, Identifiable, Equatable {
     var groupRole: String?
     var groupLabel: String?
     var sourceKind: String?
+    var sourceSnippet: String?
+    var sourceSnippetLineCount: Int?
     var editability: String?
     var fidelity: String?
     var captureNote: String?

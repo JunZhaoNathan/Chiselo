@@ -61,6 +61,7 @@ swift scripts/visual-change-revert-test.swift
 swift scripts/visual-change-added-revert-test.swift
 swift scripts/deck-gesture-smoothness-test.swift
 swift scripts/direct-html-source-cleanliness-test.swift
+swift scripts/direct-html-source-sync-test.swift
 swift scripts/direct-html-stylesheet-writeback-test.swift
 swift scripts/direct-html-responsive-change-review-test.swift
 swift scripts/direct-quick-actions-compact-test.swift

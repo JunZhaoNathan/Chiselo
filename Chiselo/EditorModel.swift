@@ -766,6 +766,8 @@ final class EditorModel: ObservableObject {
             groupRole: bridgeString(object["groupRole"]),
             groupLabel: bridgeString(object["groupLabel"]),
             sourceKind: bridgeString(object["sourceKind"]),
+            sourceSnippet: bridgeString(object["sourceSnippet"]),
+            sourceSnippetLineCount: bridgeInt(object["sourceSnippetLineCount"]),
             editability: bridgeString(object["editability"]),
             fidelity: bridgeString(object["fidelity"]),
             captureNote: bridgeString(object["captureNote"]),

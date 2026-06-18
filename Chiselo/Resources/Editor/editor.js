@@ -2131,6 +2131,7 @@
     if (shadow !== "none") payloadStyle.shadow = shadow;
     if (node.matches?.("img")) payloadStyle.objectFit = objectFitValue(style.objectFit, "fill");
     Object.assign(payloadStyle, directStyleWritebackPreview(node));
+    const sourceSnippet = directSourceSnippetForNode(node);
 
     return {
       id: ensureDirectId(node),
@@ -2139,6 +2140,9 @@
       htmlPath: directNodePath(node),
       semanticRole: semantic.role,
       semanticLabel: semantic.label,
+      sourceKind: "html-source",
+      sourceSnippet: sourceSnippet.text,
+      sourceSnippetLineCount: sourceSnippet.lineCount,
       layoutMode: directLayoutMode,
       imageSource: node.matches?.("img") ? (node.currentSrc || node.getAttribute("src") || "") : null,
       imageAlt: node.matches?.("img") ? (node.getAttribute("alt") || "") : null,
@@ -2363,6 +2367,49 @@
       stripChiseloAttributes(child);
     }
     return clone.outerHTML || "";
+  }
+
+  function directSourceSnippetForNode(node) {
+    const html = directVisualSnapshotHTML(node);
+    if (!html) return { text: "", lineCount: 0 };
+    const formatted = formatHTMLSnippet(html);
+    const lines = formatted.split("\n");
+    const maxLines = 36;
+    const visibleLines = lines.slice(0, maxLines);
+    const truncated = lines.length > maxLines || formatted.length > 5000;
+    let text = visibleLines.join("\n");
+    if (text.length > 5000) {
+      text = `${text.slice(0, 5000)}\n...`;
+    } else if (truncated) {
+      text = `${text}\n...`;
+    }
+    return { text, lineCount: lines.length };
+  }
+
+  function formatHTMLSnippet(html) {
+    const tokens = String(html || "")
+      .replace(/></g, ">\n<")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    let depth = 0;
+    const lines = [];
+    for (const token of tokens) {
+      const isClosing = /^<\//.test(token);
+      const isDoctype = /^<!/i.test(token);
+      if (isClosing) depth = Math.max(0, depth - 1);
+      lines.push(`${"  ".repeat(depth)}${token}`);
+      if (!isClosing && !isDoctype && /^<[^!?/][^>]*[^/]?>$/.test(token) && !isVoidHTMLTag(token)) {
+        depth += 1;
+      }
+    }
+    return lines.join("\n");
+  }
+
+  function isVoidHTMLTag(token) {
+    const match = String(token || "").match(/^<([a-z0-9-]+)/i);
+    if (!match) return false;
+    return new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]).has(match[1].toLowerCase());
   }
 
   function normalizeDirectHTMLSource(input) {
