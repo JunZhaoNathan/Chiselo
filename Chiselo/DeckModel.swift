@@ -130,6 +130,49 @@ struct HTMLVisualChangeItem: Codable, Equatable, Identifiable {
     }
 }
 
+enum VisualChangeFilter: String, CaseIterable, Identifiable {
+    case all
+    case text
+    case image
+    case geometry
+    case style
+    case deleted
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: return "全部"
+        case .text: return "文字"
+        case .image: return "图片"
+        case .geometry: return "位置尺寸"
+        case .style: return "样式"
+        case .deleted: return "删除"
+        }
+    }
+
+    func matches(_ item: HTMLVisualChangeItem) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .text:
+            return item.kind.contains("文字")
+        case .image:
+            return item.kind.contains("图片")
+        case .geometry:
+            return item.kind.contains("位置") || item.kind.contains("尺寸")
+        case .style:
+            return item.kind.contains("样式")
+        case .deleted:
+            return item.kind.contains("删除")
+        }
+    }
+
+    func items(from items: [HTMLVisualChangeItem]) -> [HTMLVisualChangeItem] {
+        self == .all ? items : items.filter(matches)
+    }
+}
+
 struct HTMLDiagnostics: Codable, Equatable {
     var mode: String
     var imageCount: Int
@@ -269,4 +312,47 @@ struct HTMLDiagnosticIssue: Codable, Identifiable, Equatable {
     var title: String
     var detail: String
     var elementId: String?
+}
+
+extension HTMLDiagnostics {
+    var visualChangeTargetIds: [String] {
+        normalizedTargetIds(visualChangeElementIds, fallback: visualChangeElementId)
+    }
+
+    var visualChangePreviewItems: [HTMLVisualChangeItem] {
+        visualChangeItems ?? []
+    }
+
+    func visualChangeTargetIds(for filter: VisualChangeFilter) -> [String] {
+        if filter == .all {
+            return visualChangeTargetIds
+        }
+
+        var seen = Set<String>()
+        return filter.items(from: visualChangePreviewItems).compactMap(\.elementId).filter { id in
+            guard !id.isEmpty, !seen.contains(id) else { return false }
+            seen.insert(id)
+            return true
+        }
+    }
+
+    private func normalizedTargetIds(_ values: [String]?, fallback: String?) -> [String] {
+        var output: [String] = []
+        var seen = Set<String>()
+        for value in values ?? [] {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !seen.contains(trimmed) else { continue }
+            seen.insert(trimmed)
+            output.append(trimmed)
+        }
+
+        if let fallback {
+            let trimmed = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty && !seen.contains(trimmed) {
+                output.append(trimmed)
+            }
+        }
+
+        return output
+    }
 }

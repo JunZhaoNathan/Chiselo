@@ -970,10 +970,13 @@ private struct VisualChangeReviewCard: View {
     var onSelectTarget: (String) -> Void
 
     @State private var targetIndex = 0
+    @State private var selectedFilter: VisualChangeFilter = .all
 
     var body: some View {
         let changeCount = diagnostics.visualChangeCount ?? 0
-        let targetIds = diagnostics.visualChangeTargetIds
+        let previewItems = diagnostics.visualChangePreviewItems
+        let filteredItems = selectedFilter.items(from: previewItems)
+        let targetIds = diagnostics.visualChangeTargetIds(for: selectedFilter)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -1000,6 +1003,14 @@ private struct VisualChangeReviewCard: View {
                 .foregroundStyle(MaterialTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if !previewItems.isEmpty {
+                VisualChangeFilterPicker(
+                    selection: $selectedFilter,
+                    items: previewItems,
+                    color: warningColor
+                )
+            }
+
             VisualSnapshotComparison(
                 snapshots: snapshots,
                 isCapturingSnapshot: isCapturingSnapshot,
@@ -1007,30 +1018,34 @@ private struct VisualChangeReviewCard: View {
                 onRefresh: onRefreshSnapshot
             )
 
-            if !diagnostics.visualChangePreviewItems.isEmpty {
-                VisualChangeMap(
-                    items: diagnostics.visualChangePreviewItems,
-                    totalCount: changeCount,
-                    canvasWidth: diagnostics.visualChangePreviewCanvasWidth,
-                    canvasHeight: diagnostics.visualChangePreviewCanvasHeight,
-                    color: warningColor,
-                    onSelectTarget: onSelectTarget
-                )
+            if !previewItems.isEmpty {
+                if filteredItems.isEmpty {
+                    VisualChangeEmptyFilter(filter: selectedFilter)
+                } else {
+                    VisualChangeMap(
+                        items: filteredItems,
+                        totalCount: selectedFilter == .all ? changeCount : filteredItems.count,
+                        canvasWidth: diagnostics.visualChangePreviewCanvasWidth,
+                        canvasHeight: diagnostics.visualChangePreviewCanvasHeight,
+                        color: warningColor,
+                        onSelectTarget: onSelectTarget
+                    )
 
-                VisualChangePreviewList(
-                    items: Array(diagnostics.visualChangePreviewItems.prefix(6)),
-                    totalCount: changeCount,
-                    previewCount: diagnostics.visualChangePreviewItems.count,
-                    color: warningColor,
-                    onSelectTarget: onSelectTarget
-                )
+                    VisualChangePreviewList(
+                        items: Array(filteredItems.prefix(6)),
+                        totalCount: selectedFilter == .all ? changeCount : filteredItems.count,
+                        previewCount: filteredItems.count,
+                        color: warningColor,
+                        onSelectTarget: onSelectTarget
+                    )
+                }
             }
 
             if !targetIds.isEmpty {
                 PPTXTargetNavigator(
-                    title: "视觉变更",
+                    title: selectedFilter == .all ? "视觉变更" : selectedFilter.title,
                     icon: "rectangle.2.swap",
-                    count: changeCount,
+                    count: targetIds.count,
                     targetIds: targetIds,
                     color: warningColor,
                     index: $targetIndex,
@@ -1060,6 +1075,52 @@ private struct VisualChangeReviewCard: View {
 
     private var warningColor: Color {
         Color(red: 0.78, green: 0.47, blue: 0.06)
+    }
+}
+
+private struct VisualChangeFilterPicker: View {
+    @Binding var selection: VisualChangeFilter
+    var items: [HTMLVisualChangeItem]
+    var color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Picker("变化类型", selection: $selection) {
+                ForEach(VisualChangeFilter.allCases) { filter in
+                    Text("\(filter.title) \(count(for: filter))")
+                        .tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Text(selection == .all ? "显示全部对象级变化。" : "仅显示\(selection.title)相关变化。")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+        }
+        .padding(8)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+    }
+
+    private func count(for filter: VisualChangeFilter) -> Int {
+        filter.items(from: items).count
+    }
+}
+
+private struct VisualChangeEmptyFilter: View {
+    var filter: VisualChangeFilter
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(MaterialTheme.muted)
+            Text("当前没有\(filter.title)类变化。")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(MaterialTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
     }
 }
 
@@ -2274,14 +2335,6 @@ private extension HTMLDiagnostics {
 
     var pptxFallbackTargetIds: [String] {
         normalizedTargetIds(pptxFallbackElementIds, fallback: pptxFallbackElementId)
-    }
-
-    var visualChangeTargetIds: [String] {
-        normalizedTargetIds(visualChangeElementIds, fallback: visualChangeElementId)
-    }
-
-    var visualChangePreviewItems: [HTMLVisualChangeItem] {
-        visualChangeItems ?? []
     }
 
     var visualChangePreviewCanvasWidth: Int {
