@@ -35,7 +35,7 @@ All notable changes to Chiselo will be documented here.
 - Added responsive-layout and source-writeback review signals so save/export preflight can flag multi-width checks and inline-style changes on stylesheet-backed HTML.
 - Added breakpoint-aware responsive review hints so changed HTML objects show nearby widths to check before save or export.
 - Added selected-object source writeback hints so users can see whether style edits will update a CSS rule or inline style before changing HTML.
-- Added a selected-object source sync panel that shows a clean HTML snippet for the visual selection and can re-locate the object from the Inspector.
+- Added a selected-object source sync panel that shows, edits, applies, copies, and re-locates a clean HTML snippet for the visual selection.
 - Added compact quick-action regression coverage to release preflight.
 - Added visual-change rollback regression coverage to release preflight.
 - Bumped the packaging version to `0.1.11` for the next preview build.

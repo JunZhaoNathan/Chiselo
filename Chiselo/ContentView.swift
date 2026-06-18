@@ -4148,6 +4148,8 @@ private struct GeometryMetrics {
 private struct InspectorPanel: View {
     @EnvironmentObject private var model: EditorModel
     @State private var selectedTab: InspectorTab = .layout
+    @State private var sourceDraft = ""
+    @State private var sourceDraftElementID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -4171,6 +4173,15 @@ private struct InspectorPanel: View {
                 .onAppear(perform: normalizeSelectedTab)
                 .onChange(of: model.documentMode) { _ in
                     normalizeSelectedTab()
+                }
+                .onAppear {
+                    syncSourceDraft(for: element)
+                }
+                .onChange(of: element.id) { _ in
+                    syncSourceDraft(for: element)
+                }
+                .onChange(of: element.sourceSnippet) { _ in
+                    syncSourceDraft(for: element)
                 }
 
                 ScrollView {
@@ -4199,6 +4210,17 @@ private struct InspectorPanel: View {
         if !availableTabs.contains(selectedTab) {
             selectedTab = .layout
         }
+    }
+
+    private func syncSourceDraft(for element: EditorElement) {
+        guard sourceDraftElementID != element.id else {
+            if sourceDraft.isEmpty, let snippet = element.sourceSnippet {
+                sourceDraft = snippet
+            }
+            return
+        }
+        sourceDraftElementID = element.id
+        sourceDraft = element.sourceSnippet ?? ""
     }
 
     @ViewBuilder
@@ -4679,13 +4701,13 @@ private struct InspectorPanel: View {
                         Spacer(minLength: 0)
                     }
 
-                    if let snippet = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines), !snippet.isEmpty {
+                    if !(element.sourceSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ScrollView(.horizontal, showsIndicators: true) {
-                            Text(snippet)
+                            TextEditor(text: $sourceDraft)
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(MaterialTheme.ink)
-                                .textSelection(.enabled)
                                 .padding(10)
+                                .scrollContentBackground(.hidden)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .frame(minHeight: 72, maxHeight: 220, alignment: .topLeading)
@@ -4697,7 +4719,7 @@ private struct InspectorPanel: View {
 
                         HStack(spacing: 8) {
                             Button {
-                                copySourceSnippet(snippet)
+                                copySourceSnippet(sourceDraft)
                             } label: {
                                 Label("复制片段", systemImage: "doc.on.doc")
                                     .frame(maxWidth: .infinity)
@@ -4705,9 +4727,18 @@ private struct InspectorPanel: View {
                             .buttonStyle(MaterialButtonStyle(compact: true))
 
                             Button {
+                                model.applySelectedHTMLSource(sourceDraft)
+                            } label: {
+                                Label("应用源码", systemImage: "checkmark.square")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(MaterialButtonStyle(compact: true))
+                            .disabled(!canApplySourceDraft(for: element))
+
+                            Button {
                                 model.selectHTMLNode(id: element.id)
                             } label: {
-                                Label("定位对象", systemImage: "scope")
+                                Label("定位", systemImage: "scope")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MaterialButtonStyle(compact: true))
@@ -4794,6 +4825,12 @@ private struct InspectorPanel: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(snippet, forType: .string)
         model.status = "已复制选中对象源码片段"
+    }
+
+    private func canApplySourceDraft(for element: EditorElement) -> Bool {
+        let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !draft.isEmpty && draft != original
     }
 
     private func sourceSyncTitle(for element: EditorElement) -> String {

@@ -1495,6 +1495,49 @@ final class EditorModel: ObservableObject {
         runJavaScript("window.ChiseloEditor?.selectHTMLById(\(literal));")
     }
 
+    func applySelectedHTMLSource(_ html: String) {
+        guard hasOpenDocument, documentMode == "html" else {
+            status = "请先打开 HTML 文件"
+            return
+        }
+
+        guard let literal = jsStringLiteral(html) else {
+            status = "源码片段包含无法提交的字符"
+            return
+        }
+
+        let source = "JSON.stringify(window.ChiseloEditor?.applySelectedHTMLSource?.(\(literal)) ?? null);"
+        webView?.evaluateJavaScript(source) { [weak self] result, error in
+            Task { @MainActor in
+                guard let self else { return }
+
+                if let error {
+                    self.status = "源码片段应用失败：\(error.localizedDescription)"
+                    return
+                }
+
+                guard let json = result as? String,
+                      json != "null",
+                      let data = json.data(using: .utf8),
+                      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    self.status = "源码片段应用失败：编辑器未返回结果"
+                    return
+                }
+
+                if (object["ok"] as? Bool) == true {
+                    if let element = self.bridgeElement(object["element"]) {
+                        self.updatePublished(\.selectedElement, to: element)
+                        self.updatePublished(\.selectionPath, to: element.htmlPath)
+                    }
+                    self.refreshHTMLDiagnostics()
+                    self.status = "已应用源码片段，可用撤销恢复"
+                } else {
+                    self.status = object["reason"] as? String ?? "源码片段应用失败"
+                }
+            }
+        }
+    }
+
     func revertHTMLVisualChange(changeKey: String) {
         guard hasOpenDocument, documentMode == "html" else {
             status = "请先打开 HTML 文件"

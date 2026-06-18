@@ -2412,6 +2412,56 @@
     return new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]).has(match[1].toLowerCase());
   }
 
+  function parseSingleHTMLSourceElement(html, doc) {
+    const source = String(html || "").trim();
+    if (!source) return { ok: false, reason: "源码片段为空。" };
+    const template = doc.createElement("template");
+    try {
+      template.innerHTML = source;
+    } catch (error) {
+      return { ok: false, reason: `源码片段无法解析：${error?.message || error}` };
+    }
+    const elements = [...template.content.children];
+    if (elements.length !== 1) return { ok: false, reason: "源码片段必须只有一个顶层 HTML 对象。" };
+    const extraText = [...template.content.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
+    if (extraText.length) return { ok: false, reason: "顶层对象外不能包含额外文本。" };
+    const element = elements[0];
+    if (element.matches?.("html,head,body,script,style,link,meta,title")) {
+      return { ok: false, reason: "当前安全编辑只支持替换页面正文对象。" };
+    }
+    return { ok: true, element };
+  }
+
+  function applySelectedHTMLSource(html) {
+    if (editorMode !== "html") return { ok: false, reason: "当前不是 HTML 文档模式。" };
+    if (!directSelectedNode || !directSelectedNode.isConnected) return { ok: false, reason: "请先选中一个 HTML 对象。" };
+    if (directSelectionNodes().length > 1) return { ok: false, reason: "源码片段编辑暂不支持多选对象。" };
+    if (directSelectedNode.matches?.("html,body")) return { ok: false, reason: "不能直接替换 html/body 根对象。" };
+
+    const doc = directSelectedNode.ownerDocument;
+    const parsed = parseSingleHTMLSourceElement(html, doc);
+    if (!parsed.ok) return parsed;
+
+    const replacement = parsed.element;
+    const previousId = ensureDirectId(directSelectedNode);
+    if (!replacement.dataset.chiseloId) replacement.dataset.chiseloId = previousId;
+    prepareDirectSubtree(replacement);
+
+    const parent = directSelectedNode.parentElement;
+    if (!parent) return { ok: false, reason: "当前对象没有可替换的父级。" };
+
+    pushHistory({ label: "编辑源码片段" });
+    parent.replaceChild(replacement, directSelectedNode);
+    selectDirectNode(replacement);
+    updateSelectionBox();
+    scheduleDirectLayoutRefresh();
+    scheduleHTMLTreeChanged();
+    scheduleHTMLDiagnosticsChanged();
+    postSelectionChanged({ immediate: true });
+    return { ok: true, element: selectedElement(), sourceSnippet: replacement.outerHTML || "" };
+  }
+
   function normalizeDirectHTMLSource(input) {
     let html = String(input || "");
     const hadDoctype = /^\s*<!doctype/i.test(html);
@@ -7953,6 +8003,7 @@ ${htmlSlides}
 
   window.ChiseloEditor = {
     addHTMLToSelection,
+    applySelectedHTMLSource,
     command,
     exportHTML,
     getDeck: () => clone(deck),

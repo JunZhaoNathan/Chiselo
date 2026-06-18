@@ -46,8 +46,20 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const sourceFormatted = snippet.includes('\\n  <h2>');
           const reselected = editor.selectHTMLById(selected.id);
           const reselectedSame = reselected && reselected.id === selected.id && String(reselected.sourceSnippet || '').includes('Synced title');
+          const nextSource = snippet.replace('Synced title', 'Edited from source').replace('real source', 'source editor');
+          const applyResult = editor.applySelectedHTMLSource(nextSource);
+          const applied = applyResult && applyResult.ok === true && applyResult.element && applyResult.element.id === selected.id;
+          const appliedSnippet = String(applyResult?.element?.sourceSnippet || '');
+          const exported = editor.exportHTML();
+          const diagnostics = editor.getImportDiagnostics();
+          const sourceApplied = appliedSnippet.includes('Edited from source') && exported.includes('Edited from source') && exported.includes('source editor');
+          const exportClean = diagnostics.cleanExport === true && diagnostics.exportArtifactCount === 0 && !exported.includes('data-chiselo');
+          editor.command('undo');
+          await sleep(180);
+          const undoExport = editor.exportHTML();
+          const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !reselectedSame) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !reselectedSame || !applied || !sourceApplied || !exportClean || !undoRestored) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -55,6 +67,14 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               sourceFormatted,
               lineCount,
               reselectedSame,
+              applyResult,
+              applied,
+              sourceApplied,
+              exportClean,
+              undoRestored,
+              diagnostics,
+              exported,
+              undoExport,
               selected,
               snippet
             }));
@@ -64,6 +84,10 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             type: 'result',
             id: selected.id,
             lineCount,
+            applied,
+            sourceApplied,
+            cleanExport: diagnostics.cleanExport,
+            undoRestored,
             snippet
           });
         })().catch(error => {
