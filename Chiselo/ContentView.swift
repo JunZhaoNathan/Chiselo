@@ -5545,11 +5545,19 @@ private struct SourceDraftValidation: Equatable {
         }
         let added = max(0, draftLines.count - originalLines.count)
         let removed = max(0, originalLines.count - draftLines.count)
+        let originalStructure = snippetStructure(original)
+        let draftStructure = snippetStructure(draft)
 
         var parts: [String] = []
         if changed > 0 { parts.append("改动 \(changed) 行") }
         if added > 0 { parts.append("新增 \(added) 行") }
         if removed > 0 { parts.append("删除 \(removed) 行") }
+        if originalStructure.tagCount != draftStructure.tagCount {
+            parts.append("标签 \(originalStructure.tagCount)->\(draftStructure.tagCount)")
+        }
+        if originalStructure.childCount != draftStructure.childCount {
+            parts.append("子对象 \(originalStructure.childCount)->\(draftStructure.childCount)")
+        }
 
         if parts.isEmpty {
             parts.append("空白或缩进变化")
@@ -5561,6 +5569,49 @@ private struct SourceDraftValidation: Equatable {
         text
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    private static func snippetStructure(_ html: String) -> (tagCount: Int, childCount: Int) {
+        let regex = try? NSRegularExpression(pattern: #"<\s*/?\s*([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*>"#)
+        let range = NSRange(html.startIndex..<html.endIndex, in: html)
+        let tagTokens = regex?.matches(in: html, range: range).compactMap { match -> String? in
+            guard let range = Range(match.range, in: html) else { return nil }
+            return String(html[range])
+        } ?? []
+        let tagCount = tagTokens.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("</") }.count
+        let childCount = max(0, topLevelChildStartCount(in: tagTokens) - 1)
+        return (tagCount, childCount)
+    }
+
+    private static func topLevelChildStartCount(in tagTokens: [String]) -> Int {
+        var depth = 0
+        var count = 0
+
+        for token in tagTokens {
+            let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            let isClosing = trimmed.hasPrefix("</")
+            let isSelfClosing = trimmed.hasSuffix("/>") || isVoidTagToken(trimmed)
+
+            if isClosing {
+                depth = max(0, depth - 1)
+                continue
+            }
+
+            if depth == 1 {
+                count += 1
+            }
+
+            if !isSelfClosing {
+                depth += 1
+            }
+        }
+
+        return count
+    }
+
+    private static func isVoidTagToken(_ token: String) -> Bool {
+        guard let tag = firstTagName(in: token) else { return false }
+        return ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"].contains(tag)
     }
 }
 
