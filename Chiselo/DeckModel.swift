@@ -390,6 +390,16 @@ extension HTMLDiagnostics {
         visualChangePreviewItems.filter { $0.writebackKind == "stylesheet-rule" }
     }
 
+    var stylesheetRuleWritebackTargets: [String] {
+        var seen = Set<String>()
+        return stylesheetRuleChangeItems.compactMap(\.writebackTarget).filter { value in
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !seen.contains(trimmed) else { return false }
+            seen.insert(trimmed)
+            return true
+        }
+    }
+
     var sourceWritebackTargetIds: [String] {
         var seen = Set<String>()
         return (inlineStyleChangeItems + stylesheetRuleChangeItems).compactMap(\.elementId).filter { id in

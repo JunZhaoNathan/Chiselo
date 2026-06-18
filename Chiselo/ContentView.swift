@@ -1345,17 +1345,22 @@ private struct SourceWritebackRow: View {
     }
 
     private var detail: String {
-        let label = [item.writebackLabel, item.writebackTarget]
-            .compactMap { value -> String? in
-                let trimmed = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmed.isEmpty ? nil : trimmed
-            }
-            .joined(separator: " ")
-        let prefix = label.isEmpty ? "源码" : label
+        let prefix = writebackPrefix
         if let afterValue = item.afterValue, !afterValue.isEmpty {
             return "\(prefix)：\(afterValue)"
         }
         return "\(prefix)：\(item.detail ?? item.kind)"
+    }
+
+    private var writebackPrefix: String {
+        if item.writebackKind == "stylesheet-rule" {
+            let target = (item.writebackTarget ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return target.isEmpty ? "CSS 规则" : "CSS 规则 \(target)"
+        }
+        if item.writebackKind == "inline-style" {
+            return "inline style"
+        }
+        return item.writebackLabel ?? "源码"
     }
 
     private var iconColor: Color {
@@ -2768,11 +2773,13 @@ private extension HTMLDiagnostics {
         let ruleWrites = stylesheetRuleWritebackCount ?? 0
         let stylesheets = stylesheetCount ?? 0
         let externalSheets = externalStylesheetCount ?? 0
+        let ruleTargets = stylesheetRuleWritebackTargets.prefix(3).joined(separator: "、")
+        let ruleTargetSuffix = ruleTargets.isEmpty ? "" : "（\(ruleTargets)）"
         if ruleWrites > 0 && inlineChanges == 0 {
-            return "\(ruleWrites) 次样式修改已写入本地 class 规则，源码更易继续维护。"
+            return "\(ruleWrites) 次样式修改已写入本地 CSS 规则\(ruleTargetSuffix)，源码更易继续维护。"
         }
         if ruleWrites > 0 && inlineChanges > 0 {
-            return "\(ruleWrites) 次写入 class 规则，\(inlineChanges) 个对象仍写入 inline style。"
+            return "\(ruleWrites) 次写入 CSS 规则\(ruleTargetSuffix)，\(inlineChanges) 个对象仍写入 inline style。"
         }
         if inlineChanges > 0 && stylesheets > 0 {
             return "\(inlineChanges) 个变化写入 inline style；原稿含 \(stylesheets) 个样式表，保存前建议抽查源码。"
