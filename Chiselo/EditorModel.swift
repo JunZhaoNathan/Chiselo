@@ -132,6 +132,7 @@ final class EditorModel: ObservableObject {
     @Published var redoDepth: Int = 0
     @Published var nextUndoLabel: String?
     @Published var nextRedoLabel: String?
+    @Published var sourceDraftMappingSummary: SourceDraftMappingSummary?
 
     var hasOpenDocument: Bool {
         activeTabID != nil && !tabs.isEmpty
@@ -174,6 +175,7 @@ final class EditorModel: ObservableObject {
     private var htmlVisualBaselineImage: NSImage?
     private var pendingHTMLVisualBaselineCapture = false
     private var tabSafetyInfo: [UUID: OpenTabSafetyInfo] = [:]
+    private var sourceDraftValidationRequestID: Int = 0
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -826,6 +828,43 @@ final class EditorModel: ObservableObject {
         }
 
         return items.isEmpty ? nil : items
+    }
+
+    private func bridgeSourceDraftMappingSummary(_ value: Any?) -> SourceDraftMappingSummary? {
+        guard let object = value as? [String: Any],
+              let preservedCount = bridgeInt(object["preservedCount"]),
+              let addedCount = bridgeInt(object["addedCount"]),
+              let unmatchedCount = bridgeInt(object["unmatchedCount"]),
+              let values = object["items"] as? [[String: Any]] else {
+            return nil
+        }
+
+        let items = values.compactMap { object -> SourceDraftMappingItem? in
+            guard let slot = bridgeString(object["slot"]),
+                  let kind = bridgeString(object["kind"]),
+                  let nextTagName = bridgeString(object["nextTagName"]),
+                  let nextLabel = bridgeString(object["nextLabel"]) else {
+                return nil
+            }
+
+            return SourceDraftMappingItem(
+                slot: slot,
+                kind: kind,
+                previousID: bridgeString(object["previousID"]),
+                previousTagName: bridgeString(object["previousTagName"]),
+                previousLabel: bridgeString(object["previousLabel"]),
+                nextTagName: nextTagName,
+                nextLabel: nextLabel,
+                score: bridgeInt(object["score"])
+            )
+        }
+
+        return SourceDraftMappingSummary(
+            preservedCount: preservedCount,
+            addedCount: addedCount,
+            unmatchedCount: unmatchedCount,
+            items: items
+        )
     }
 
     private func bridgeElementFrame(_ value: Any?) -> EditorElementFrame? {
@@ -1570,11 +1609,61 @@ final class EditorModel: ObservableObject {
                         self.updatePublished(\.selectedElement, to: element)
                         self.updatePublished(\.selectionPath, to: element.htmlPath)
                     }
+                    self.updatePublished(\.sourceDraftMappingSummary, to: nil)
                     self.refreshHTMLDiagnostics()
                     self.status = "已应用源码片段，可用撤销恢复"
                 } else {
                     self.status = object["reason"] as? String ?? "源码片段应用失败"
                 }
+            }
+        }
+    }
+
+    func validateSelectedHTMLSourceDraft(_ html: String, completion: @escaping (SourceDraftMappingSummary?) -> Void) {
+        guard hasOpenDocument, documentMode == "html" else {
+            updatePublished(\.sourceDraftMappingSummary, to: nil)
+            completion(nil)
+            return
+        }
+
+        guard let literal = jsStringLiteral(html) else {
+            updatePublished(\.sourceDraftMappingSummary, to: nil)
+            completion(nil)
+            return
+        }
+
+        sourceDraftValidationRequestID += 1
+        let requestID = sourceDraftValidationRequestID
+        let source = "JSON.stringify(window.ChiseloEditor?.validateSelectedHTMLSource?.(\(literal)) ?? null);"
+        webView?.evaluateJavaScript(source) { [weak self] result, error in
+            Task { @MainActor in
+                guard let self else {
+                    completion(nil)
+                    return
+                }
+                guard requestID == self.sourceDraftValidationRequestID else {
+                    completion(nil)
+                    return
+                }
+
+                if error != nil {
+                    self.updatePublished(\.sourceDraftMappingSummary, to: nil)
+                    completion(nil)
+                    return
+                }
+
+                guard let json = result as? String,
+                      json != "null",
+                      let data = json.data(using: .utf8),
+                      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    self.updatePublished(\.sourceDraftMappingSummary, to: nil)
+                    completion(nil)
+                    return
+                }
+
+                let mapping = self.bridgeSourceDraftMappingSummary(object["mappingSummary"])
+                self.updatePublished(\.sourceDraftMappingSummary, to: mapping)
+                completion(mapping)
             }
         }
     }

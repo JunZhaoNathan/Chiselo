@@ -2585,7 +2585,8 @@
     return {
       ...validation,
       element: parsed.element,
-      tagName: parsed.element.tagName?.toLowerCase?.() || ""
+      tagName: parsed.element.tagName?.toLowerCase?.() || "",
+      mappingSummary: validation.ok ? sourceDraftMappingSummary(directSelectedNode, parsed.element) : null
     };
   }
 
@@ -2635,6 +2636,65 @@
         replacement.dataset.chiseloId = previous.dataset.chiseloId;
       }
     }
+  }
+
+  function sourceDraftMappingSummary(previousRoot, replacementRoot) {
+    if (!previousRoot || !replacementRoot) return null;
+
+    const previousNodes = [previousRoot, ...([...previousRoot.querySelectorAll?.("*") || []].filter((node) => directSourceNodeIsVisible(node)))];
+    const replacementNodes = [replacementRoot, ...([...replacementRoot.querySelectorAll?.("*") || []].filter((node) => directSourceNodeIsVisible(node)))];
+    const pairs = directSourceMatchedChildPairs(previousNodes, replacementNodes);
+    const matchedPrevious = new Set(pairs.map((pair) => pair.previous));
+    const matchedReplacement = new Set(pairs.map((pair) => pair.replacement));
+
+    const items = [];
+    for (const pair of pairs.slice(0, 8)) {
+      items.push({
+        slot: "preserved",
+        kind: "保留原对象",
+        previousID: pair.previous.dataset?.chiseloId || "",
+        previousTagName: pair.previous.tagName?.toLowerCase?.() || "",
+        previousLabel: directSourcePreviewLabel(pair.previous),
+        nextTagName: pair.replacement.tagName?.toLowerCase?.() || "",
+        nextLabel: directSourcePreviewLabel(pair.replacement),
+        score: Math.round(pair.score || 0)
+      });
+    }
+
+    const addedNodes = replacementNodes.filter((node) => !matchedReplacement.has(node)).slice(0, 4);
+    for (const node of addedNodes) {
+      items.push({
+        slot: "added",
+        kind: "新增对象",
+        previousID: null,
+        previousTagName: null,
+        previousLabel: null,
+        nextTagName: node.tagName?.toLowerCase?.() || "",
+        nextLabel: directSourcePreviewLabel(node),
+        score: null
+      });
+    }
+
+    const unmatchedNodes = previousNodes.filter((node) => !matchedPrevious.has(node)).slice(0, 4);
+    for (const node of unmatchedNodes) {
+      items.push({
+        slot: "unmatched",
+        kind: "原对象将替换",
+        previousID: node.dataset?.chiseloId || "",
+        previousTagName: node.tagName?.toLowerCase?.() || "",
+        previousLabel: directSourcePreviewLabel(node),
+        nextTagName: "",
+        nextLabel: "",
+        score: null
+      });
+    }
+
+    return {
+      preservedCount: pairs.length,
+      addedCount: replacementNodes.filter((node) => !matchedReplacement.has(node)).length,
+      unmatchedCount: previousNodes.filter((node) => !matchedPrevious.has(node)).length,
+      items
+    };
   }
 
   function directSourceMatchedChildPairs(previousChildren, replacementChildren) {
@@ -2766,6 +2826,13 @@
   function directSourceMatchText(node) {
     if (!node) return "";
     return normalizedText(node).slice(0, 64);
+  }
+
+  function directSourcePreviewLabel(node) {
+    if (!node) return "";
+    const tag = node.tagName?.toLowerCase?.() || "";
+    const text = normalizedText(node).slice(0, 28);
+    return text ? `${tag}「${text}」` : directNodeToken(node);
   }
 
   function directSourceIdentityTokens(node) {

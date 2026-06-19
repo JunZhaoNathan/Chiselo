@@ -62,6 +62,28 @@ struct EditorSourceNodeItem: Codable, Identifiable, Equatable {
     var depth: Int?
 }
 
+struct SourceDraftMappingItem: Codable, Equatable, Identifiable {
+    var slot: String
+    var kind: String
+    var previousID: String?
+    var previousTagName: String?
+    var previousLabel: String?
+    var nextTagName: String
+    var nextLabel: String
+    var score: Int?
+
+    var id: String {
+        "\(slot)-\(previousID ?? "new")-\(nextTagName)-\(nextLabel)"
+    }
+}
+
+struct SourceDraftMappingSummary: Codable, Equatable {
+    var preservedCount: Int
+    var addedCount: Int
+    var unmatchedCount: Int
+    var items: [SourceDraftMappingItem]
+}
+
 struct EditorElementFrame: Codable, Equatable {
     var label: String?
     var x: Double

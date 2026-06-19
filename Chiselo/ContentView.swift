@@ -4151,6 +4151,7 @@ private struct InspectorPanel: View {
     @State private var sourceDraft = ""
     @State private var sourceDraftElementID: String?
     @State private var sourceDraftOriginalSnippet = ""
+    @State private var pendingSourceDraftValidationID: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -4183,6 +4184,9 @@ private struct InspectorPanel: View {
                 }
                 .onChange(of: element.sourceSnippet) { _ in
                     syncSourceDraft(for: element)
+                }
+                .onChange(of: sourceDraft) { _ in
+                    refreshSourceDraftValidationPreview(for: element)
                 }
 
                 ScrollView {
@@ -4219,14 +4223,17 @@ private struct InspectorPanel: View {
             if sourceDraftOriginalSnippet != snippet {
                 sourceDraft = snippet
                 sourceDraftOriginalSnippet = snippet
+                refreshSourceDraftValidationPreview(for: element)
             } else if sourceDraft.isEmpty, !snippet.isEmpty {
                 sourceDraft = snippet
+                refreshSourceDraftValidationPreview(for: element)
             }
             return
         }
         sourceDraftElementID = element.id
         sourceDraftOriginalSnippet = snippet
         sourceDraft = snippet
+        refreshSourceDraftValidationPreview(for: element)
     }
 
     @ViewBuilder
@@ -4735,6 +4742,10 @@ private struct InspectorPanel: View {
 
                         SourceDraftValidationBadge(validation: validation)
 
+                        if let mappingSummary = validation.mappingSummary, sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines) != (element.sourceSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines) {
+                            sourceDraftMappingSummaryGroup(mappingSummary)
+                        }
+
                         if let siblingItems = element.sourceSiblingItems, siblingItems.count > 1 {
                             sourceSiblingNavigationGroup(siblingItems, selectedID: element.id)
                         }
@@ -5091,6 +5102,7 @@ private struct InspectorPanel: View {
         sourceDraft = snippet
         sourceDraftElementID = element.id
         sourceDraftOriginalSnippet = snippet
+        model.sourceDraftMappingSummary = nil
         model.status = "已恢复为当前选中对象的原始源码片段"
     }
 
@@ -5111,7 +5123,30 @@ private struct InspectorPanel: View {
     }
 
     private func sourceDraftValidation(for element: EditorElement) -> SourceDraftValidation {
-        SourceDraftValidation(original: element.sourceSnippet ?? "", draft: sourceDraft, originalTagName: element.tagName)
+        SourceDraftValidation(
+            original: element.sourceSnippet ?? "",
+            draft: sourceDraft,
+            originalTagName: element.tagName,
+            mappingSummary: model.sourceDraftMappingSummary
+        )
+    }
+
+    private func refreshSourceDraftValidationPreview(for element: EditorElement) {
+        guard model.documentMode == "html" else { return }
+
+        let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !draft.isEmpty, draft != original else {
+            model.sourceDraftMappingSummary = nil
+            return
+        }
+
+        let validationID = UUID()
+        pendingSourceDraftValidationID = validationID
+        model.validateSelectedHTMLSourceDraft(sourceDraft) { summary in
+            guard pendingSourceDraftValidationID == validationID else { return }
+            model.sourceDraftMappingSummary = summary
+        }
     }
 
     private func sourceSyncTitle(for element: EditorElement) -> String {
@@ -5127,6 +5162,87 @@ private struct InspectorPanel: View {
             return "\(linePart)，与画面选中对象同步：\(path)"
         }
         return "\(linePart)，与画面选中对象同步。"
+    }
+
+    private func sourceDraftMappingSummaryGroup(_ summary: SourceDraftMappingSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                Text("对象同步预览")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Spacer(minLength: 0)
+                Text("保留 \(summary.preservedCount) · 新增 \(summary.addedCount) · 替换 \(summary.unmatchedCount)")
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.muted)
+            }
+
+            ForEach(summary.items.prefix(6)) { item in
+                sourceDraftMappingRow(item)
+            }
+
+            if summary.items.count > 6 {
+                Text("其余 \(summary.items.count - 6) 项映射已折叠，应用后仍可继续逐项定位复核。")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+            }
+        }
+        .padding(8)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private func sourceDraftMappingRow(_ item: SourceDraftMappingItem) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(item.kind)
+                .font(.system(size: 8, weight: .heavy))
+                .foregroundStyle(sourceDraftMappingColor(for: item))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(sourceDraftMappingColor(for: item).opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 2) {
+                if let previousLabel = item.previousLabel, !previousLabel.isEmpty {
+                    Text(previousLabel)
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+
+                if !item.nextLabel.isEmpty {
+                    Text(item.nextLabel)
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(MaterialTheme.ink)
+                } else if item.slot == "unmatched" {
+                    Text("这处原对象在新片段里没有稳定对应项。")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.ink)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if let score = item.score {
+                Text("\(score)")
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.muted)
+            }
+        }
+    }
+
+    private func sourceDraftMappingColor(for item: SourceDraftMappingItem) -> Color {
+        switch item.slot {
+        case "preserved":
+            return Color(red: 0.06, green: 0.52, blue: 0.26)
+        case "added":
+            return MaterialTheme.primary
+        default:
+            return Color(red: 0.78, green: 0.47, blue: 0.06)
+        }
     }
 
     private func formatMetric(_ value: Double) -> String {
@@ -5435,13 +5551,15 @@ private struct SourceDraftValidation: Equatable {
     var severity: Severity
     var messages: [String]
     var changeSummary: String?
+    var mappingSummary: SourceDraftMappingSummary?
 
-    init(original: String, draft: String, originalTagName: String?) {
+    init(original: String, draft: String, originalTagName: String?, mappingSummary: SourceDraftMappingSummary? = nil) {
         let originalText = original.trimmingCharacters(in: .whitespacesAndNewlines)
         let draftText = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         var messages: [String] = []
         var severity: Severity = .ok
         let changeSummary = Self.changeSummary(original: originalText, draft: draftText)
+        self.mappingSummary = mappingSummary
 
         if draftText.isEmpty {
             self.severity = .error
@@ -5501,6 +5619,7 @@ private struct SourceDraftValidation: Equatable {
         self.severity = severity
         self.messages = Array(NSOrderedSet(array: messages)).compactMap { $0 as? String }
         self.changeSummary = changeSummary
+        self.mappingSummary = mappingSummary
     }
 
     var title: String {
