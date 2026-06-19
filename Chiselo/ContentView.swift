@@ -4222,15 +4222,18 @@ private struct InspectorPanel: View {
         let snippet = element.sourceSnippet ?? ""
         guard sourceDraftElementID != element.id else {
             if sourceDraftOriginalSnippet != snippet {
+                invalidateSourceDraftValidationPreview()
                 sourceDraft = snippet
                 sourceDraftOriginalSnippet = snippet
                 scheduleSourceDraftValidationPreview(for: element, delay: 0)
             } else if sourceDraft.isEmpty, !snippet.isEmpty {
+                invalidateSourceDraftValidationPreview()
                 sourceDraft = snippet
                 scheduleSourceDraftValidationPreview(for: element, delay: 0)
             }
             return
         }
+        invalidateSourceDraftValidationPreview()
         sourceDraftElementID = element.id
         sourceDraftOriginalSnippet = snippet
         sourceDraft = snippet
@@ -5100,10 +5103,10 @@ private struct InspectorPanel: View {
 
     private func restoreSourceDraft(for element: EditorElement) {
         let snippet = element.sourceSnippet ?? ""
+        invalidateSourceDraftValidationPreview()
         sourceDraft = snippet
         sourceDraftElementID = element.id
         sourceDraftOriginalSnippet = snippet
-        model.sourceDraftMappingSummary = nil
         model.status = "已恢复为当前选中对象的原始源码片段"
     }
 
@@ -5164,6 +5167,12 @@ private struct InspectorPanel: View {
             guard pendingSourceDraftValidationID == validationID else { return }
             model.sourceDraftMappingSummary = summary
         }
+    }
+
+    private func invalidateSourceDraftValidationPreview() {
+        sourceDraftValidationTask?.cancel()
+        pendingSourceDraftValidationID = UUID()
+        model.sourceDraftMappingSummary = nil
     }
 
     private func sourceSyncTitle(for element: EditorElement) -> String {
@@ -5285,6 +5294,7 @@ private struct InspectorPanel: View {
             return
         }
 
+        invalidateSourceDraftValidationPreview()
         model.selectHTMLNode(id: previousID)
         model.status = item.slot == "unmatched" ? "已定位将被替换的原对象" : "已定位将保留的原对象"
     }
