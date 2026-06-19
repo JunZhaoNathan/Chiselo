@@ -59,6 +59,8 @@ struct EditorSourceNodeItem: Codable, Identifiable, Equatable {
     var tagName: String
     var label: String
     var path: String
+    var canEditText: Bool?
+    var textPreview: String?
     var depth: Int?
 }
 

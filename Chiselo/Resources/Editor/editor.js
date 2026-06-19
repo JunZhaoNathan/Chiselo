@@ -2447,11 +2447,14 @@
   }
 
   function directSourceNodeItem(node, depth, options = {}) {
+    const textPreview = normalizedText(node).slice(0, 72);
     return {
       id: ensureDirectId(node),
       tagName: node.tagName.toLowerCase(),
       label: options.compactLabel ? directNodeToken(node) : htmlTreeLabel(node),
       path: directNodePath(node),
+      canEditText: directNodeAllowsTextEdit(node),
+      textPreview,
       depth
     };
   }

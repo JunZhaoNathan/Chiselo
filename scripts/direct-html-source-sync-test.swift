@@ -59,6 +59,11 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const articleSelectionOk = !!articleSelection && articleSelection.tagName === 'article' && String(articleSelection.sourceSnippet || '').includes('sourceTarget');
           const selectedH2Item = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
           const selectedStrongItem = childItems.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const childMetadataVisible = selectedH2Item?.canEditText === true
+            && String(selectedH2Item?.textPreview || '').includes('Synced title')
+            && selectedStrongItem?.canEditText === true
+            && String(selectedStrongItem?.textPreview || '').includes('real source')
+            && Number(selectedStrongItem?.depth || 0) >= 2;
           const originalH2Id = String(selectedH2Item && selectedH2Item.id || '');
           const originalStrongId = String(selectedStrongItem && selectedStrongItem.id || '');
           const h2Selection = selectedH2Item ? editor.selectHTMLById(selectedH2Item.id) : null;
@@ -130,7 +135,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           editor.command('undo');
           await sleep(180);
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !mappingPreviewDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored || !structureShiftIdsStable || !structureShiftSelectionOk) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !childMetadataVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !mappingPreviewDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored || !structureShiftIdsStable || !structureShiftSelectionOk) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -143,6 +148,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               siblingItems,
               articleSelectionOk,
               sourceChildItemsVisible,
+              childMetadataVisible,
               childItems,
               h2SelectionOk,
               h2Snippet,
@@ -195,6 +201,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             sourceAncestorItemsVisible,
             sourceSiblingItemsAvailable,
             sourceChildItemsVisible,
+            childMetadataVisible,
             articleSelectionOk,
             h2SelectionOk,
             sourceSiblingItemsVisible,

@@ -4863,7 +4863,7 @@ private struct InspectorPanel: View {
 
     private func sourceAncestorNavigationButton(_ item: EditorSourceNodeItem, isSelected: Bool) -> some View {
         Button {
-            model.selectHTMLNode(id: item.id)
+            locateSourceNodeItem(item, statusPrefix: "已定位源码路径")
         } label: {
             Text(item.label.isEmpty ? item.tagName.uppercased() : item.label)
                 .font(.system(size: 9, weight: .heavy, design: .monospaced))
@@ -4919,7 +4919,7 @@ private struct InspectorPanel: View {
 
     private func sourceSiblingNavigationButton(_ item: EditorSourceNodeItem, isSelected: Bool) -> some View {
         Button {
-            model.selectHTMLNode(id: item.id)
+            locateSourceNodeItem(item, statusPrefix: "已定位同级对象")
         } label: {
             HStack(spacing: 5) {
                 Text(item.tagName.uppercased())
@@ -4985,26 +4985,45 @@ private struct InspectorPanel: View {
 
     private func sourceChildNavigationRow(_ item: EditorSourceNodeItem) -> some View {
         Button {
-            model.selectHTMLNode(id: item.id)
+            locateSourceNodeItem(item, statusPrefix: "已定位源码子对象")
         } label: {
-            HStack(spacing: 7) {
+            HStack(alignment: .top, spacing: 7) {
                 Text(item.tagName.uppercased())
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
                     .foregroundStyle(MaterialTheme.primaryDark)
                     .frame(width: 38, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.label.isEmpty ? item.tagName : item.label)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(MaterialTheme.ink)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    HStack(spacing: 5) {
+                        Text(item.label.isEmpty ? item.tagName : item.label)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(MaterialTheme.ink)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
 
-                    Text(item.path)
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(MaterialTheme.muted)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        if item.canEditText == true {
+                            Text("可改字")
+                                .font(.system(size: 8, weight: .heavy))
+                                .foregroundStyle(MaterialTheme.primaryDark)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(MaterialTheme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
+                        }
+                    }
+
+                    if let preview = item.textPreview, !preview.isEmpty {
+                        Text(preview)
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    } else {
+                        Text(item.path)
+                            .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(MaterialTheme.muted)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -5025,6 +5044,13 @@ private struct InspectorPanel: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(MaterialTheme.separator, lineWidth: 1)
         )
+        .help(item.path)
+    }
+
+    private func locateSourceNodeItem(_ item: EditorSourceNodeItem, statusPrefix: String) {
+        invalidateSourceDraftValidationPreview()
+        model.selectHTMLNode(id: item.id)
+        model.status = "\(statusPrefix)：\(item.tagName.uppercased())"
     }
 
     @ViewBuilder

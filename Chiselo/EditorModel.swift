@@ -823,6 +823,8 @@ final class EditorModel: ObservableObject {
                 tagName: tagName,
                 label: label,
                 path: path,
+                canEditText: bridgeBool(object["canEditText"]),
+                textPreview: bridgeString(object["textPreview"]),
                 depth: bridgeInt(object["depth"])
             )
         }
