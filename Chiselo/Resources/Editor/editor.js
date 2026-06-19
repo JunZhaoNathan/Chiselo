@@ -4561,13 +4561,35 @@
       : Number(node.dataset.chiseloTranslateY || 0) + (rect.y - currentRect.y);
     const baseTransform = useCache ? context.baseTransform : node.dataset.chiseloBaseTransform;
     const base = baseTransform === "none" ? "" : baseTransform;
+    const baselineRect = useCache ? context.startRect : currentRect;
+    const sizeChanged = Math.abs(rect.w - baselineRect.w) > 1 || Math.abs(rect.h - baselineRect.h) > 1;
+    const canWriteSize = sizeChanged && !directShouldPreserveFlowSize(node);
 
     node.dataset.chiseloTranslateX = String(Math.round(tx));
     node.dataset.chiseloTranslateY = String(Math.round(ty));
     node.style.boxSizing = "border-box";
-    node.style.width = `${Math.max(MIN_SIZE, Math.round(rect.w))}px`;
-    node.style.height = `${Math.max(MIN_SIZE, Math.round(rect.h))}px`;
+    if (canWriteSize) {
+      node.style.width = `${Math.max(MIN_SIZE, Math.round(rect.w))}px`;
+      node.style.height = `${Math.max(MIN_SIZE, Math.round(rect.h))}px`;
+    }
     node.style.transform = `${base} translate(${Math.round(tx)}px, ${Math.round(ty)}px)`.trim();
+  }
+
+  function directShouldPreserveFlowSize(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE || node.matches?.("html,body")) return false;
+    const win = node.ownerDocument.defaultView;
+    const style = win.getComputedStyle(node);
+    const parentStyle = node.parentElement ? win.getComputedStyle(node.parentElement) : null;
+    const display = String(style.display || "");
+    const parentDisplay = String(parentStyle?.display || "");
+    const containerType = String(style.containerType || "normal");
+    if (style.position === "absolute" || style.position === "fixed") return false;
+    return display.includes("flex")
+      || display.includes("grid")
+      || parentDisplay.includes("flex")
+      || parentDisplay.includes("grid")
+      || containerType !== "normal"
+      || style.position === "sticky";
   }
 
   function positionedAncestor(node) {

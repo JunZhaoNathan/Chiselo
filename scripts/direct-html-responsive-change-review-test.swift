@@ -62,7 +62,35 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
           const hasStructuredReason = String(item.responsiveReason || '').includes('布局') && String(item.responsiveLayoutKind || '').includes('布局') && Array.isArray(item.responsiveReviewWidths) && item.responsiveReviewWidths.includes(620);
           const hasReason = String(item.detail || '').includes('断点附近宽度') && String(item.afterValue || '').includes('布局') && hasStructuredReason && hasBreakpointWidths;
 
-          if ((diagnostics.responsiveRuleCount || 0) < 1 || (diagnostics.responsiveLayoutRiskCount || 0) < 1 || (diagnostics.responsiveChangeCount || 0) < 1 || !matchedTarget || items.length < 1 || !hasReason || !issue || issue.elementId !== target.id) {
+          const appMain = editor.selectHTML('.mock-main');
+          if (!appMain) throw new Error('Could not select mock app main pane.');
+          const appDoc = document.querySelector('iframe.html-frame')?.contentDocument;
+          const appMainNode = appDoc?.querySelector('.mock-main');
+          const appAsideNode = appDoc?.querySelector('.mock-ai');
+          const beforeMainRect = appMainNode?.getBoundingClientRect?.();
+          const beforeAsideRect = appAsideNode?.getBoundingClientRect?.();
+          editor.command('setLayoutTransform');
+          editor.updateElement({
+            id: appMain.id,
+            x: appMain.x,
+            y: appMain.y,
+            w: appMain.w + 120,
+            h: appMain.h + 40
+          });
+          await sleep(180);
+          const afterMainRect = appMainNode?.getBoundingClientRect?.();
+          const afterAsideRect = appAsideNode?.getBoundingClientRect?.();
+          const mainStyleAttr = appMainNode?.getAttribute('style') || '';
+          const appSidebarStayedRight = beforeMainRect && beforeAsideRect && afterMainRect && afterAsideRect
+            && afterAsideRect.top < afterMainRect.bottom - 24
+            && afterAsideRect.left >= afterMainRect.right - 2;
+          const flowSizePreserved = appMainNode
+            && !/width\\s*:/.test(mainStyleAttr)
+            && !/height\\s*:/.test(mainStyleAttr)
+            && Math.abs(afterMainRect.width - beforeMainRect.width) < 2
+            && Math.abs(afterMainRect.height - beforeMainRect.height) < 2;
+
+          if ((diagnostics.responsiveRuleCount || 0) < 1 || (diagnostics.responsiveLayoutRiskCount || 0) < 1 || (diagnostics.responsiveChangeCount || 0) < 1 || !matchedTarget || items.length < 1 || !hasReason || !issue || issue.elementId !== target.id || !appSidebarStayedRight || !flowSizePreserved) {
             throw new Error(JSON.stringify({
               responsiveRuleCount: diagnostics.responsiveRuleCount,
               responsiveLayoutRiskCount: diagnostics.responsiveLayoutRiskCount,
@@ -72,7 +100,14 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
               targetId: target.id,
               targetIds,
               items,
-              issue
+              issue,
+              appSidebarStayedRight,
+              flowSizePreserved,
+              beforeMainRect: beforeMainRect ? { x: beforeMainRect.x, y: beforeMainRect.y, width: beforeMainRect.width, height: beforeMainRect.height } : null,
+              afterMainRect: afterMainRect ? { x: afterMainRect.x, y: afterMainRect.y, width: afterMainRect.width, height: afterMainRect.height } : null,
+              beforeAsideRect: beforeAsideRect ? { x: beforeAsideRect.x, y: beforeAsideRect.y, width: beforeAsideRect.width, height: beforeAsideRect.height } : null,
+              afterAsideRect: afterAsideRect ? { x: afterAsideRect.x, y: afterAsideRect.y, width: afterAsideRect.width, height: afterAsideRect.height } : null,
+              mainStyleAttr
             }));
           }
 
@@ -84,6 +119,8 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
             responsiveChangeCount: diagnostics.responsiveChangeCount,
             responsiveChangeElementIds: targetIds,
             issueElementId: issue.elementId,
+            appSidebarStayedRight,
+            flowSizePreserved,
             cleanExport: diagnostics.cleanExport
           });
         })().catch(error => {
@@ -133,10 +170,15 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
         .feature-grid { display: flex; gap: 20px; align-items: stretch; }
         .feature-card { flex: 1 1 0; min-width: 180px; padding: 22px; background: rgb(248, 250, 252); color: rgb(15, 23, 42); border: 1px solid rgb(203, 213, 225); }
         .plain-note { margin-top: 28px; width: 280px; padding: 18px; background: rgb(241, 245, 249); }
+        .mock-app { display: flex; flex-wrap: wrap; gap: 16px; width: 1040px; margin-top: 42px; padding: 16px; background: rgb(15, 23, 42); color: rgb(226, 232, 240); box-sizing: border-box; }
+        .mock-main { flex: 1 1 0; min-width: 0; min-height: 280px; padding: 18px; border: 1px solid rgb(51, 65, 85); box-sizing: border-box; }
+        .mock-ai { flex: 0 0 330px; min-height: 280px; padding: 18px; border: 1px solid rgb(20, 184, 166); box-sizing: border-box; }
         @media (max-width: 620px) {
           main { width: 100%; padding: 24px; }
           .feature-grid { flex-direction: column; }
           .feature-card { min-width: 0; }
+          .mock-app { width: 100%; }
+          .mock-ai { flex-basis: 100%; }
         }
       </style>
     </head>
@@ -147,6 +189,16 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
           <article class="feature-card">Responsive card B</article>
         </section>
         <p class="plain-note">Plain note outside the edited target.</p>
+        <section class="mock-app">
+          <div class="mock-main">
+            <h2>Main editor</h2>
+            <p>Code, preview, log and editing controls stay in the main pane.</p>
+          </div>
+          <aside class="mock-ai">
+            <h2>AI panel</h2>
+            <p>This sidebar must stay on the right after object adjustment.</p>
+          </aside>
+        </section>
       </main>
     </body>
     </html>
