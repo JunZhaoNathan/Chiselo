@@ -149,6 +149,22 @@ final class EditorModel: ObservableObject {
         openedURL != nil
     }
 
+    var activeBackupReminderText: String? {
+        guard let activeTabID,
+              let safety = tabSafetyInfo[activeTabID] else {
+            return nil
+        }
+
+        if let warning = safety.warning {
+            return warning
+        }
+        if let backupURL = safety.backupURL {
+            let prefix = safety.backupCreated ? "已自动备份原始文件" : "已找到原始备份"
+            return "\(prefix)：\(backupURL.lastPathComponent)"
+        }
+        return "应用修改前，建议先备份原始 HTML 文件。"
+    }
+
     weak var webView: WKWebView?
     private var openedURL: URL?
     private let safeFileHistory = SafeFileHistory()

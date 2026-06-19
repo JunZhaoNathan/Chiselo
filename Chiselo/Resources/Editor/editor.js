@@ -2616,19 +2616,199 @@
   function preserveDirectSourceChildIds(previousRoot, replacementRoot) {
     if (!previousRoot || !replacementRoot) return;
 
-    const previousByKey = new Map();
-    for (const node of previousRoot.querySelectorAll?.("*") || []) {
-      const key = directRelativeElementKey(previousRoot, node);
-      const id = node.dataset?.chiseloId || "";
-      if (key && id && !previousByKey.has(key)) previousByKey.set(key, id);
+    if (!replacementRoot.dataset?.chiseloId && previousRoot.dataset?.chiseloId) {
+      replacementRoot.dataset.chiseloId = previousRoot.dataset.chiseloId;
     }
 
-    for (const node of replacementRoot.querySelectorAll?.("*") || []) {
-      if (node.dataset?.chiseloId) continue;
-      const key = directRelativeElementKey(replacementRoot, node);
-      const id = key ? previousByKey.get(key) : "";
-      if (id) node.dataset.chiseloId = id;
+    preserveDirectSourceSubtreeIds(previousRoot, replacementRoot);
+  }
+
+  function preserveDirectSourceSubtreeIds(previousNode, replacementNode) {
+    const previousChildren = [...previousNode.querySelectorAll?.("*") || []]
+      .filter((node) => directSourceNodeIsVisible(node));
+    const replacementChildren = [...replacementNode.querySelectorAll?.("*") || []]
+      .filter((node) => directSourceNodeIsVisible(node));
+    if (!previousChildren.length || !replacementChildren.length) return;
+
+    for (const { previous, replacement } of directSourceMatchedChildPairs(previousChildren, replacementChildren)) {
+      if (previous.dataset?.chiseloId && !replacement.dataset?.chiseloId) {
+        replacement.dataset.chiseloId = previous.dataset.chiseloId;
+      }
     }
+  }
+
+  function directSourceMatchedChildPairs(previousChildren, replacementChildren) {
+    const candidates = [];
+
+    for (let previousIndex = 0; previousIndex < previousChildren.length; previousIndex += 1) {
+      for (let replacementIndex = 0; replacementIndex < replacementChildren.length; replacementIndex += 1) {
+        const previous = previousChildren[previousIndex];
+        const replacement = replacementChildren[replacementIndex];
+        const score = directSourceMatchScore(previous, replacement, previousIndex, replacementIndex);
+        if (score > 0) {
+          candidates.push({ previous, replacement, score, previousIndex, replacementIndex });
+        }
+      }
+    }
+
+    candidates.sort((left, right) =>
+      right.score - left.score ||
+      left.previousIndex - right.previousIndex ||
+      left.replacementIndex - right.replacementIndex
+    );
+
+    const matchedPrevious = new Set();
+    const matchedReplacement = new Set();
+    const assignments = [];
+
+    for (const candidate of candidates) {
+      if (candidate.score < 18) continue;
+      if (matchedPrevious.has(candidate.previous) || matchedReplacement.has(candidate.replacement)) continue;
+      matchedPrevious.add(candidate.previous);
+      matchedReplacement.add(candidate.replacement);
+      assignments.push(candidate);
+    }
+
+    return assignments;
+  }
+
+  function directSourceMatchScore(previous, replacement, previousIndex = 0, replacementIndex = 0) {
+    if (!previous || !replacement) return Number.NEGATIVE_INFINITY;
+
+    let score = 0;
+    const previousTag = previous.tagName?.toLowerCase?.() || "";
+    const replacementTag = replacement.tagName?.toLowerCase?.() || "";
+    if (previousTag && replacementTag && previousTag === replacementTag) score += 24;
+
+    const previousId = previous.getAttribute?.("id") || "";
+    const replacementId = replacement.getAttribute?.("id") || "";
+    if (previousId && replacementId) {
+      if (previousId === replacementId) {
+        score += 120;
+      } else if (directStringSimilarity(previousId, replacementId) >= 0.75) {
+        score += 30;
+      }
+    } else if (previousId || replacementId) {
+      score += 4;
+    }
+
+    score += directSourceClassScore(previous, replacement);
+    score += directSourceTokenScore(previous, replacement);
+    score += directSourceTextScore(previous, replacement);
+
+    const previousCount = directSourceMatchableChildren(previous).length;
+    const replacementCount = directSourceMatchableChildren(replacement).length;
+    score += Math.max(0, 10 - Math.abs(previousCount - replacementCount));
+
+    const previousKey = previous.parentElement ? directRelativeElementKey(previous.parentElement, previous) : "";
+    const replacementKey = replacement.parentElement ? directRelativeElementKey(replacement.parentElement, replacement) : "";
+    if (previousKey && previousKey === replacementKey) score += 24;
+
+    score += Math.max(0, 12 - Math.abs(previousIndex - replacementIndex) * 3);
+    return score;
+  }
+
+  function directSourceClassScore(previous, replacement) {
+    const previousClasses = normalizedClassList(previous).split(/\s+/).filter(Boolean);
+    const replacementClasses = normalizedClassList(replacement).split(/\s+/).filter(Boolean);
+    if (!previousClasses.length && !replacementClasses.length) return 0;
+
+    const previousSet = new Set(previousClasses);
+    const replacementSet = new Set(replacementClasses);
+    let shared = 0;
+    for (const name of previousSet) {
+      if (replacementSet.has(name)) shared += 1;
+    }
+
+    const union = new Set([...previousSet, ...replacementSet]).size || 1;
+    let score = Math.round((shared / union) * 18);
+    if (previousClasses.length && replacementClasses.length && previousClasses.join("|") === replacementClasses.join("|")) {
+      score += 12;
+    }
+    return score;
+  }
+
+  function directSourceTokenScore(previous, replacement) {
+    const previousTokens = directSourceIdentityTokens(previous);
+    const replacementTokens = directSourceIdentityTokens(replacement);
+    if (!previousTokens.length && !replacementTokens.length) return 0;
+
+    const previousSet = new Set(previousTokens);
+    const replacementSet = new Set(replacementTokens);
+    let shared = 0;
+    for (const token of previousSet) {
+      if (replacementSet.has(token)) shared += 1;
+    }
+
+    return Math.min(24, shared * 8);
+  }
+
+  function directSourceTextScore(previous, replacement) {
+    const previousText = directSourceMatchText(previous);
+    const replacementText = directSourceMatchText(replacement);
+    if (!previousText && !replacementText) return 0;
+    if (previousText && previousText === replacementText) return 18;
+
+    const previousTrimmed = previousText.replace(/\s+/g, " ");
+    const replacementTrimmed = replacementText.replace(/\s+/g, " ");
+    if (!previousTrimmed || !replacementTrimmed) return 0;
+
+    if (previousTrimmed === replacementTrimmed) return 18;
+    if (previousTrimmed.includes(replacementTrimmed) || replacementTrimmed.includes(previousTrimmed)) {
+      return Math.min(16, Math.max(previousTrimmed.length, replacementTrimmed.length) / 2);
+    }
+
+    const prefixLength = directCommonPrefixLength(previousTrimmed, replacementTrimmed);
+    if (prefixLength >= 4) return Math.min(10, prefixLength);
+    return 0;
+  }
+
+  function directSourceMatchText(node) {
+    if (!node) return "";
+    return normalizedText(node).slice(0, 64);
+  }
+
+  function directSourceIdentityTokens(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return [];
+
+    const attributes = ["role", "aria-label", "aria-labelledby", "title", "alt", "name", "placeholder", "type", "data-testid", "data-name"];
+    const tokens = [];
+    for (const attribute of attributes) {
+      const value = node.getAttribute?.(attribute);
+      if (value) tokens.push(value.trim().toLowerCase());
+    }
+    return [...new Set(tokens)];
+  }
+
+  function directSourceMatchableChildren(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return [];
+    return [...node.children].filter((child) => directSourceNodeIsVisible(child));
+  }
+
+  function directCommonPrefixLength(left, right) {
+    const length = Math.min(left.length, right.length);
+    let index = 0;
+    while (index < length && left[index] === right[index]) index += 1;
+    return index;
+  }
+
+  function directStringSimilarity(left, right) {
+    const a = String(left || "").trim().toLowerCase();
+    const b = String(right || "").trim().toLowerCase();
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+
+    const longest = Math.max(a.length, b.length);
+    const prefix = directCommonPrefixLength(a, b);
+    const suffix = directCommonSuffixLength(a, b);
+    return Math.max(prefix, suffix) / longest;
+  }
+
+  function directCommonSuffixLength(left, right) {
+    const max = Math.min(left.length, right.length);
+    let index = 0;
+    while (index < max && left[left.length - 1 - index] === right[right.length - 1 - index]) index += 1;
+    return index;
   }
 
   function directRelativeElementKey(root, node) {

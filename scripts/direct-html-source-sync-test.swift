@@ -98,7 +98,31 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const undoExport = editor.exportHTML();
           const undoRestored = undoExport.includes('Synced title') && !undoExport.includes('Edited from source');
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored) {
+          editor.selectHTML('#sourceTarget');
+          const structureShiftBase = editor.selectHTML('#sourceTarget');
+          const structureShiftBaseChildren = Array.isArray(structureShiftBase?.sourceChildItems) ? structureShiftBase.sourceChildItems : [];
+          const structureShiftBaseH2 = structureShiftBaseChildren.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
+          const structureShiftBaseStrong = structureShiftBaseChildren.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const structureShiftSource = [
+            '<article id="sourceTarget" class="source-card">',
+            '  <header>',
+            '    <h2>Edited from source</h2>',
+            '  </header>',
+            '  <p>This is <strong>source editor</strong> mapped to a visual object.</p>',
+            '</article>'
+          ].join('\\n');
+          const structureShiftApply = editor.applySelectedHTMLSource(structureShiftSource);
+          const structureShiftChildren = Array.isArray(structureShiftApply?.element?.sourceChildItems) ? structureShiftApply.element.sourceChildItems : [];
+          const structureShiftH2 = structureShiftChildren.find(item => String(item && item.tagName || '').toLowerCase() === 'h2');
+          const structureShiftStrong = structureShiftChildren.find(item => String(item && item.tagName || '').toLowerCase() === 'strong');
+          const structureShiftIdsStable = structureShiftApply?.ok === true && structureShiftH2?.id === structureShiftBaseH2?.id && structureShiftStrong?.id === structureShiftBaseStrong?.id;
+          const structureShiftSelectH2 = structureShiftH2 ? editor.selectHTMLById(structureShiftH2.id) : null;
+          const structureShiftSelectStrong = structureShiftStrong ? editor.selectHTMLById(structureShiftStrong.id) : null;
+          const structureShiftSelectionOk = !!structureShiftSelectH2 && !!structureShiftSelectStrong && structureShiftSelectH2.tagName === 'h2' && structureShiftSelectStrong.tagName === 'strong';
+          editor.command('undo');
+          await sleep(180);
+
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored || !structureShiftIdsStable || !structureShiftSelectionOk) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -135,6 +159,16 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               sourceApplied,
               exportClean,
               undoRestored,
+              structureShiftApply,
+              structureShiftBase,
+              structureShiftBaseChildren,
+              structureShiftBaseH2,
+              structureShiftBaseStrong,
+              structureShiftChildren,
+              structureShiftH2,
+              structureShiftStrong,
+              structureShiftIdsStable,
+              structureShiftSelectionOk,
               diagnostics,
               exported,
               undoExport,
@@ -161,6 +195,8 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             sourceApplied,
             cleanExport: diagnostics.cleanExport,
             undoRestored,
+            structureShiftIdsStable,
+            structureShiftSelectionOk,
             snippet
           });
         })().catch(error => {

@@ -4729,6 +4729,10 @@ private struct InspectorPanel: View {
                                 .stroke(MaterialTheme.hairline, lineWidth: 1)
                         )
 
+                        if let backupReminder = model.activeBackupReminderText {
+                            sourceBackupReminderBanner(backupReminder)
+                        }
+
                         SourceDraftValidationBadge(validation: validation)
 
                         if let siblingItems = element.sourceSiblingItems, siblingItems.count > 1 {
@@ -4782,6 +4786,29 @@ private struct InspectorPanel: View {
                 }
             }
         }
+    }
+
+    private func sourceBackupReminderBanner(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "externaldrive.badge.timemachine")
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(MaterialTheme.primary)
+                .frame(width: 18, height: 18)
+                .background(MaterialTheme.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("先确认原始备份")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text(text)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(MaterialTheme.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
     }
 
     private func sourceAncestorNavigationGroup(_ items: [EditorSourceNodeItem], selectedID: String) -> some View {
