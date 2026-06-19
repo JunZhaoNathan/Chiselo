@@ -4779,7 +4779,7 @@ private struct InspectorPanel: View {
                             Button {
                                 model.applySelectedHTMLSource(sourceDraft)
                             } label: {
-                                Label("应用源码", systemImage: "checkmark.square")
+                                Label(sourceApplyButtonTitle(validation), systemImage: validation.mappingSummary?.hasStructureRisk == true ? "exclamationmark.triangle" : "checkmark.square")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MaterialButtonStyle(compact: true))
@@ -5228,10 +5228,15 @@ private struct InspectorPanel: View {
                 Spacer(minLength: 0)
                 Text("保留 \(summary.preservedCount) · 新增 \(summary.addedCount) · 替换 \(summary.unmatchedCount)")
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(MaterialTheme.muted)
+                    .foregroundStyle(summary.hasStructureRisk ? Color(red: 0.78, green: 0.47, blue: 0.06) : MaterialTheme.muted)
             }
 
-            ForEach(summary.items.prefix(6)) { item in
+            Text(summary.riskSummary)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(summary.hasStructureRisk ? Color(red: 0.78, green: 0.47, blue: 0.06) : MaterialTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(sourceDraftMappingPreviewItems(summary)) { item in
                 sourceDraftMappingRow(item)
             }
 
@@ -5247,6 +5252,23 @@ private struct InspectorPanel: View {
             RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
                 .stroke(MaterialTheme.hairline, lineWidth: 1)
         )
+    }
+
+    private func sourceDraftMappingPreviewItems(_ summary: SourceDraftMappingSummary) -> [SourceDraftMappingItem] {
+        Array(summary.items.sorted { left, right in
+            if sourceDraftMappingPriority(left) == sourceDraftMappingPriority(right) {
+                return left.id < right.id
+            }
+            return sourceDraftMappingPriority(left) < sourceDraftMappingPriority(right)
+        }.prefix(6))
+    }
+
+    private func sourceDraftMappingPriority(_ item: SourceDraftMappingItem) -> Int {
+        switch item.slot {
+        case "unmatched": return 0
+        case "added": return 1
+        default: return 2
+        }
     }
 
     private func sourceDraftMappingRow(_ item: SourceDraftMappingItem) -> some View {
@@ -5312,6 +5334,10 @@ private struct InspectorPanel: View {
     private func sourceDraftMappingCanLocate(_ item: SourceDraftMappingItem) -> Bool {
         guard let previousID = item.previousID, !previousID.isEmpty else { return false }
         return item.slot == "preserved" || item.slot == "unmatched"
+    }
+
+    private func sourceApplyButtonTitle(_ validation: SourceDraftValidation) -> String {
+        validation.mappingSummary?.hasStructureRisk == true ? "复核并应用" : "应用源码"
     }
 
     private func locateSourceDraftMappingItem(_ item: SourceDraftMappingItem) {
@@ -5688,6 +5714,15 @@ private struct SourceDraftValidation: Equatable {
         if Self.normalizedClassValue(in: originalText) != Self.normalizedClassValue(in: draftText) {
             severity = severity == .error ? .error : .warning
             messages.append("class 将发生变化，可能影响样式命中。")
+        }
+
+        if let mappingSummary {
+            if mappingSummary.hasStructureRisk {
+                severity = severity == .error ? .error : .warning
+                messages.append(mappingSummary.riskSummary)
+            } else if originalText != draftText {
+                messages.append(mappingSummary.riskSummary)
+            }
         }
 
         if originalText == draftText {

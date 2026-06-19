@@ -96,10 +96,17 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           const mappingSummary = mappingPreview?.mappingSummary;
           const mappingPreviewDetected = mappingPreview?.ok === true
             && mappingSummary
+            && mappingSummary.structureRisk === true
             && Number(mappingSummary.preservedCount || 0) >= 3
+            && Number(mappingSummary.addedCount || 0) >= 1
             && Array.isArray(mappingSummary.items)
             && mappingSummary.items.some(item => item.slot === 'preserved' && String(item.nextTagName || '').toLowerCase() === 'h2')
             && mappingSummary.items.some(item => item.slot === 'added' && String(item.nextTagName || '').toLowerCase() === 'header');
+          const simpleMappingPreview = editor.validateSelectedHTMLSource(nextSource)?.mappingSummary;
+          const simpleMappingStable = simpleMappingPreview
+            && simpleMappingPreview.structureRisk === false
+            && Number(simpleMappingPreview.addedCount || 0) === 0
+            && Number(simpleMappingPreview.unmatchedCount || 0) === 0;
           const scriptRejected = editor.validateSelectedHTMLSource(nextSource.replace('</article>', '<script>alert(1)</script></article>'));
           const handlerRejected = editor.applySelectedHTMLSource(nextSource.replace('<h2>', '<h2 onclick="alert(1)">'));
           const dangerousRejected = scriptRejected.ok === false && handlerRejected.ok === false;
@@ -135,7 +142,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
           editor.command('undo');
           await sleep(180);
 
-          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !childMetadataVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !mappingPreviewDetected || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored || !structureShiftIdsStable || !structureShiftSelectionOk) {
+          if (!sourceHasTag || !sourceHasChildren || !sourceClean || !sourceFormatted || lineCount < 4 || !sourceAncestorItemsVisible || !sourceSiblingItemsAvailable || !articleSelectionOk || !sourceChildItemsVisible || !childMetadataVisible || !h2SelectionOk || !sourceSiblingItemsVisible || !strongSelectionOk || !reselectedSame || !warningDetected || !mappingPreviewDetected || !simpleMappingStable || !dangerousRejected || !applied || !childIdsStable || !sourceApplied || !exportClean || !undoRestored || !structureShiftIdsStable || !structureShiftSelectionOk) {
             throw new Error(JSON.stringify({
               sourceHasTag,
               sourceHasChildren,
@@ -163,6 +170,8 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
               mappingPreview,
               mappingSummary,
               mappingPreviewDetected,
+              simpleMappingPreview,
+              simpleMappingStable,
               scriptRejected,
               handlerRejected,
               dangerousRejected,
@@ -208,6 +217,7 @@ final class DirectHTMLSourceSyncTest: NSObject, WKNavigationDelegate, WKScriptMe
             strongSelectionOk,
             warningDetected,
             mappingPreviewDetected,
+            simpleMappingStable,
             dangerousRejected,
             applied,
             childIdsStable,

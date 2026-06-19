@@ -83,7 +83,19 @@ struct SourceDraftMappingSummary: Codable, Equatable {
     var preservedCount: Int
     var addedCount: Int
     var unmatchedCount: Int
+    var structureRisk: Bool?
     var items: [SourceDraftMappingItem]
+
+    var hasStructureRisk: Bool {
+        (structureRisk ?? false) || addedCount > 0 || unmatchedCount > 0
+    }
+
+    var riskSummary: String {
+        if hasStructureRisk {
+            return "结构会变化：保留 \(preservedCount)，新增 \(addedCount)，替换 \(unmatchedCount)"
+        }
+        return "对象映射稳定：\(preservedCount) 个对象可保留"
+    }
 }
 
 struct EditorElementFrame: Codable, Equatable {

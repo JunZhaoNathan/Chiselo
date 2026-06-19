@@ -865,6 +865,7 @@ final class EditorModel: ObservableObject {
             preservedCount: preservedCount,
             addedCount: addedCount,
             unmatchedCount: unmatchedCount,
+            structureRisk: bridgeBool(object["structureRisk"]),
             items: items
         )
     }

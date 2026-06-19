@@ -2664,7 +2664,9 @@
       });
     }
 
-    const addedNodes = replacementNodes.filter((node) => !matchedReplacement.has(node)).slice(0, 4);
+    const addedAll = replacementNodes.filter((node) => !matchedReplacement.has(node));
+    const unmatchedAll = previousNodes.filter((node) => !matchedPrevious.has(node));
+    const addedNodes = addedAll.slice(0, 4);
     for (const node of addedNodes) {
       items.push({
         slot: "added",
@@ -2678,7 +2680,7 @@
       });
     }
 
-    const unmatchedNodes = previousNodes.filter((node) => !matchedPrevious.has(node)).slice(0, 4);
+    const unmatchedNodes = unmatchedAll.slice(0, 4);
     for (const node of unmatchedNodes) {
       items.push({
         slot: "unmatched",
@@ -2694,8 +2696,9 @@
 
     return {
       preservedCount: pairs.length,
-      addedCount: replacementNodes.filter((node) => !matchedReplacement.has(node)).length,
-      unmatchedCount: previousNodes.filter((node) => !matchedPrevious.has(node)).length,
+      addedCount: addedAll.length,
+      unmatchedCount: unmatchedAll.length,
+      structureRisk: addedAll.length > 0 || unmatchedAll.length > 0,
       items
     };
   }
