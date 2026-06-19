@@ -4152,6 +4152,7 @@ private struct InspectorPanel: View {
     @State private var sourceDraftElementID: String?
     @State private var sourceDraftOriginalSnippet = ""
     @State private var pendingSourceDraftValidationID: UUID?
+    @State private var sourceDraftValidationTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -4186,7 +4187,7 @@ private struct InspectorPanel: View {
                     syncSourceDraft(for: element)
                 }
                 .onChange(of: sourceDraft) { _ in
-                    refreshSourceDraftValidationPreview(for: element)
+                    scheduleSourceDraftValidationPreview(for: element)
                 }
 
                 ScrollView {
@@ -4223,17 +4224,17 @@ private struct InspectorPanel: View {
             if sourceDraftOriginalSnippet != snippet {
                 sourceDraft = snippet
                 sourceDraftOriginalSnippet = snippet
-                refreshSourceDraftValidationPreview(for: element)
+                scheduleSourceDraftValidationPreview(for: element, delay: 0)
             } else if sourceDraft.isEmpty, !snippet.isEmpty {
                 sourceDraft = snippet
-                refreshSourceDraftValidationPreview(for: element)
+                scheduleSourceDraftValidationPreview(for: element, delay: 0)
             }
             return
         }
         sourceDraftElementID = element.id
         sourceDraftOriginalSnippet = snippet
         sourceDraft = snippet
-        refreshSourceDraftValidationPreview(for: element)
+        scheduleSourceDraftValidationPreview(for: element, delay: 0)
     }
 
     @ViewBuilder
@@ -5131,19 +5132,35 @@ private struct InspectorPanel: View {
         )
     }
 
+    private func scheduleSourceDraftValidationPreview(for element: EditorElement, delay: UInt64 = 250_000_000) {
+        sourceDraftValidationTask?.cancel()
+        let draft = sourceDraft
+        sourceDraftValidationTask = Task { @MainActor in
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: delay)
+            }
+            guard !Task.isCancelled else { return }
+            refreshSourceDraftValidationPreview(for: element, draft: draft)
+        }
+    }
+
     private func refreshSourceDraftValidationPreview(for element: EditorElement) {
+        refreshSourceDraftValidationPreview(for: element, draft: sourceDraft)
+    }
+
+    private func refreshSourceDraftValidationPreview(for element: EditorElement, draft: String) {
         guard model.documentMode == "html" else { return }
 
         let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !draft.isEmpty, draft != original else {
+        let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDraft.isEmpty, trimmedDraft != original else {
             model.sourceDraftMappingSummary = nil
             return
         }
 
         let validationID = UUID()
         pendingSourceDraftValidationID = validationID
-        model.validateSelectedHTMLSourceDraft(sourceDraft) { summary in
+        model.validateSelectedHTMLSourceDraft(draft) { summary in
             guard pendingSourceDraftValidationID == validationID else { return }
             model.sourceDraftMappingSummary = summary
         }
@@ -5198,40 +5215,52 @@ private struct InspectorPanel: View {
     }
 
     private func sourceDraftMappingRow(_ item: SourceDraftMappingItem) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(item.kind)
-                .font(.system(size: 8, weight: .heavy))
-                .foregroundStyle(sourceDraftMappingColor(for: item))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(sourceDraftMappingColor(for: item).opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+        Button {
+            locateSourceDraftMappingItem(item)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Text(item.kind)
+                    .font(.system(size: 8, weight: .heavy))
+                    .foregroundStyle(sourceDraftMappingColor(for: item))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(sourceDraftMappingColor(for: item).opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
 
-            VStack(alignment: .leading, spacing: 2) {
-                if let previousLabel = item.previousLabel, !previousLabel.isEmpty {
-                    Text(previousLabel)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                VStack(alignment: .leading, spacing: 2) {
+                    if let previousLabel = item.previousLabel, !previousLabel.isEmpty {
+                        Text(previousLabel)
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(MaterialTheme.muted)
+                    }
+
+                    if !item.nextLabel.isEmpty {
+                        Text(item.nextLabel)
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(MaterialTheme.ink)
+                    } else if item.slot == "unmatched" {
+                        Text("这处原对象在新片段里没有稳定对应项。")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.ink)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if let score = item.score {
+                    Text("\(score)")
+                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
                         .foregroundStyle(MaterialTheme.muted)
                 }
 
-                if !item.nextLabel.isEmpty {
-                    Text(item.nextLabel)
-                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(MaterialTheme.ink)
-                } else if item.slot == "unmatched" {
-                    Text("这处原对象在新片段里没有稳定对应项。")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(MaterialTheme.ink)
-                }
+                Image(systemName: sourceDraftMappingCanLocate(item) ? "scope" : "plus.app")
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundStyle(sourceDraftMappingCanLocate(item) ? MaterialTheme.primary : MaterialTheme.muted.opacity(0.70))
             }
-
-            Spacer(minLength: 0)
-
-            if let score = item.score {
-                Text("\(score)")
-                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(MaterialTheme.muted)
-            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .disabled(!sourceDraftMappingCanLocate(item))
+        .help(sourceDraftMappingCanLocate(item) ? "定位当前真实对象" : "新增对象应用后才能定位")
     }
 
     private func sourceDraftMappingColor(for item: SourceDraftMappingItem) -> Color {
@@ -5243,6 +5272,21 @@ private struct InspectorPanel: View {
         default:
             return Color(red: 0.78, green: 0.47, blue: 0.06)
         }
+    }
+
+    private func sourceDraftMappingCanLocate(_ item: SourceDraftMappingItem) -> Bool {
+        guard let previousID = item.previousID, !previousID.isEmpty else { return false }
+        return item.slot == "preserved" || item.slot == "unmatched"
+    }
+
+    private func locateSourceDraftMappingItem(_ item: SourceDraftMappingItem) {
+        guard sourceDraftMappingCanLocate(item), let previousID = item.previousID else {
+            model.status = "新增对象应用源码后才能定位"
+            return
+        }
+
+        model.selectHTMLNode(id: previousID)
+        model.status = item.slot == "unmatched" ? "已定位将被替换的原对象" : "已定位将保留的原对象"
     }
 
     private func formatMetric(_ value: Double) -> String {
