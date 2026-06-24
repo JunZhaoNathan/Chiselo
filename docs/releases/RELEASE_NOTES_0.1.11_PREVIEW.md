@@ -26,4 +26,4 @@ For important delivery files, keep both the original source and Chiselo's backup
 
 Download `Chiselo-0.1.11.dmg` after the GitHub Release asset is published.
 
-This preview build is ad-hoc signed and not notarized. If macOS blocks the first launch, read the included `首次打开帮助.txt`.
+This build is signed with Developer ID, notarized by Apple, and stapled for Gatekeeper verification.

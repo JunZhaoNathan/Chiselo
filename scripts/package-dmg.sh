@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/outputs}"
 DEFAULT_OUTPUT_DIR="$ROOT_DIR/outputs"
 APP_NAME="Chiselo"
-BUNDLE_ID="app.chiselo.editor"
+BUNDLE_ID="com.fangle.chiselo"
 VERSION="0.1.11"
 BUILD_CONFIG="release"
 BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$BUILD_CONFIG"
@@ -16,8 +16,33 @@ DEFAULT_OUTPUT_APP_BUNDLE="$DEFAULT_OUTPUT_DIR/$APP_NAME.app"
 DMG_PATH="$OUTPUT_DIR/Chiselo-${VERSION}.dmg"
 ICON_DIR="$ROOT_DIR/Chiselo/Resources/AppIcon"
 ICON_FILE="$ICON_DIR/Chiselo.icns"
+TEAM_ID="JF8T4Y5B5R"
+TEAM_NAME="Wuhan Fan Ge Network Technology Co., Ltd."
+DEFAULT_DEVELOPER_ID="Developer ID Application: ${TEAM_NAME} (${TEAM_ID})"
+SIGNING_IDENTITY="${CODESIGN_IDENTITY:-${SIGN_IDENTITY:-}}"
 
 cd "$ROOT_DIR"
+
+if [[ -z "$SIGNING_IDENTITY" ]]; then
+  if security find-identity -v -p codesigning 2>/dev/null | grep -F "\"$DEFAULT_DEVELOPER_ID\"" >/dev/null; then
+    SIGNING_IDENTITY="$DEFAULT_DEVELOPER_ID"
+  else
+    SIGNING_IDENTITY="-"
+  fi
+fi
+
+if [[ "$SIGNING_IDENTITY" == "-" ]]; then
+  CODESIGN_TIMESTAMP=(--timestamp=none)
+  CODESIGN_LABEL="ad-hoc"
+else
+  CODESIGN_TIMESTAMP=(--timestamp)
+  CODESIGN_LABEL="$SIGNING_IDENTITY"
+fi
+
+sign_app_bundle() {
+  local target="$1"
+  codesign --force --deep --options runtime "${CODESIGN_TIMESTAMP[@]}" --sign "$SIGNING_IDENTITY" "$target"
+}
 
 echo "==> Generating design tokens"
 node "$ROOT_DIR/scripts/generate-design-tokens.mjs"
@@ -128,8 +153,8 @@ PLIST
 
 echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
-echo "==> Ad-hoc signing"
-codesign --force --deep --sign - "$APP_BUNDLE"
+echo "==> Signing app ($CODESIGN_LABEL)"
+sign_app_bundle "$APP_BUNDLE"
 
 echo "==> Preparing DMG staging"
 mkdir -p "$DMG_STAGING"
@@ -278,6 +303,11 @@ hdiutil create \
   -ov \
   -format UDZO \
   "$DMG_PATH"
+
+if [[ "$SIGNING_IDENTITY" != "-" ]]; then
+  echo "==> Signing DMG ($CODESIGN_LABEL)"
+  codesign --force "${CODESIGN_TIMESTAMP[@]}" --sign "$SIGNING_IDENTITY" "$DMG_PATH"
+fi
 
 echo "==> Verifying DMG"
 hdiutil verify "$DMG_PATH"
