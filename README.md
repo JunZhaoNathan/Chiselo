@@ -8,19 +8,58 @@
 
 **Chisel your HTML.**
 
-Chiselo is a native macOS visual HTML editor for refining existing or AI-generated HTML files without turning them into a new website project.
+Chiselo is a native macOS visual HTML editor for existing web pages and visual documents. Open a finished `.html`, `.htm`, or `.xhtml` file, select what you see in the browser rendering, and edit text, images, tables, color, spacing, position, size, and layout directly.
 
-中文定位：Chiselo 要取代 Dreamweaver 的“现有 HTML 可视化修改”工作流，而不是复制 Dreamweaver 的建站、FTP 和传统 IDE 功能。它直接打开已有或 AI 生成的成熟 HTML，让不懂复杂前端工具的用户精修文字、图片、表格、模块和版式，再安全保存或导出。
+中文定位：Chiselo 服务于“打开已有 HTML，再直接改页面”的工作流。它覆盖 Dreamweaver 用户最常见的页面修改场景：已有官网、落地页、报告、仪表盘、演示页面和 AI 生成的成熟 HTML，都可以在原文件基础上继续调整、复核、保存和交付。
 
-Chiselo starts from an existing HTML document. It is a finishing and delivery workflow, not a project authoring environment. The core promise is simple:
+HTML remains the working document throughout the session. Chiselo keeps source preservation, local editing, change review, protected saving, responsive preview, and delivery checks in one focused macOS app.
 
-**Bring in your HTML, refine it visually, preflight delivery, then export.**
-
-The product promise is deliberately focused: simpler visual editing for static and conventional AI-generated HTML; more reliable source preservation, saving, and change review; and an explicit trusted compatibility mode when a document depends on a complex dynamic runtime.
+**Open existing HTML. Edit the rendered page. Save with confidence.**
 
 ![Chiselo editor preview](assets/chiselo-editor-preview.png)
 
-Website: [chiselo.vellumloop.com](https://chiselo.vellumloop.com/)
+Official website: [chiselo.vellumloop.com](https://chiselo.vellumloop.com/)
+
+## Visual HTML Editing for Existing Pages
+
+Chiselo is built for the moment after a page already exists and needs a precise human pass. It works well with hand-built HTML, exported web documents, static product pages, HTML reports, presentation pages, dashboards, and conventional AI-generated HTML.
+
+People looking for a Dreamweaver alternative often need a quick, visual way to revise an existing file. Chiselo concentrates on that editing session: open the page, click the visible object, make the local change, inspect the result, and save the original document format.
+
+### Edit rendered HTML directly
+
+- Select the visible DOM element on the canvas instead of searching source code for its location.
+- Double-click text to edit in place.
+- Adjust typography, colors, borders, radius, shadows, spacing, geometry, alignment, layers, and image display from the visual Inspector.
+- Move, resize, nudge, duplicate, delete, and reorder page objects with object-level controls.
+- Edit tables with `rowspan` and `colspan` protection, replace images, and add common HTML elements when needed.
+
+### Keep the source and the page stable
+
+- Untouched HTML returns byte-for-byte unchanged.
+- A selected local edit is isolated from unselected objects; zoom, drag, resize, text, and style regressions are checked against real HTML fixtures.
+- Linked local CSS and HTML save as one rollback-capable transaction.
+- Every opened document receives a backup and save history before a write reaches the original file.
+- Visual change review shows changed text, images, geometry, and key styles before handoff.
+
+### Review at the right width and deliver the right file
+
+- Preview exact desktop (`1440px`), tablet (`768px`), and phone (`390px`) CSS widths without writing responsive preview state into the document.
+- Check broken resources, text overflow, clipping, bounds, overlap, runtime risks, and source cleanliness.
+- Save standalone HTML, export high-fidelity PDF, or export best-effort editable PPTX.
+- Packaged macOS releases include Sparkle update checking, Developer ID signing, and notarized release artifacts.
+
+### Work safely with complex pages
+
+Chiselo opens HTML in static safety mode. Scripts, forms, and remote runtime privileges require an explicit trusted-document choice. Complex applications, cross-origin resources, animations, canvas regions, and pseudo-elements remain visible in diagnostics so the user can decide whether the page is suitable for a visual edit or needs a compatibility review.
+
+## Chiselo and Vellumloop
+
+Chiselo is made by [Vellumloop](https://vellumloop.com/), a local-first macOS software studio. Vellumloop builds focused tools for serious writing, long-form creative work, HTML refinement, and personal planning. The studio's shared approach is straightforward: users keep control of their files, important changes stay visible, and completed work remains easy to carry forward.
+
+- [Vellumloop](https://vellumloop.com/) — the parent studio and product directory
+- [Chiselo website](https://chiselo.vellumloop.com/) — product information, installation guidance, and current release access
+- [Chiselo Releases](https://github.com/JunZhaoNathan/Chiselo/releases/latest) — signed macOS DMG downloads and release notes
 
 ## Download
 
@@ -45,12 +84,12 @@ The local preview package is Developer ID signed when the signing identity is av
 
 ## Why Chiselo
 
-- HTML stays the editable source document.
-- The browser-rendered page stays the source of truth.
-- Chiselo adds object-level visual finishing controls on top of the rendered document.
-- Delivery checks and exports focus on HTML/PDF/PPTX quality.
-- Dynamic and script-rendered HTML is handled as a compatibility case, not the product identity.
-- Ordinary mode keeps DOM, source, runtime, and PPTX complexity out of the default workflow; Advanced mode preserves those tools when needed.
+- Existing HTML stays editable and portable.
+- Browser rendering gives users a direct visual target for every change.
+- Object-level controls keep page refinement approachable for people who do not work in code editors every day.
+- Source preservation, protected saving, and change review make small visual corrections easier to verify.
+- HTML, PDF, and PPTX outputs support distinct delivery needs.
+- Static safety mode and trusted compatibility mode give dynamic pages a clear operational boundary.
 
 ## What You Can Do
 
@@ -92,7 +131,7 @@ User docs:
 
 ## Product Status
 
-For static pages and conventional AI-generated HTML, Chiselo covers the core workflow of a light Dreamweaver: rendered-object selection, visual editing, exact no-op round-trip, responsive preview, protected save, local CSS writeback, undo/redo, diagnostics, and high-fidelity PDF output. Its goal is to replace Dreamweaver's existing-HTML visual editing workflow, not its site management, FTP, or traditional IDE features. Complex scripts, pseudo-elements, animations, and cross-origin resources require trusted compatibility mode and continued review; perfectly editable PPTX output is also not guaranteed.
+For static pages and conventional AI-generated HTML, Chiselo covers the core light-Dreamweaver workflow: rendered-object selection, visual editing, exact no-op round-trip, responsive preview, protected save, local CSS writeback, undo/redo, diagnostics, and high-fidelity PDF output. The product scope centers on existing-HTML visual editing. Site management, FTP, backend development, framework tooling, databases, and general-purpose code authoring sit outside this focused workflow. Complex scripts, pseudo-elements, animations, and cross-origin resources require trusted compatibility mode and continued review; PPTX remains a best-effort editable export.
 
 PDF remains the recommended final format when maximum fidelity matters.
 
