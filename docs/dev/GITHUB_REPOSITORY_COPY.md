@@ -47,7 +47,7 @@ Chiselo website: https://chiselo.vellumloop.com/
 Vellumloop: https://vellumloop.com/
 ```
 
-Chiselo is made by Vellumloop, a local-first macOS software studio for serious writing, long-form creative work, HTML refinement, and personal planning. Keep these links in the repository About field, README, release notes, and public announcements.
+Chiselo is made by Vellumloop, AI-era local-first software for serious work. Vellumloop keeps writing, planning, and creation where users remain in control. Keep these links in the repository About field, README, release notes, and public announcements.
 
 ## Star Reminder
 

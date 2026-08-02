@@ -55,7 +55,7 @@ Chiselo opens HTML in static safety mode. Scripts, forms, and remote runtime pri
 
 ## Chiselo and Vellumloop
 
-Chiselo is made by [Vellumloop](https://vellumloop.com/), a local-first macOS software studio. Vellumloop builds focused tools for serious writing, long-form creative work, HTML refinement, and personal planning. The studio's shared approach is straightforward: users keep control of their files, important changes stay visible, and completed work remains easy to carry forward.
+Chiselo is made by [Vellumloop](https://vellumloop.com/), AI-era local-first software for serious work. Vellumloop keeps writing, planning, and creation where users remain in control. Its products give people a clear place to work with files, ideas, and AI assistance while preserving ownership and review.
 
 - [Vellumloop](https://vellumloop.com/) — the parent studio and product directory
 - [Chiselo website](https://chiselo.vellumloop.com/) — product information, installation guidance, and current release access
