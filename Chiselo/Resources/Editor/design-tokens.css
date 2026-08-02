@@ -7,9 +7,16 @@
   --panel: rgba(255, 255, 255, 0.7);
   --panel-strong: rgba(255, 255, 255, 0.92);
   --panel-tint: rgba(246, 249, 253, 0.72);
+  --panel-floating: rgba(255, 255, 255, 0.86);
+  --panel-chrome: rgba(248, 251, 255, 0.64);
   --accent: #0A84FF;
   --accent-dark: #073F78;
   --accent-2: #C0262D;
+  --danger-soft: #FFF7F7;
+  --success: #0F853F;
+  --success-soft: #EAF7EF;
+  --warning: #C7780F;
+  --warning-soft: #FFF6D8;
   --ink: #131518;
   --muted-solid: #5D636E;
   --muted: rgba(60, 60, 67, 0.72);

@@ -2,9 +2,16 @@
 
 ## Core Position
 
-Chiselo is an HTML refinement and delivery tool.
+Chiselo is built to replace Dreamweaver's existing-HTML visual editing workflow for the AI HTML era, without copying Dreamweaver's site-building, FTP, or traditional IDE surface.
 
 It starts from an existing HTML file. The job is to make that file easier to inspect, adjust, polish, and deliver with high visual fidelity.
+
+## Product Promise
+
+- Static pages and conventional AI-generated HTML must be simpler to edit than in Dreamweaver.
+- Source preservation, save safety, and change review must be more reliable and more visible to the user.
+- Complex dynamic pages must enter an explicit trusted compatibility mode instead of silently weakening the default safety boundary.
+- Existing HTML remains the product's input and source of truth; Chiselo does not require a proprietary project model before editing can begin.
 
 ## What Chiselo Is
 
@@ -12,10 +19,11 @@ It starts from an existing HTML file. The job is to make that file easier to ins
 - A precision adjustment tool for text, images, tables, cards, modules, spacing, alignment, and page boundaries.
 - A delivery preflight tool for clean HTML, high-fidelity PDF, and best-effort editable PPTX.
 - A safer editing workflow with backups, version snapshots, diagnostics, and restore paths.
+- A nontechnical visual editor for mature HTML produced by AI or other tools.
 
 ## What Chiselo Is Not
 
-- Not Dreamweaver.
+- Not the full Dreamweaver IDE, site manager, or publishing stack.
 - Not a website builder.
 - Not a template marketplace.
 - Not an AI content generator.
@@ -31,12 +39,16 @@ Strongly aligned:
 - Image replacement with portable embedded resources.
 - Table editing.
 - Geometry controls, page/canvas boundaries, guides, snapping, and nudging.
+- Flow-preserving local resize plus zoom-stable pointer coordinates and cross-frame gesture release.
 - Non-technical visual style controls for color, typography, alignment, borders, radius, shadows, and image display modes.
 - Delivery preflight for broken resources, overflow, out-of-bounds objects, overlap, clean HTML, PDF, and PPTX risks.
 - PPTX effect-risk detection for complex CSS visuals that need post-export review.
 - Object-level visual diff against the opened HTML for reviewing changed text, images, geometry, and key styles before delivery, including next/previous changed-object navigation in export preflight.
 - PPTX editable-object report for estimating text, image, shape, review, and whole-object fallback counts before export, with click-through targeting, next/previous review navigation, and preflight repair actions.
 - Safe backups and history restore.
+- Protected close/quit, transactional HTML plus local CSS save, and exact untouched-source round-trip.
+- Ordinary/advanced UI separation and exact responsive viewport previews.
+- Static-safe HTML loading with explicit trusted dynamic compatibility.
 - `转为可编辑版` for converting the current rendering into stable editable objects.
 - Deterministic module grouping, module-group movement, and module-internal size/spacing cleanup.
 
@@ -54,10 +66,14 @@ Needs continued polishing:
 Use:
 
 - existing HTML;
+- replaces Dreamweaver's existing-HTML visual editing workflow;
 - HTML refinement;
 - high-fidelity adjustment;
 - visual finishing;
 - delivery preflight;
+- source preservation;
+- safe save and change review;
+- trusted compatibility mode;
 - dynamic-content risk;
 - script-rendered HTML;
 - convert to editable version.
@@ -68,15 +84,15 @@ Avoid as product identity:
 - generated HTML;
 - generator compatibility;
 - website builder;
-- Dreamweaver replacement;
+- full Dreamweaver replacement;
 - code editor.
 
-Generated or script-rendered files may be supported as input, but they are not the product identity.
+Always qualify the Dreamweaver comparison by naming the workflow being replaced. Existing and AI-generated HTML are both first-class inputs. Dynamic applications remain a trusted compatibility case rather than the default workflow.
 
 ## Next Product Priorities
 
-1. Broader visual style controls for spacing, repeated-card consistency, and mixed module cleanup.
-2. More advanced group-internal alignment rules for mixed text/image/button modules.
-3. Export preflight improvements with object-level risk navigation and before/after review.
-4. PPTX editability improvements with clearer object mapping and fallback explanations.
-5. Snapshot diff and visual comparison before save/export.
+1. Formal regression coverage for source preservation, save rollback, and visual editing behavior.
+2. Native isolation for untrusted HTML and an explicit trusted compatibility path for dynamic pages.
+3. Minimal-diff source writeback and richer before/after review before overwriting files.
+4. More predictable resizing, spacing, and layout preservation across responsive pages and repeated modules.
+5. Continued decomposition of the SwiftUI interface, document model, and browser editor runtime into independently tested modules.

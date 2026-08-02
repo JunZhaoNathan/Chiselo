@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Precision Editing Risk Fixture</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: #f8fafc;
+      color: #172033;
+    }
+
+    main {
+      width: 960px;
+      min-height: 620px;
+      margin: 0 auto;
+      padding: 32px;
+      background: #ffffff;
+      box-sizing: border-box;
+    }
+
+    .scroll-box {
+      position: relative;
+      width: 240px;
+      height: 96px;
+      overflow: auto;
+      border: 1px solid #9ca3af;
+      background: #f1f5f9;
+    }
+
+    .moved-chip {
+      width: 120px;
+      height: 44px;
+      padding: 10px;
+      box-sizing: border-box;
+      transform: translate(230px, 16px);
+      background: #dbeafe;
+      border: 1px solid #60a5fa;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .managed-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .managed-grid > div {
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+    }
+
+    table {
+      display: block;
+      width: 320px;
+      margin-top: 24px;
+      overflow: auto;
+      border-collapse: collapse;
+      word-break: keep-all;
+    }
+
+    th,
+    td {
+      min-width: 180px;
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Precision editing risk fixture</h1>
+    <section class="scroll-box">
+      <div class="moved-chip">被裁剪的对象</div>
+    </section>
+    <section class="managed-grid">
+      <div>网格托管对象 A</div>
+      <div>网格托管对象 B</div>
+    </section>
+    <table>
+      <thead>
+        <tr>
+          <th>产品线</th>
+          <th>目标客户</th>
+          <th>商业模式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>官网公开试用</td>
+          <td>访客、学生、教师、个人</td>
+          <td>免费 → 引导注册/下载</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

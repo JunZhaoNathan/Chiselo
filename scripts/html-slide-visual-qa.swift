@@ -135,7 +135,7 @@ final class HTMLSlideVisualQA: NSObject, WKNavigationDelegate {
       const issues = [];
       const majorSelector = [
         'h1', 'h2', 'h3', 'p.subtitle', '.kicker', '.accent-line',
-        'img', 'table', '.pill-row', '.grid-3', '.grid-4', '.two-col',
+        'img', 'table', '.pill', '.grid-3', '.grid-4', '.two-col',
         '.timeline', '.dashboard', '.architecture', '.quote',
         '.metric-card', '.capability-card', '.scenario-card', '.risk-card',
         '.phase', '.component-row', '.bar-list', '.material-card'

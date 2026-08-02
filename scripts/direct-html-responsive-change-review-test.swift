@@ -67,8 +67,10 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
           const appDoc = document.querySelector('iframe.html-frame')?.contentDocument;
           const appMainNode = appDoc?.querySelector('.mock-main');
           const appAsideNode = appDoc?.querySelector('.mock-ai');
+          const appShellNode = appDoc?.querySelector('.mock-app');
           const beforeMainRect = appMainNode?.getBoundingClientRect?.();
           const beforeAsideRect = appAsideNode?.getBoundingClientRect?.();
+          const beforeShellRect = appShellNode?.getBoundingClientRect?.();
           editor.command('setLayoutTransform');
           editor.updateElement({
             id: appMain.id,
@@ -80,17 +82,25 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
           await sleep(180);
           const afterMainRect = appMainNode?.getBoundingClientRect?.();
           const afterAsideRect = appAsideNode?.getBoundingClientRect?.();
+          const afterShellRect = appShellNode?.getBoundingClientRect?.();
           const mainStyleAttr = appMainNode?.getAttribute('style') || '';
-          const appSidebarStayedRight = beforeMainRect && beforeAsideRect && afterMainRect && afterAsideRect
-            && afterAsideRect.top < afterMainRect.bottom - 24
-            && afterAsideRect.left >= afterMainRect.right - 2;
-          const flowSizePreserved = appMainNode
+          const rectSame = (before, after) => before && after
+            && Math.abs(before.x - after.x) < 0.5
+            && Math.abs(before.y - after.y) < 0.5
+            && Math.abs(before.width - after.width) < 0.5
+            && Math.abs(before.height - after.height) < 0.5;
+          const appSidebarUnchanged = rectSame(beforeAsideRect, afterAsideRect);
+          const appShellUnchanged = rectSame(beforeShellRect, afterShellRect);
+          const mainResizedLocally = beforeMainRect && afterMainRect
+            && Math.abs(afterMainRect.x - beforeMainRect.x) < 0.5
+            && Math.abs(afterMainRect.y - beforeMainRect.y) < 0.5
+            && Math.abs(afterMainRect.width - beforeMainRect.width - 120) < 1
+            && Math.abs(afterMainRect.height - beforeMainRect.height - 40) < 1;
+          const flowFootprintPreserved = appMainNode
             && !/width\\s*:/.test(mainStyleAttr)
-            && !/height\\s*:/.test(mainStyleAttr)
-            && Math.abs(afterMainRect.width - beforeMainRect.width) < 2
-            && Math.abs(afterMainRect.height - beforeMainRect.height) < 2;
+            && !/height\\s*:/.test(mainStyleAttr);
 
-          if ((diagnostics.responsiveRuleCount || 0) < 1 || (diagnostics.responsiveLayoutRiskCount || 0) < 1 || (diagnostics.responsiveChangeCount || 0) < 1 || !matchedTarget || items.length < 1 || !hasReason || !issue || issue.elementId !== target.id || !appSidebarStayedRight || !flowSizePreserved) {
+          if ((diagnostics.responsiveRuleCount || 0) < 1 || (diagnostics.responsiveLayoutRiskCount || 0) < 1 || (diagnostics.responsiveChangeCount || 0) < 1 || !matchedTarget || items.length < 1 || !hasReason || !issue || issue.elementId !== target.id || !appSidebarUnchanged || !appShellUnchanged || !mainResizedLocally || !flowFootprintPreserved) {
             throw new Error(JSON.stringify({
               responsiveRuleCount: diagnostics.responsiveRuleCount,
               responsiveLayoutRiskCount: diagnostics.responsiveLayoutRiskCount,
@@ -101,12 +111,16 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
               targetIds,
               items,
               issue,
-              appSidebarStayedRight,
-              flowSizePreserved,
+              appSidebarUnchanged,
+              appShellUnchanged,
+              mainResizedLocally,
+              flowFootprintPreserved,
               beforeMainRect: beforeMainRect ? { x: beforeMainRect.x, y: beforeMainRect.y, width: beforeMainRect.width, height: beforeMainRect.height } : null,
               afterMainRect: afterMainRect ? { x: afterMainRect.x, y: afterMainRect.y, width: afterMainRect.width, height: afterMainRect.height } : null,
               beforeAsideRect: beforeAsideRect ? { x: beforeAsideRect.x, y: beforeAsideRect.y, width: beforeAsideRect.width, height: beforeAsideRect.height } : null,
               afterAsideRect: afterAsideRect ? { x: afterAsideRect.x, y: afterAsideRect.y, width: afterAsideRect.width, height: afterAsideRect.height } : null,
+              beforeShellRect: beforeShellRect ? { x: beforeShellRect.x, y: beforeShellRect.y, width: beforeShellRect.width, height: beforeShellRect.height } : null,
+              afterShellRect: afterShellRect ? { x: afterShellRect.x, y: afterShellRect.y, width: afterShellRect.width, height: afterShellRect.height } : null,
               mainStyleAttr
             }));
           }
@@ -119,8 +133,10 @@ final class DirectHTMLResponsiveChangeReviewTest: NSObject, WKNavigationDelegate
             responsiveChangeCount: diagnostics.responsiveChangeCount,
             responsiveChangeElementIds: targetIds,
             issueElementId: issue.elementId,
-            appSidebarStayedRight,
-            flowSizePreserved,
+            appSidebarUnchanged,
+            appShellUnchanged,
+            mainResizedLocally,
+            flowFootprintPreserved,
             cleanExport: diagnostics.cleanExport
           });
         })().catch(error => {

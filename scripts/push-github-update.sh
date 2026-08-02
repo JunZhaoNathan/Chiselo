@@ -22,6 +22,9 @@ else
   echo "==> Running quick checks"
   swift build
   node --check scripts/generate-design-tokens.mjs
+  node --check Chiselo/Resources/Editor/source-mapping.js
+  node --check Chiselo/Resources/Editor/visual-change.js
+  node --check Chiselo/Resources/Editor/editor-geometry.js
   node --check Chiselo/Resources/Editor/editor.js
 fi
 

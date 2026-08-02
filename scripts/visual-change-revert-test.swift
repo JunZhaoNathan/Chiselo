@@ -77,6 +77,16 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           if ((diagnostics.inlineStyleChangeCount || 0) !== 0) {
             throw new Error(`Text-only edit should not count inline style changes, got ${diagnostics.inlineStyleChangeCount}`);
           }
+          if (textItem.writebackKind !== 'layout-stability' || textItem.writebackLabel !== '局部尺寸保护' || textItem.writebackTarget !== 'style') {
+            throw new Error(`Expected explicit local frame stability metadata, got ${JSON.stringify(textItem)}`);
+          }
+          const protectedExport = editor.exportHTML();
+          if (!/id="title"[^>]*style="[^"]*(?:width|height):/i.test(protectedExport)) {
+            throw new Error('Text edit did not preserve its original local frame in exported HTML.');
+          }
+          if (/data-chiselo-local-frame-locked/i.test(protectedExport)) {
+            throw new Error('Local frame editor metadata leaked into exported HTML.');
+          }
 
           const revertResult = editor.revertVisualChange(textItem.changeKey);
           await sleep(220);
@@ -85,6 +95,9 @@ final class VisualChangeRevertTest: NSObject, WKNavigationDelegate, WKScriptMess
           }
           if (!editor.exportHTML().includes('Original title') || editor.exportHTML().includes('Changed title')) {
             throw new Error('Text visual change did not revert in exported HTML.');
+          }
+          if (/<h1[^>]*id="title"[^>]*style=/i.test(editor.exportHTML())) {
+            throw new Error('Text visual change revert left local frame protection in exported HTML.');
           }
 
           editor.selectHTML('#card');

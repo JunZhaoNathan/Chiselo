@@ -23,7 +23,7 @@ Do not commit these to the repository:
 - `.build/`;
 - `outputs/`;
 - `Chiselo.app`;
-- `Chiselo-0.1.11.dmg`;
+- `Chiselo-0.1.20.dmg`;
 - logs, temp files, local caches, and unreferenced temporary screenshots.
 
 The DMG should be uploaded later as a GitHub Release asset.
@@ -139,23 +139,36 @@ To rebuild the default package:
 
 ```bash
 scripts/release-preflight.sh
-scripts/package-dmg.sh
-hdiutil verify outputs/Chiselo-0.1.11.dmg
+CHISELO_NOTARIZE=1 scripts/package-dmg.sh
+hdiutil verify outputs/Chiselo-0.1.20.dmg
+xcrun stapler validate outputs/Chiselo-0.1.20.dmg
+spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.20.dmg
 ```
 
 Default release asset:
 
 ```text
-outputs/Chiselo-0.1.11.dmg
+outputs/Chiselo-0.1.20.dmg
+outputs/Chiselo-0.1.20-macOS-arm64-appcast.xml
+outputs/latest/appcast-arm64.xml
 ```
 
 If using a custom package output from the Codex build folder, upload:
 
 ```text
-outputs/codex-build/Chiselo-0.1.11.dmg
+outputs/codex-build/Chiselo-0.1.20.dmg
 ```
 
-Only upload one DMG to GitHub Releases unless you intentionally built multiple variants.
+Only upload one DMG to GitHub Releases unless you intentionally built multiple variants. Upload the `latest/appcast-*.xml` file to the feed path configured in `SUFeedURL` if you want in-app update checks to see this release.
+
+For the Vellumloop download bucket, publish and verify the Sparkle feed with:
+
+```bash
+scripts/publish-r2-release.sh
+scripts/verify-online-update.sh
+```
+
+Do not announce automatic updates until the online verification passes.
 
 ## Step 5: Create The GitHub Release
 
@@ -165,13 +178,13 @@ Only upload one DMG to GitHub Releases unless you intentionally built multiple v
 4. Create a new tag:
 
 ```text
-v0.1.11
+v0.1.20
 ```
 
 5. Release title:
 
 ```text
-Chiselo 0.1.11
+Chiselo 0.1.20
 ```
 
 6. Leave `Set as a pre-release` unchecked for downloadable public builds.
@@ -179,7 +192,7 @@ Chiselo 0.1.11
 8. Paste the text from:
 
 ```text
-docs/releases/RELEASE_NOTES_0.1.11_PREVIEW.md
+docs/releases/RELEASE_NOTES_0.1.20_PREVIEW.md
 ```
 
 9. Upload the DMG file.
@@ -223,7 +236,7 @@ Use GitHub Desktop or a Personal Access Token. Do not paste your GitHub password
 
 macOS says the app cannot be opened
 
-The preview build is ad-hoc signed and not notarized. Use Finder right-click -> Open for the first launch.
+Release packages should be built with `CHISELO_NOTARIZE=1 scripts/package-dmg.sh`, which signs, notarizes, staples, and then writes the Sparkle appcast. Use Finder right-click -> Open only if Gatekeeper still blocks a locally copied test build.
 
 DMG accidentally appears in `git status`
 

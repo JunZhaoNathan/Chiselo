@@ -2,6 +2,114 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.22 - 2026-08-02
+
+- Fixed direct HTML selection boxes drifting from their visible target after an embedded responsive preview scrolls. The overlay now aligns to the iframe's actual on-screen bounds without changing document geometry, styles, or source.
+- Added real-WebKit regression coverage for clicking a responsive-preview input after scrolling the embedded page: the selected target must remain the input itself and all four selection-box edges must align within two screen pixels.
+- Bumped the source version to `0.1.22` and the Sparkle build number to `22`.
+
+## 0.1.21 - 2026-08-02
+
+- HTML documents now always open at 100% CSS-pixel scale. Window resize, inspector changes, object selection, local edits, and responsive device-width previews no longer change zoom unless the user explicitly asks.
+- Added explicit toolbar controls for `100%` and `fit width`; Cmd/Ctrl plus wheel remains the direct manual zoom gesture.
+- Reworked table-internal selection so it exposes working safe actions for text editing, whole-table selection, row/column changes, alignment, and cell presets while hiding geometry, nudge, alignment, and layer controls that the editor correctly refuses to apply.
+- Added real-WebKit regression coverage on imported HTML for initial 100% scale, window resize stability, responsive-preview stability, explicit fit-width, and explicit 100% restoration.
+- Fixed local ad-hoc app bundles on macOS: their main executable now carries the development-only library-validation entitlement needed to load the bundled Sparkle framework. Developer ID builds continue to use same-team framework signing.
+- Bumped the source version to `0.1.21` and the Sparkle build number to `21`.
+
+## 0.1.20 - 2026-08-02
+
+- Bumped the source version to `0.1.20` and the Sparkle build number to `20`.
+- Extracted browser-bridge payload decoding from `EditorModel.swift` into a stateless decoder without changing editor geometry, gesture state, DOM mutation, or save ownership.
+- Completed decoding for the box-model, layout, position, opacity, typography, and stylesheet-writeback fields already returned by the browser, so the Inspector now receives the rendered state instead of silently dropping those values.
+- Added XCTest coverage for complete selection payloads, malformed required geometry, non-finite coordinates, mixed scalar types, nested item filtering, stylesheet matches, and source-draft mappings.
+- Revalidated high-zoom drag, resize, cross-frame release, zoom preservation, zoom-out stability, and zero-collateral edits against the sample page, operations dashboard, editorial brief, and delivery form.
+
+## 0.1.19 - 2026-08-02
+
+- Bumped the source version to `0.1.19` and the Sparkle build number to `19`.
+- Made resize operations on flow-managed HTML elements use local transform scaling so the selected object changes size without expanding its layout slot or moving unrelated content.
+- Extended zero-collateral regressions with real target movement and resizing while checking complete computed styles, `::before` and `::after`, geometry, and independently comparable DOM source across up to 120 non-target nodes.
+- Added high-zoom pointer regressions for cross-frame drag release, screen-to-document coordinate conversion, resize-handle accuracy, zoom preservation, post-release stability, and zoom-out selection stability.
+- Revalidated the strengthened geometry and zoom contract against the sample page, operations dashboard, editorial brief, and delivery form, and made all four cases part of release preflight.
+
+## 0.1.18 - 2026-08-02
+
+- Bumped the source version to `0.1.18` and the Sparkle build number to `18`.
+- Strengthened zero-collateral regressions to compare every computed style property, `::before` and `::after` pseudo-element styles, geometry, and independently comparable `outerHTML` across up to 120 visible non-target nodes.
+- Revalidated the stronger invariant against the synthetic isolation fixture and four bundled real HTML pages.
+- Extracted resize, snap, distance, rectangle, and overflow calculations from `editor.js` into `editor-geometry.js` behind a frozen dependency-free API.
+- Added focused geometry boundary coverage and packaged-resource verification without moving gesture state or DOM write operations out of the main editor runtime.
+
+## 0.1.17 - 2026-08-02
+
+- Bumped the source version to `0.1.17` and the Sparkle build number to `17`.
+- Strengthened zero-collateral editing regressions so every unrelated peer must retain byte-identical live DOM source in addition to unchanged geometry and computed visual style.
+- Revalidated the synthetic isolation fixture, sample page, operations dashboard, editorial brief, and delivery form with the stricter invariant.
+- Extracted HTML diagnostics presentation calculations from `ContentView.swift` without changing scores, recommendations, or UI behavior.
+- Extracted file decoding and open-tab input parsing from `EditorModel.swift`, and removed an unused result-count helper.
+- Extracted source-node matching, stable object-ID preservation, and source-draft mapping review from `editor.js` into `source-mapping.js` behind an explicit dependency interface.
+- Extracted pure visual-change filtering, classification, summaries, writeback labeling, and rollback eligibility from `editor.js` into `visual-change.js`; DOM capture and mutations remain in the main runtime.
+- Added standalone visual-change module syntax and filter coverage to release preflight while retaining the existing rollback integration regressions.
+
+## 0.1.16 - 2026-08-02
+
+- Bumped the source version to `0.1.16` and the Sparkle build number to `16`.
+- Added local edit frame isolation so text, typography, line-height, and padding changes do not push unrelated modules or downstream sections.
+- Added a zero-collateral edit regression covering target, sibling-card, and following-section geometry and visual style stability.
+- Verified zero-collateral editing against the bundled sample page, operations dashboard, editorial brief, and delivery form.
+- Classified automatic frame preservation separately from user-authored inline style changes, and made text-change rollback remove its associated frame protection.
+- Added native WebKit content rules that block remote HTTP/HTTPS page resources in static-safe mode and are removed only after trusted dynamic compatibility is confirmed.
+- Added native navigation policy that prevents imported pages from replacing the Chiselo editor shell.
+- Added a formal SwiftPM XCTest target for save transactions and runtime security policy, including real WebKit content-rule compilation.
+- Moved delivery-check views, visual snapshot data, and safe-runtime HTML transforms into independently compiled modules.
+- Made `swift test`, runtime safety syntax, and zero-collateral editing part of the complete release preflight.
+- Removed unrelated INKMOSS/TRIZ prototype scripts and regenerated build/output artifacts from the final source tree.
+
+## 0.1.15 - 2026-08-02
+
+- Bumped the package version to `0.1.15` and the Sparkle build number to `15`.
+- Added protected modified-tab close and application quit flows with Save, Cancel, and Don't Save choices.
+- Made HTML plus changed linked local CSS saving transactional, with pre-commit snapshots and automatic rollback after partial commit failure.
+- Made imported HTML static-safe by default and added an explicit trusted dynamic compatibility mode for scripts and forms.
+- Preserved untouched HTML byte for byte and delayed DOM serialization until a real edit occurs.
+- Added ordinary and advanced workspace modes; DOM/source/layer/runtime/PPTX complexity is hidden by default.
+- Added exact original, desktop (`1440px`), tablet (`768px`), and phone (`390px`) responsive viewport controls that do not modify document state.
+- Added deterministic rollback, runtime safety, and responsive viewport regressions to release preflight.
+- Upgraded GitHub CI to execute the complete release preflight on every push and pull request.
+- Extracted toolbar workspace/runtime/viewport controls from the main SwiftUI view and save persistence from the editor model.
+- Centralized release version metadata and strengthened online Sparkle verification with appcast signature, exact feed, and DMG SHA-256 checks.
+- Removed stale local build products, old package outputs, account caches, machine-specific release identity data, and obsolete design-audit screenshots from the working tree.
+
+## 0.1.14 - 2026-06-28
+
+- Bumped the package version to `0.1.14` and the Sparkle build number to `14`.
+- Locked direct geometry editing for table-internal HTML structures (`td`, `th`, rows, table sections, captions, and descendants inside cells) so Markdown-exported tables no longer clip text after accidental drag or resize attempts.
+- Kept table-internal objects selectable for text, style, and table row/column operations, while whole `table` elements remain movable/resizable.
+- Rebuilt and hid selection resize handles whenever a selection changes between free geometry objects and table-locked objects.
+- Added a Markdown-style table overflow fixture and regression test covering the `免费 → 引导注册/下载` cell scenario from the TRIZPLUS file.
+
+## 0.1.13 - 2026-06-28
+
+- Bumped the package version to `0.1.13` and the Sparkle build number to `13`.
+- Added packaged-build version and build fingerprint display to the toolbar, including dirty working-tree content in the fingerprint to prevent ambiguous same-version builds.
+- Rebalanced the main split view around the center canvas with narrower navigator/inspector defaults and a wider minimum editor area.
+- Renamed the HTML page overlay label to `内容边界` so canvas guides no longer imply that the page itself has resized.
+- Reworked the inspector into common editing first: `内容 / 外观 / 位置 / 层级 / 源码`.
+- Added inspector-side direct text editing for the selected text object only.
+- Hid editor overlay layers from assistive technologies and added clearer accessibility labels to the object tree.
+
+## 0.1.12 - 2026-06-27
+
+- Added Sparkle update checking for packaged macOS builds with a `检查更新…` menu entry.
+- Added Chiselo-specific Sparkle Ed25519 key/appcast tooling.
+- Updated DMG packaging to embed and sign `Sparkle.framework`, write `SUPublicEDKey` and `SUFeedURL`, optionally notarize/staple with `CHISELO_NOTARIZE=1`, and generate signed appcast XML files after the final DMG is ready.
+- Stabilized direct HTML object editing for flow-based diagrams so click, drag, resize, text edit, and single selection no longer shrink the page or move unrelated objects.
+- Compacted the direct HTML object tree for high-fidelity app prototypes by hiding decorative icon nodes and treating compact controls as leaf components in the sidebar.
+- Added an INKMOSS high-fidelity prototype regression covering page interactions, drag, resize, style edits, text edits, layout changes, duplicate/delete, undo/redo, and clean export.
+- Kept direct HTML stage sizing stable across fixed overlays and HTML undo/redo restores so page dimensions do not unexpectedly grow, shrink, or recalculate after local edits.
+- Bumped the package version to `0.1.12` and the Sparkle build number to `12`.
+
 ## 0.1.11 - 2026-06-15
 
 - Added a first-edit backup reminder for real local HTML and Chiselo project files so users confirm the original file backup before continuing precision edits.

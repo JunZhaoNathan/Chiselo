@@ -5,15 +5,10 @@ on:
   pull_request:
 
 jobs:
-  build:
+  full-regression:
     runs-on: macos-14
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Swift build
-        run: swift build
-      - name: JavaScript syntax checks
-        run: |
-          node --check Chiselo/Resources/Editor/editor.js
-          node --check scripts/generate-digital-transformation-slides.mjs
-      - name: Validate sample deck
-        run: node scripts/validate-deck.mjs examples/sample.aislide
+      - name: Complete release preflight
+        run: scripts/release-preflight.sh

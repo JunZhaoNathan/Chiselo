@@ -9,6 +9,7 @@ Chiselo is a native macOS app for visually refining existing HTML files. It is f
 - Keeps save-time `.chiselo-history/` snapshots before overwriting an existing file.
 - Keeps selected-object quick actions compact by default so the toolbar no longer covers the text being edited.
 - Adds release-preflight coverage for the compact selection quick-action UI.
+- Stabilizes direct HTML object editing for flow-based diagrams: single-object selection, stable canvas sizing, text-edit cleanup when selecting another object, and transform-based drag/resize for text, pills, and cards inside flex/grid/inline layouts.
 
 ## Safety Notes
 
@@ -26,4 +27,4 @@ For important delivery files, keep both the original source and Chiselo's backup
 
 Download `Chiselo-0.1.11.dmg` after the GitHub Release asset is published.
 
-This build is signed with Developer ID, notarized by Apple, and stapled for Gatekeeper verification.
+This build is signed with Developer ID. Notarization and stapling are not part of the local DMG packaging script unless a separate notarization step is run before release.

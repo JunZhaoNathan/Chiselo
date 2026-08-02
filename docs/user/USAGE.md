@@ -6,6 +6,24 @@ Use the Open button or drag a `.html`, `.htm`, or `.xhtml` file into the Chiselo
 
 Each document opens in a browser-style tab.
 
+## Ordinary And Advanced Modes
+
+Chiselo starts in `普通` mode. This is the intended light-Dreamweaver workflow: select the rendered object, then edit its content, appearance, or position. DOM structure, source controls, layer tools, dynamic runtime controls, and PPTX-specific options stay hidden.
+
+Switch to `高级` when you need the object tree, HTML/CSS source writeback, layer ordering, trusted dynamic-page execution, background controls, editable HTML, or PPTX export. Switching modes does not modify the document.
+
+## Responsive Preview
+
+Use the four viewport buttons in the toolbar to choose the page's original width, desktop (`1440px`), tablet (`768px`), or phone (`390px`). These are real iframe viewport widths, so CSS media and container behavior can reflow. Preview changes do not enter undo history and are never written into HTML.
+
+Check all three device sizes after changing a responsive page, especially around navigation, grids, tables, fixed elements, and long text.
+
+## Static Safety And Dynamic Compatibility
+
+HTML opens in `静态安全` mode by default. The page's scripts and forms cannot run, while its rendered static HTML, CSS, images, and fonts remain available for editing.
+
+In `高级` mode, `动态兼容` can be enabled for a trusted file that needs JavaScript to construct its page. Chiselo asks for confirmation first. Do not enable it for unknown HTML: dynamic compatibility intentionally grants the page script and form capabilities inside its editing iframe.
+
 ## Select And Edit
 
 - Click rendered HTML content to select an element.
@@ -34,6 +52,8 @@ Use the `样式` panel to adjust selected objects without editing CSS. Text obje
 
 Use `外观` for fill, border color, border width, corner radius, and shadow presets. These controls apply to direct HTML selections and to objects created by `转为可编辑版`.
 
+When local text, typography, line-height, or padding changes would normally reflow the page, Chiselo preserves the selected object's current frame so sibling modules and later sections stay still. Content that no longer fits is reported as overflow for review instead of silently pushing unrelated objects.
+
 When an image is selected, use `显示方式` to choose `裁切`, `完整`, or `拉伸`, then replace the image if needed. Chiselo writes these choices back into the exported HTML instead of keeping them as editor-only state.
 
 ## Safe Saving
@@ -41,6 +61,12 @@ When an image is selected, use `显示方式` to choose `裁切`, `完整`, or `
 When opening a real local HTML or Chiselo project file, Chiselo creates a one-time sibling backup named like `filename.chiselo-backup.html` or `filename.chiselo-backup.aislide`. If that backup already exists, Chiselo keeps it instead of replacing it.
 
 When saving over an existing HTML or Chiselo project file, Chiselo first copies the previous version into a sibling `.chiselo-history/` folder with a timestamped filename. Use the `备份` toolbar button to reveal that folder from the current document.
+
+For HTML linked to local CSS files, Chiselo stages the changed CSS files and HTML before committing any of them. If one commit fails, already-written files are restored automatically. Merely opening, previewing, or saving an untouched HTML document preserves the original HTML bytes exactly.
+
+Closing a modified tab asks whether to save, cancel, or discard it. Quitting with modified documents offers Save All, Cancel, or Don't Save, including when the last window is closed.
+
+Static-safe mode disables page scripts and forms and blocks remote HTTP/HTTPS page resources at the native WebKit layer. Use dynamic compatibility only for HTML you trust; enabling it permits the page's scripts, forms, and remote resources after confirmation.
 
 Use the `恢复` toolbar button to open the version history browser. Select any snapshot to see its timestamp, filename, and file size, then restore that specific version. Chiselo asks for confirmation and saves the current file into `.chiselo-history/` before restoring.
 

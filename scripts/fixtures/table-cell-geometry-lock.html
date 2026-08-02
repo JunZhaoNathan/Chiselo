@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Table Cell Geometry Lock Fixture</title>
+  <style>
+    html body {
+      margin: 0;
+      padding: 32px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #333;
+      background: #fff;
+    }
+
+    .markdown-preview {
+      width: 100%;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    table {
+      display: block;
+      width: 100%;
+      margin: 10px 0 15px;
+      border-collapse: collapse;
+      border-spacing: 0;
+      overflow: auto;
+      word-break: keep-all;
+    }
+
+    td,
+    th {
+      border: 1px solid #d6d6d6;
+      padding: 6px 13px;
+    }
+
+    th {
+      color: #000;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body for="html-export">
+  <div class="crossnote markdown-preview">
+    <h2>基础说明</h2>
+    <table>
+      <tbody>
+        <tr>
+          <th>项目</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td>样例</td>
+          <td>用于保持 table:nth-of-type(2) 与真实 Markdown 导出一致。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>四条产品线与定价分层</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>产品线</th>
+          <th>目标客户</th>
+          <th>核心价值</th>
+          <th>商业模式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>官网公开试用</td>
+          <td>访客、学生、教师、个人</td>
+          <td>低门槛体验、获客漏斗</td>
+          <td>免费 → 引导注册/下载</td>
+        </tr>
+        <tr>
+          <td>Pro 桌面版</td>
+          <td>个人创新者、教师、工程师、小团队</td>
+          <td>本地项目工作台 + 交付物导出</td>
+          <td>个人订阅</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

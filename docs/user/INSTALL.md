@@ -7,7 +7,7 @@
 3. Drag `Chiselo.app` to `Applications`.
 4. Launch Chiselo from `Applications`.
 
-Current preview builds are ad-hoc signed and not notarized. If macOS blocks the first launch, try these in order:
+Current preview builds are Developer ID signed when the signing identity is available. Release packaging can be notarized and stapled with `CHISELO_NOTARIZE=1 scripts/package-dmg.sh`. If macOS blocks the first launch, try these in order:
 
 1. Move `Chiselo.app` to `Applications`, then Finder right-click -> `Open`.
 2. Check `System Settings -> Privacy & Security` for an `Open Anyway` button.
@@ -17,7 +17,7 @@ Current preview builds are ad-hoc signed and not notarized. If macOS blocks the 
 xattr -dr com.apple.quarantine /Applications/Chiselo.app
 ```
 
-The DMG also includes `首次打开帮助.txt` with these steps.
+The DMG includes `README.txt` and `更新说明.txt` with the current install, signing, and release notes.
 
 ## Build Locally
 
@@ -32,11 +32,26 @@ swift run Chiselo
 scripts/package-dmg.sh
 ```
 
+For a notarized release package:
+
+```bash
+CHISELO_NOTARIZE=1 scripts/package-dmg.sh
+```
+
 Outputs:
 
 ```text
 outputs/Chiselo.app
-outputs/Chiselo-0.1.11.dmg
+outputs/Chiselo-0.1.20.dmg
+outputs/Chiselo-0.1.20-macOS-arm64-appcast.xml
+outputs/latest/appcast-arm64.xml
+```
+
+Publish the update feed after packaging:
+
+```bash
+scripts/publish-r2-release.sh
+scripts/verify-online-update.sh
 ```
 
 Custom output directory:

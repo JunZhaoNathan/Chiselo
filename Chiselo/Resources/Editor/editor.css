@@ -97,9 +97,13 @@ html[data-backdrop="dots"] .editor-shell {
   overflow: visible;
   transform-origin: top left;
   background: white;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-stage);
   box-shadow: var(--shadow);
+}
+
+.stage.is-html-document.is-responsive-preview {
+  box-sizing: content-box;
 }
 
 .slide-surface,
@@ -114,7 +118,7 @@ html[data-backdrop="dots"] .editor-shell {
 
 .slide-surface {
   overflow: hidden;
-  background: #f9fafb;
+  background: var(--panel-chrome);
   border-radius: var(--radius-stage);
 }
 
@@ -229,7 +233,7 @@ html[data-backdrop="dots"] .editor-shell {
   padding: calc(4px * var(--overlay-scale)) calc(7px * var(--overlay-scale));
   border: max(1px, calc(1px * var(--overlay-scale))) solid rgba(10, 132, 255, 0.28);
   border-radius: calc(7px * var(--overlay-scale));
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--panel-strong);
   color: #0757a8;
   font: 760 calc(10px * var(--overlay-scale)) -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   line-height: 1;
@@ -262,7 +266,7 @@ html[data-backdrop="dots"] .editor-shell {
   padding: calc(4px * var(--overlay-scale)) calc(7px * var(--overlay-scale));
   border: max(1px, calc(1px * var(--overlay-scale))) solid rgba(10, 132, 255, 0.25);
   border-radius: calc(7px * var(--overlay-scale));
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--panel-strong);
   color: #0757a8;
   font: 700 calc(11px * var(--overlay-scale)) -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   line-height: 1;
@@ -273,7 +277,7 @@ html[data-backdrop="dots"] .editor-shell {
 .page-boundary-center,
 .page-boundary-tick {
   position: absolute;
-  background: rgba(10, 132, 255, 0.28);
+  background: rgba(10, 132, 255, 0.16);
 }
 
 .page-boundary-center.x {
@@ -331,7 +335,7 @@ img[data-chiselo-broken-resource] {
   background:
     linear-gradient(135deg, rgba(197, 43, 38, 0.12) 25%, transparent 25%) 0 0 / 18px 18px,
     linear-gradient(135deg, transparent 75%, rgba(197, 43, 38, 0.12) 75%) 0 0 / 18px 18px,
-    #fff7f7 !important;
+    var(--danger-soft) !important;
 }
 
 .hover-label {
@@ -345,7 +349,7 @@ img[data-chiselo-broken-resource] {
   padding: 0 9px;
   border-radius: 999px;
   border: 1px solid var(--hairline);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--panel-floating);
   color: var(--accent);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.13);
   -webkit-backdrop-filter: blur(18px) saturate(1.25);
@@ -379,7 +383,7 @@ img[data-chiselo-broken-resource] {
   padding: 0 10px;
   border-radius: 999px;
   border: 1px solid rgba(10, 132, 255, 0.24);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--panel-floating);
   color: var(--accent);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
@@ -407,6 +411,33 @@ img[data-chiselo-broken-resource] {
 
 .selection-box.is-locked .resize-handle {
   border-color: var(--accent-2);
+}
+
+.selection-box.is-geometry-locked .resize-handle {
+  display: none;
+  pointer-events: none;
+}
+
+.selection-box.is-revealing {
+  animation: selection-reveal-pulse 0.86s ease-out;
+}
+
+@keyframes selection-reveal-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(10, 132, 255, 0.44),
+      0 0 0 max(1px, calc(1px * var(--overlay-scale))) rgba(10, 132, 255, 0.18);
+  }
+  60% {
+    box-shadow:
+      0 0 0 calc(10px * var(--overlay-scale)) rgba(10, 132, 255, 0.14),
+      0 0 0 max(1px, calc(1px * var(--overlay-scale))) rgba(10, 132, 255, 0.20);
+  }
+  100% {
+    box-shadow:
+      0 0 0 calc(16px * var(--overlay-scale)) rgba(10, 132, 255, 0),
+      0 0 0 max(1px, calc(1px * var(--overlay-scale))) rgba(10, 132, 255, 0.10);
+  }
 }
 
 .resize-handle[data-handle="nw"] {
@@ -466,9 +497,9 @@ img[data-chiselo-broken-resource] {
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #fff7ed;
-  color: #9a3412;
-  border: 1px solid #fed7aa;
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid rgba(199, 120, 15, 0.24);
   font-size: 12px;
   font-weight: 600;
 }
@@ -482,7 +513,7 @@ img[data-chiselo-broken-resource] {
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  background: rgba(239, 246, 255, 0.88);
+  background: var(--panel-floating);
   color: var(--accent);
   border: 1px solid rgba(10, 132, 255, 0.24);
   font-size: 12px;
@@ -505,7 +536,7 @@ img[data-chiselo-broken-resource] {
   padding: 2px;
   border-radius: 999px;
   border: 1px solid rgba(10, 132, 255, 0.18);
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--panel);
   box-shadow: 0 5px 14px rgba(0, 0, 0, 0.10);
   -webkit-backdrop-filter: blur(22px) saturate(1.32);
   backdrop-filter: blur(22px) saturate(1.32);
@@ -519,14 +550,14 @@ img[data-chiselo-broken-resource] {
 .quick-action-bar:hover,
 .quick-action-bar:focus-within {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--panel-floating);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
 }
 
 .quick-action-bar.is-open {
   opacity: 1;
   border-radius: var(--radius-medium);
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--panel-strong);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
 }
 
@@ -595,7 +626,7 @@ img[data-chiselo-broken-resource] {
   padding: 6px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-medium);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--panel-strong);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
   -webkit-backdrop-filter: blur(22px) saturate(1.26);
   backdrop-filter: blur(22px) saturate(1.26);
@@ -678,6 +709,17 @@ img[data-chiselo-broken-resource] {
 
 .quick-action.is-danger:hover {
   background: rgba(197, 43, 38, 0.1);
+}
+
+.quick-action:disabled {
+  cursor: default;
+  color: var(--muted);
+  background: rgba(15, 23, 42, 0.055);
+}
+
+.quick-action:disabled:hover {
+  color: var(--muted);
+  background: rgba(15, 23, 42, 0.055);
 }
 
 .empty-state {

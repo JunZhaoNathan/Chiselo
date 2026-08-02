@@ -17,15 +17,15 @@ struct ContentView: View {
                 ZStack {
                     HSplitView {
                         DocumentNavigator()
-                            .frame(minWidth: 170, idealWidth: 220, maxWidth: 380)
+                            .frame(minWidth: 156, idealWidth: 190, maxWidth: 320)
                             .frame(maxHeight: .infinity)
 
                         WebEditorView()
-                            .frame(minWidth: 560)
+                            .frame(minWidth: 720)
                             .frame(maxHeight: .infinity)
 
                         InspectorPanel()
-                            .frame(minWidth: 250, idealWidth: 310, maxWidth: 480)
+                            .frame(minWidth: 238, idealWidth: 286, maxWidth: 430)
                             .frame(maxHeight: .infinity)
                     }
                     .frame(maxHeight: .infinity)
@@ -91,11 +91,13 @@ struct ContentView: View {
 private struct AppGlassBackground: View {
     var body: some View {
         ZStack {
+            MaterialTheme.background
+
             LinearGradient(
                 colors: [
-                    MaterialTheme.surfaceStrong,
-                    MaterialTheme.background,
-                    MaterialTheme.canvasChromeEnd.opacity(0.72)
+                    MaterialTheme.surfaceFloating,
+                    MaterialTheme.surfaceChrome,
+                    MaterialTheme.canvasChromeEnd.opacity(0.62)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -105,9 +107,9 @@ private struct AppGlassBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.54),
-                            Color.white.opacity(0.18),
-                            MaterialTheme.glow.opacity(0.42)
+                            MaterialTheme.surfaceStrong.opacity(0.36),
+                            MaterialTheme.surfaceChrome.opacity(0.26),
+                            MaterialTheme.glow.opacity(0.24)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -149,7 +151,12 @@ private struct BrowserTabBar: View {
                 .help("拖动分隔线可调整左右栏")
         }
         .frame(height: 44)
-        .background(.ultraThinMaterial)
+        .background(
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Rectangle().fill(MaterialTheme.surfaceChrome)
+            }
+        )
         .overlay(Rectangle().fill(MaterialTheme.hairline).frame(height: 1), alignment: .top)
         .overlay(Rectangle().fill(MaterialTheme.separator).frame(height: 1), alignment: .bottom)
     }
@@ -173,6 +180,12 @@ private struct BrowserTab: View {
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                         .truncationMode(.middle)
+                    if tab.hasUnsavedChanges {
+                        Circle()
+                            .fill(MaterialTheme.accentWarning)
+                            .frame(width: 7, height: 7)
+                            .accessibilityLabel("有未保存的修改")
+                    }
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, minHeight: 30)
@@ -196,13 +209,13 @@ private struct BrowserTab: View {
         .foregroundStyle(isActive ? MaterialTheme.ink : MaterialTheme.muted)
         .background(
             RoundedRectangle(cornerRadius: 9)
-                .fill(isActive ? MaterialTheme.surface : Color.white.opacity(0.34))
+                .fill(isActive ? MaterialTheme.surfaceFloating : MaterialTheme.surfaceChrome)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 9)
-                .stroke(isActive ? MaterialTheme.primary.opacity(0.36) : MaterialTheme.hairline, lineWidth: 1)
+                .stroke(isActive ? MaterialTheme.primary.opacity(0.30) : MaterialTheme.hairline.opacity(0.76), lineWidth: 1)
         )
-        .shadow(color: isActive ? MaterialTheme.shadow.opacity(0.20) : .clear, radius: 7, x: 0, y: 2)
+        .shadow(color: isActive ? MaterialTheme.shadow.opacity(0.12) : .clear, radius: 8, x: 0, y: 2)
     }
 }
 
@@ -280,11 +293,12 @@ private struct WelcomeStartView: View {
         .padding(34)
         .frame(maxWidth: 520)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel))
+        .background(MaterialTheme.surfaceFloating, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel))
         .overlay(
             RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel)
-                .stroke(MaterialTheme.hairline, lineWidth: 1)
+                .stroke(MaterialTheme.hairline.opacity(0.88), lineWidth: 1)
         )
-        .shadow(color: MaterialTheme.shadow.opacity(0.18), radius: 24, x: 0, y: 10)
+        .shadow(color: MaterialTheme.shadow.opacity(0.12), radius: 24, x: 0, y: 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             Rectangle()
@@ -345,7 +359,7 @@ private struct AppToolbar: View {
                     .tracking(0.6)
                     .foregroundStyle(MaterialTheme.primary)
             }
-            .frame(width: 196, alignment: .leading)
+            .frame(width: 150, alignment: .leading)
 
             ToolbarCommandGroup {
                 ToolbarActionButton(title: "打开", icon: "folder") {
@@ -359,17 +373,6 @@ private struct AppToolbar: View {
                 .disabled(!model.hasOpenDocument)
                 .help("保存当前文件，并在覆盖前生成版本快照")
 
-                ToolbarActionButton(title: "备份", icon: "clock.arrow.circlepath") {
-                    model.revealSafetyFolder()
-                }
-                .disabled(!model.canRevealSafetyFolder)
-                .help("打开当前文件的 Chiselo 版本快照目录")
-
-                ToolbarActionButton(title: "恢复", icon: "arrow.counterclockwise.circle") {
-                    model.presentHistoryBrowser()
-                }
-                .disabled(!model.canRevealSafetyFolder)
-                .help("浏览 Chiselo 版本快照并恢复指定版本")
             }
 
             MaterialDivider()
@@ -400,34 +403,47 @@ private struct AppToolbar: View {
 
             ExportMenu()
 
-            BackdropMenu()
+            HTMLViewportPicker()
+            HTMLZoomControls()
+
+            if model.workspaceMode == .advanced {
+                AdvancedWorkspaceMenu()
+            }
+
+            WorkspaceModePicker()
 
             Spacer()
 
-            Text(modeBadgeTitle)
-                .font(.system(size: 11, weight: .heavy))
-                .foregroundStyle(MaterialTheme.primaryDark)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
-                        .fill(MaterialTheme.surfaceTint)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
-                        .stroke(MaterialTheme.separator, lineWidth: 1)
-                )
-                .help(model.documentMode == "html" ? "精修当前 HTML 页面/文档" : "在固定画布中精修当前内容")
+            HStack(spacing: 6) {
+                Text(modeBadgeTitle)
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                if let buildLabel {
+                    Text(buildLabel)
+                        .foregroundStyle(MaterialTheme.muted)
+                }
+            }
+            .font(.system(size: 11, weight: .heavy))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                    .fill(MaterialTheme.surfaceTint)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                    .stroke(MaterialTheme.separator, lineWidth: 1)
+            )
+            .help(buildHelp)
         }
         .buttonStyle(MaterialButtonStyle())
         .padding(.horizontal, MaterialTheme.panelPadding)
         .padding(.vertical, 12)
         .background(
             ZStack {
-                Rectangle().fill(.regularMaterial)
-                Rectangle().fill(Color.white.opacity(0.22))
+                Rectangle().fill(.ultraThinMaterial)
+                Rectangle().fill(MaterialTheme.surfaceChrome)
             }
-            .shadow(color: MaterialTheme.shadow.opacity(0.20), radius: 10, x: 0, y: 2)
+            .shadow(color: MaterialTheme.shadow.opacity(0.10), radius: 12, x: 0, y: 2)
         )
         .overlay(Rectangle().fill(MaterialTheme.hairline).frame(height: 1), alignment: .top)
         .overlay(Rectangle().fill(MaterialTheme.separator).frame(height: 1), alignment: .bottom)
@@ -437,26 +453,23 @@ private struct AppToolbar: View {
         guard model.hasOpenDocument else { return "准备开始" }
         return model.documentMode == "html" ? "页面精修" : "画布精修"
     }
-}
 
-private struct BackdropMenu: View {
-    @EnvironmentObject private var model: EditorModel
-
-    var body: some View {
-        Menu {
-            ForEach(EditorModel.EditorBackdrop.allCases) { backdrop in
-                Button {
-                    model.setEditorBackdrop(backdrop)
-                } label: {
-                    Label(backdrop.title, systemImage: model.editorBackdrop == backdrop ? "checkmark.circle.fill" : backdrop.iconName)
-                }
-            }
-        } label: {
-            Label("背景", systemImage: "square.grid.3x3")
+    private var buildLabel: String? {
+        guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { return nil }
+        let fingerprint = (Bundle.main.infoDictionary?["ChiseloBuildFingerprint"] as? String)?.prefix(7)
+        if let fingerprint, !fingerprint.isEmpty {
+            return "v\(version) · \(fingerprint)"
         }
-        .menuStyle(.button)
-        .buttonStyle(MaterialButtonStyle())
-        .help("切换编辑区背景")
+        return "v\(version)"
+    }
+
+    private var buildHelp: String {
+        let mode = model.documentMode == "html" ? "精修当前 HTML 页面/文档" : "在固定画布中精修当前内容"
+        let timestamp = Bundle.main.infoDictionary?["ChiseloBuildTimestamp"] as? String
+        if let buildLabel, let timestamp {
+            return "\(mode)。当前构建：\(buildLabel)，\(timestamp)"
+        }
+        return mode
     }
 }
 
@@ -524,14 +537,16 @@ private struct ExportMenu: View {
                 )
             }
 
-            Button {
-                model.exportEditableHTML()
-            } label: {
-                ExportMenuItemLabel(
-                    title: "可编辑 HTML",
-                    subtitle: "浏览器内可直接改文字",
-                    icon: "pencil.and.outline"
-                )
+            if model.workspaceMode == .advanced {
+                Button {
+                    model.exportEditableHTML()
+                } label: {
+                    ExportMenuItemLabel(
+                        title: "可编辑 HTML",
+                        subtitle: "浏览器内可直接改文字",
+                        icon: "pencil.and.outline"
+                    )
+                }
             }
 
             Divider()
@@ -546,14 +561,16 @@ private struct ExportMenu: View {
                 )
             }
 
-            Button {
-                model.exportPPTX()
-            } label: {
-                ExportMenuItemLabel(
-                    title: "可编辑 PPTX",
-                    subtitle: "作为可编辑 Office 交付格式",
-                    icon: "rectangle.on.rectangle.angled"
-                )
+            if model.workspaceMode == .advanced {
+                Button {
+                    model.exportPPTX()
+                } label: {
+                    ExportMenuItemLabel(
+                        title: "可编辑 PPTX",
+                        subtitle: "作为可编辑 Office 交付格式",
+                        icon: "rectangle.on.rectangle.angled"
+                    )
+                }
             }
         } label: {
             Label("导出", systemImage: "square.and.arrow.up")
@@ -561,17 +578,21 @@ private struct ExportMenu: View {
         .menuStyle(.button)
         .buttonStyle(MaterialButtonStyle(filled: true))
         .disabled(!model.hasOpenDocument)
-        .help("从 HTML 主资产导出 HTML、PDF 或可编辑 PPTX")
+        .help(model.workspaceMode == .advanced ? "导出 HTML、PDF 或可编辑 PPTX" : "导出 HTML 或高保真 PDF")
     }
 
     private var preflightSubtitle: String {
         guard model.documentMode == "html" else { return "检查页面、对象和导出格式" }
-        return model.htmlDiagnostics.preflightSummary
+        return model.workspaceMode == .advanced
+            ? model.htmlDiagnostics.preflightSummary
+            : model.htmlDiagnostics.ordinaryPreflightSummary
     }
 
     private var preflightIcon: String {
         guard model.documentMode == "html" else { return "checklist" }
-        return model.htmlDiagnostics.preflightIcon
+        return model.workspaceMode == .advanced
+            ? model.htmlDiagnostics.preflightIcon
+            : model.htmlDiagnostics.ordinaryPreflightIcon
     }
 }
 
@@ -601,7 +622,7 @@ private struct ExportPreflightPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: model.documentMode == "html" ? model.htmlDiagnostics.preflightIcon : "checklist")
+                Image(systemName: preflightHeaderIcon)
                     .font(.system(size: 22, weight: .heavy))
                     .foregroundStyle(headerColor)
                     .frame(width: 42, height: 42)
@@ -662,14 +683,16 @@ private struct ExportPreflightPanel: View {
                 } label: {
                     Label("导出 PDF", systemImage: "doc.richtext")
                 }
-                .buttonStyle(MaterialButtonStyle())
+                .buttonStyle(MaterialButtonStyle(filled: model.workspaceMode == .ordinary))
 
-                Button {
-                    closeThen { model.exportPPTX() }
-                } label: {
-                    Label("导出 PPTX", systemImage: "rectangle.on.rectangle.angled")
+                if model.workspaceMode == .advanced {
+                    Button {
+                        closeThen { model.exportPPTX() }
+                    } label: {
+                        Label("导出 PPTX", systemImage: "rectangle.on.rectangle.angled")
+                    }
+                    .buttonStyle(MaterialButtonStyle(filled: true))
                 }
-                .buttonStyle(MaterialButtonStyle(filled: true))
             }
             .padding(16)
             .background(MaterialTheme.surfaceStrong)
@@ -681,7 +704,7 @@ private struct ExportPreflightPanel: View {
         let diagnostics = model.htmlDiagnostics
 
         return VStack(alignment: .leading, spacing: 16) {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            LazyVGrid(columns: preflightScoreColumns, spacing: 12) {
                 ExportTargetScoreCard(
                     title: "HTML",
                     subtitle: "源码洁净度 \(diagnostics.sourceCleanlinessPercent)%",
@@ -700,17 +723,22 @@ private struct ExportPreflightPanel: View {
                     color: scoreColor(diagnostics.pdfFidelityScore)
                 )
 
-                ExportTargetScoreCard(
-                    title: "PPTX",
-                    subtitle: "可编辑性 \(diagnostics.pptxEditabilityScore)%",
-                    score: diagnostics.pptxEditabilityScore,
-                    icon: "rectangle.on.rectangle.angled",
-                    detail: diagnostics.pptxRiskSummary,
-                    color: scoreColor(diagnostics.pptxEditabilityScore)
-                )
+                if model.workspaceMode == .advanced {
+                    ExportTargetScoreCard(
+                        title: "PPTX",
+                        subtitle: "可编辑性 \(diagnostics.pptxEditabilityScore)%",
+                        score: diagnostics.pptxEditabilityScore,
+                        icon: "rectangle.on.rectangle.angled",
+                        detail: diagnostics.pptxRiskSummary,
+                        color: scoreColor(diagnostics.pptxEditabilityScore)
+                    )
+                }
             }
 
-            PreflightRecommendationCard(diagnostics: diagnostics)
+            PreflightRecommendationCard(
+                diagnostics: diagnostics,
+                includesPPTX: model.workspaceMode == .advanced
+            )
             if (diagnostics.visualChangeCount ?? 0) > 0 {
                 VisualChangeReviewCard(
                     diagnostics: diagnostics,
@@ -734,7 +762,7 @@ private struct ExportPreflightPanel: View {
                     model.selectHTMLNode(id: elementId)
                 }
             }
-            if diagnostics.sourcePollutionReviewCount > 0 {
+            if model.workspaceMode == .advanced, diagnostics.sourcePollutionReviewCount > 0 {
                 SourceWritebackReviewCard(
                     diagnostics: diagnostics,
                     onSelectTarget: { elementId in
@@ -746,24 +774,26 @@ private struct ExportPreflightPanel: View {
                     }
                 )
             }
-            PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
-                dismiss()
-                model.selectHTMLNode(id: elementId)
-            }
-            if diagnostics.hasPPTXRepairActions {
-                PPTXRepairActionCard(
-                    diagnostics: diagnostics,
-                    onSelectTarget: { elementId in
-                        dismiss()
-                        model.selectHTMLNode(id: elementId)
-                    },
-                    onConvertEditable: {
-                        closeThen { model.freezeCurrentHTMLLayout() }
-                    },
-                    onExportPDF: {
-                        closeThen { model.exportPDF() }
-                    }
-                )
+            if model.workspaceMode == .advanced {
+                PPTXMappingReportCard(diagnostics: diagnostics) { elementId in
+                    dismiss()
+                    model.selectHTMLNode(id: elementId)
+                }
+                if diagnostics.hasPPTXRepairActions {
+                    PPTXRepairActionCard(
+                        diagnostics: diagnostics,
+                        onSelectTarget: { elementId in
+                            dismiss()
+                            model.selectHTMLNode(id: elementId)
+                        },
+                        onConvertEditable: {
+                            closeThen { model.freezeCurrentHTMLLayout() }
+                        },
+                        onExportPDF: {
+                            closeThen { model.exportPDF() }
+                        }
+                    )
+                }
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -771,10 +801,15 @@ private struct ExportPreflightPanel: View {
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundStyle(MaterialTheme.ink)
 
-                if let issues = diagnostics.issues, !issues.isEmpty {
-                    ForEach(issues.prefix(10)) { issue in
+                if !visiblePreflightIssues.isEmpty {
+                    ForEach(visiblePreflightIssues.prefix(10)) { issue in
                         DeliveryIssueRow(issue: issue) {
                             if let elementId = issue.elementId {
+                                dismiss()
+                                model.selectHTMLNode(id: elementId)
+                            }
+                        } relatedAction: {
+                            if let elementId = issue.relatedElementId {
                                 dismiss()
                                 model.selectHTMLNode(id: elementId)
                             }
@@ -793,17 +828,19 @@ private struct ExportPreflightPanel: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("PPTX 复核提示")
-                    .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(MaterialTheme.ink)
+            if model.workspaceMode == .advanced {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("PPTX 复核提示")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.ink)
 
-                PreflightNoteRow(icon: "rectangle.2.swap", title: "视觉变更", detail: (diagnostics.visualChangeCount ?? 0) > 0 ? "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时发生变化，导出前建议逐项复核。" : "当前画面与打开时未检测到明显对象级变化。")
-                PreflightNoteRow(icon: "rectangle.split.3x1", title: "响应式", detail: diagnostics.responsiveReviewDetail)
-                PreflightNoteRow(icon: "tablecells", title: "表格", detail: diagnostics.spanTableCount > 0 ? "合并单元格会降低 PPTX 对象映射稳定性。" : "普通表格仍建议导出后抽查行列和文字框。")
-                PreflightNoteRow(icon: "scribble.variable", title: "矢量/SVG", detail: diagnostics.svgCount > 0 ? "SVG 或复杂矢量可能会转成形状或图片，需要复核可编辑程度。" : "未检测到明显 SVG 风险。")
-                PreflightNoteRow(icon: "camera.filters", title: "视觉效果", detail: (diagnostics.pptxEffectRiskCount ?? 0) > 0 ? "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂 CSS 效果导出 PPTX 后需要复核。" : "未检测到明显复杂 CSS 效果风险。")
-                PreflightNoteRow(icon: "square.stack.3d.up", title: "层叠", detail: (diagnostics.overlapCount ?? 0) > 0 ? "重叠对象导出 PPTX 后要检查层级顺序。" : "未检测到明显重叠风险。")
+                    PreflightNoteRow(icon: "rectangle.2.swap", title: "视觉变更", detail: (diagnostics.visualChangeCount ?? 0) > 0 ? "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时发生变化，导出前建议逐项复核。" : "当前画面与打开时未检测到明显对象级变化。")
+                    PreflightNoteRow(icon: "rectangle.split.3x1", title: "响应式", detail: diagnostics.responsiveReviewDetail)
+                    PreflightNoteRow(icon: "tablecells", title: "表格", detail: diagnostics.spanTableCount > 0 ? "合并单元格会降低 PPTX 对象映射稳定性。" : "普通表格仍建议导出后抽查行列和文字框。")
+                    PreflightNoteRow(icon: "scribble.variable", title: "矢量/SVG", detail: diagnostics.svgCount > 0 ? "SVG 或复杂矢量可能会转成形状或图片，需要复核可编辑程度。" : "未检测到明显 SVG 风险。")
+                    PreflightNoteRow(icon: "camera.filters", title: "视觉效果", detail: (diagnostics.pptxEffectRiskCount ?? 0) > 0 ? "\(diagnostics.pptxEffectRiskCount ?? 0) 个复杂 CSS 效果导出 PPTX 后需要复核。" : "未检测到明显复杂 CSS 效果风险。")
+                    PreflightNoteRow(icon: "square.stack.3d.up", title: "层叠", detail: (diagnostics.overlapCount ?? 0) > 0 ? "重叠对象导出 PPTX 后要检查层级顺序。" : "未检测到明显重叠风险。")
+                }
             }
         }
     }
@@ -812,7 +849,7 @@ private struct ExportPreflightPanel: View {
         let editableSummary = model.deck?.editableVersionSummary
 
         return VStack(alignment: .leading, spacing: 16) {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            LazyVGrid(columns: preflightScoreColumns, spacing: 12) {
                 ExportTargetScoreCard(
                     title: "HTML",
                     subtitle: "画布导出",
@@ -829,14 +866,16 @@ private struct ExportPreflightPanel: View {
                     detail: "PDF 会按页面尺寸渲染，适合高保真交付。",
                     color: scoreColor(96)
                 )
-                ExportTargetScoreCard(
-                    title: "PPTX",
-                    subtitle: editableSummary.map { "可编辑性 \($0.pptxEditabilityScore)%" } ?? "对象可编辑",
-                    score: editableSummary?.pptxEditabilityScore ?? 90,
-                    icon: "rectangle.on.rectangle.angled",
-                    detail: editableSummary?.pptxDetail ?? "文本、图片和形状会尽量保留为可编辑对象。",
-                    color: scoreColor(editableSummary?.pptxEditabilityScore ?? 90)
-                )
+                if model.workspaceMode == .advanced {
+                    ExportTargetScoreCard(
+                        title: "PPTX",
+                        subtitle: editableSummary.map { "可编辑性 \($0.pptxEditabilityScore)%" } ?? "对象可编辑",
+                        score: editableSummary?.pptxEditabilityScore ?? 90,
+                        icon: "rectangle.on.rectangle.angled",
+                        detail: editableSummary?.pptxDetail ?? "文本、图片和形状会尽量保留为可编辑对象。",
+                        color: scoreColor(editableSummary?.pptxEditabilityScore ?? 90)
+                    )
+                }
             }
 
             if let editableSummary {
@@ -856,25 +895,56 @@ private struct ExportPreflightPanel: View {
 
     private var headerSubtitle: String {
         if model.documentMode == "html" {
-            return model.htmlDiagnostics.preflightSummary
+            return model.workspaceMode == .advanced
+                ? model.htmlDiagnostics.preflightSummary
+                : model.htmlDiagnostics.ordinaryPreflightSummary
         }
-        return "固定画布可导出 HTML、PDF 和 PPTX"
+        return model.workspaceMode == .advanced ? "固定画布可导出 HTML、PDF 和 PPTX" : "固定画布可导出 HTML 和 PDF"
+    }
+
+    private var preflightHeaderIcon: String {
+        guard model.documentMode == "html" else { return "checklist" }
+        return model.workspaceMode == .advanced
+            ? model.htmlDiagnostics.preflightIcon
+            : model.htmlDiagnostics.ordinaryPreflightIcon
     }
 
     private var headerColor: Color {
         if model.documentMode == "html" {
-            return scoreColor(model.htmlDiagnostics.overallExportScore)
+            let diagnostics = model.htmlDiagnostics
+            let score = model.workspaceMode == .advanced
+                ? diagnostics.overallExportScore
+                : min(diagnostics.htmlReadinessScore, diagnostics.pdfFidelityScore)
+            return scoreColor(score)
         }
         return successColor
     }
 
+    private var preflightScoreColumns: [GridItem] {
+        let count = model.workspaceMode == .advanced ? 3 : 2
+        return Array(repeating: GridItem(.flexible()), count: count)
+    }
+
+    private var visiblePreflightIssues: [HTMLDiagnosticIssue] {
+        let issues = model.htmlDiagnostics.issues ?? []
+        guard model.workspaceMode == .ordinary else { return issues }
+        let advancedOnlyKinds: Set<String> = [
+            "span-table",
+            "pptx-effect-risk",
+            "source-pollution-review",
+            "stylesheet-rule-writeback",
+            "stylesheet-edit-review"
+        ]
+        return issues.filter { !advancedOnlyKinds.contains($0.kind) }
+    }
+
     private var successColor: Color {
-        Color(red: 0.06, green: 0.52, blue: 0.26)
+        MaterialTheme.accentSuccess
     }
 
     private func scoreColor(_ score: Int) -> Color {
         if score >= 85 { return successColor }
-        if score >= 65 { return Color(red: 0.78, green: 0.47, blue: 0.06) }
+        if score >= 65 { return MaterialTheme.accentWarning }
         return MaterialTheme.accentDanger
     }
 
@@ -935,6 +1005,7 @@ private struct ExportTargetScoreCard: View {
 
 private struct PreflightRecommendationCard: View {
     var diagnostics: HTMLDiagnostics
+    var includesPPTX: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -964,21 +1035,23 @@ private struct PreflightRecommendationCard: View {
         if diagnostics.blockingExportRiskCount > 0 {
             items.append(("exclamationmark.triangle.fill", "先处理红色问题，再导出正式版本。断链、文字溢出和越界会直接影响交付质量。", MaterialTheme.accentDanger))
         } else {
-            items.append(("checkmark.seal.fill", "HTML 和 PDF 可直接进入导出复核。重要文件仍建议打开导出结果抽查一遍。", Color(red: 0.06, green: 0.52, blue: 0.26)))
+            items.append(("checkmark.seal.fill", "HTML 和 PDF 可直接进入导出复核。重要文件仍建议打开导出结果抽查一遍。", MaterialTheme.accentSuccess))
         }
 
-        if diagnostics.pptxReviewRiskCount > 0 {
-            items.append(("rectangle.on.rectangle.angled", "导出可编辑 PPTX 时，表格、SVG、复杂视觉效果、重叠对象和合并单元格需要重点复核。", Color(red: 0.78, green: 0.47, blue: 0.06)))
-        } else {
-            items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", Color(red: 0.06, green: 0.52, blue: 0.26)))
+        if includesPPTX {
+            if diagnostics.pptxReviewRiskCount > 0 {
+                items.append(("rectangle.on.rectangle.angled", "导出可编辑 PPTX 时，表格、SVG、复杂视觉效果、重叠对象和合并单元格需要重点复核。", MaterialTheme.accentWarning))
+            } else {
+                items.append(("rectangle.on.rectangle.angled", "PPTX 可编辑性风险较低，可导出后检查文本框、图片和对象层级。", MaterialTheme.accentSuccess))
+            }
         }
 
         if (diagnostics.visualChangeCount ?? 0) > 0 {
-            items.append(("rectangle.2.swap", "已检测到相对打开时的对象级视觉变化，导出前建议逐项确认改动范围是否符合预期。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("rectangle.2.swap", "已检测到相对打开时的对象级视觉变化，导出前建议逐项确认改动范围是否符合预期。", MaterialTheme.accentWarning))
         }
 
         if diagnostics.runtimeCompatibilityRiskCount > 0 {
-            items.append(("viewfinder", "脚本渲染、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先转为可编辑版再精修。", Color(red: 0.78, green: 0.47, blue: 0.06)))
+            items.append(("viewfinder", "脚本渲染、嵌入页面或画布内容不一定能拆成普通对象。需要像交付稿一样稳定微调时，优先转为可编辑版再精修。", MaterialTheme.accentWarning))
         }
         return items
     }
@@ -1098,7 +1171,7 @@ private struct VisualChangeReviewCard: View {
     }
 
     private var warningColor: Color {
-        Color(red: 0.78, green: 0.47, blue: 0.06)
+        MaterialTheme.accentWarning
     }
 
     private func visualChangeSubtitle(changeCount: Int, targetCount: Int) -> String {
@@ -1117,7 +1190,7 @@ private struct ResponsiveChangeReviewCard: View {
 
     @State private var targetIndex = 0
 
-    private let color = Color(red: 0.78, green: 0.47, blue: 0.06)
+    private let color = MaterialTheme.accentWarning
 
     var body: some View {
         let items = diagnostics.responsiveChangePreviewItems
@@ -1270,7 +1343,7 @@ private struct SourceWritebackReviewCard: View {
 
     @State private var targetIndex = 0
 
-    private let color = Color(red: 0.78, green: 0.47, blue: 0.06)
+    private let color = MaterialTheme.accentWarning
 
     var body: some View {
         let inlineItems = diagnostics.inlineStyleChangeItems
@@ -1363,9 +1436,9 @@ private struct SourceWritebackSelectorList: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "curlybraces")
                 .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(Color(red: 0.06, green: 0.52, blue: 0.26))
+                .foregroundStyle(MaterialTheme.accentSuccess)
                 .frame(width: 18, height: 18)
-                .background(Color(red: 0.06, green: 0.52, blue: 0.26).opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+                .background(MaterialTheme.accentSuccess.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("CSS 规则")
@@ -1472,7 +1545,7 @@ private struct SourceWritebackRow: View {
     }
 
     private var iconColor: Color {
-        item.writebackKind == "stylesheet-rule" ? Color(red: 0.06, green: 0.52, blue: 0.26) : color
+        item.writebackKind == "stylesheet-rule" ? MaterialTheme.accentSuccess : color
     }
 }
 
@@ -1632,7 +1705,7 @@ private struct VisualSnapshotComparison: View {
         if diff.hasMeaningfulChange {
             return color
         }
-        return Color(red: 0.06, green: 0.52, blue: 0.26)
+        return MaterialTheme.accentSuccess
     }
 
     private func percentText(_ value: Double) -> String {
@@ -1844,7 +1917,7 @@ private struct VisualChangeMap: View {
 
     private func fillColor(for item: HTMLVisualChangeItem) -> Color {
         if item.kind.contains("删除") { return MaterialTheme.accentDanger }
-        if item.kind.contains("新增") { return Color(red: 0.06, green: 0.52, blue: 0.26) }
+        if item.kind.contains("新增") { return MaterialTheme.accentSuccess }
         return color
     }
 }
@@ -2007,7 +2080,7 @@ private struct VisualChangePreviewRow: View {
 
     private var rowColor: Color {
         if item.kind.contains("删除") { return MaterialTheme.accentDanger }
-        if item.kind.contains("新增") { return Color(red: 0.06, green: 0.52, blue: 0.26) }
+        if item.kind.contains("新增") { return MaterialTheme.accentSuccess }
         return color
     }
 }
@@ -2125,7 +2198,7 @@ private struct PPTXMappingReportCard: View {
                             icon: "checklist",
                             count: diagnostics.pptxReviewObjectCount ?? 0,
                             targetIds: diagnostics.pptxReviewTargetIds,
-                            color: Color(red: 0.78, green: 0.47, blue: 0.06),
+                            color: MaterialTheme.accentWarning,
                             index: $reviewTargetIndex,
                             onSelectTarget: onSelectTarget
                         )
@@ -2162,8 +2235,8 @@ private struct PPTXMappingReportCard: View {
 
     private var reportColor: Color {
         if diagnostics.pptxFallbackObjectCount ?? 0 > 0 { return MaterialTheme.accentDanger }
-        if diagnostics.pptxReviewObjectCount ?? 0 > 0 { return Color(red: 0.78, green: 0.47, blue: 0.06) }
-        return Color(red: 0.06, green: 0.52, blue: 0.26)
+        if diagnostics.pptxReviewObjectCount ?? 0 > 0 { return MaterialTheme.accentWarning }
+        return MaterialTheme.accentSuccess
     }
 
     private var hasTargetNavigation: Bool {
@@ -2408,7 +2481,7 @@ private struct PPTXRepairActionCard: View {
                         icon: "doc.richtext",
                         title: "保真交付",
                         detail: "视觉一致优先时使用 PDF",
-                        color: Color(red: 0.06, green: 0.52, blue: 0.26),
+                        color: MaterialTheme.accentSuccess,
                         buttonTitle: "导出PDF"
                     ) {
                         onExportPDF()
@@ -2421,7 +2494,7 @@ private struct PPTXRepairActionCard: View {
     }
 
     private var warningColor: Color {
-        Color(red: 0.78, green: 0.47, blue: 0.06)
+        MaterialTheme.accentWarning
     }
 }
 
@@ -2503,6 +2576,93 @@ private struct PreflightNoteRow: View {
     }
 }
 
+private struct PrecisionSafetyCard: View {
+    var element: EditorElement
+    var onLocate: (String) -> Void
+
+    var body: some View {
+        if let status = element.chiseloPrecisionSafetyStatus {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: status.icon)
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(status.color)
+                        .frame(width: 22, height: 22)
+                        .background(status.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(status.title)
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(MaterialTheme.ink)
+                        Text(status.detail)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                if !status.operations.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(status.operations.prefix(4), id: \.self) { operation in
+                            Text(operation)
+                                .font(.system(size: 9, weight: .heavy))
+                                .foregroundStyle(status.color)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4)
+                                .background(status.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+
+                if status.targetId != nil || status.containerId != nil {
+                    HStack(spacing: 7) {
+                        if let targetId = status.targetId {
+                            Button {
+                                onLocate(targetId)
+                            } label: {
+                                Label("对象", systemImage: "scope")
+                            }
+                            .buttonStyle(CompactInspectorButtonStyle(color: status.color))
+                        }
+
+                        if let containerId = status.containerId, containerId != status.targetId {
+                            Button {
+                                onLocate(containerId)
+                            } label: {
+                                Label("父级", systemImage: "rectangle.inset.filled")
+                            }
+                            .buttonStyle(CompactInspectorButtonStyle(color: MaterialTheme.primary))
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .background(status.color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium))
+            .overlay(
+                RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
+                    .stroke(status.color.opacity(0.22), lineWidth: 1)
+            )
+        }
+    }
+}
+
+private struct CompactInspectorButtonStyle: ButtonStyle {
+    var color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 10, weight: .heavy))
+            .foregroundStyle(color)
+            .padding(.horizontal, 9)
+            .frame(height: 24)
+            .background(color.opacity(configuration.isPressed ? 0.18 : 0.10), in: RoundedRectangle(cornerRadius: 6))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+}
+
 private struct EditableVersionSummary: Equatable {
     var pageCount: Int
     var totalObjects: Int
@@ -2555,8 +2715,8 @@ private struct EditableVersionSummary: Equatable {
     }
 
     var qualityColor: Color {
-        if pptxEditabilityScore >= 85 { return Color(red: 0.06, green: 0.52, blue: 0.26) }
-        if pptxEditabilityScore >= 65 { return Color(red: 0.78, green: 0.47, blue: 0.06) }
+        if pptxEditabilityScore >= 85 { return MaterialTheme.accentSuccess }
+        if pptxEditabilityScore >= 65 { return MaterialTheme.accentWarning }
         return MaterialTheme.accentDanger
     }
 }
@@ -2701,284 +2861,6 @@ private extension EditorDeck {
             canvasFallbackCount: canvasFallbacks,
             pptxEditabilityScore: score
         )
-    }
-}
-
-private extension HTMLDiagnostics {
-    var preflightSummary: String {
-        if blockingExportRiskCount > 0 {
-            return "\(blockingExportRiskCount) 项需先处理"
-        }
-        if pptxReviewRiskCount > 0 {
-            return "\(pptxReviewRiskCount) 项导出后需复核"
-        }
-        if (visualChangeCount ?? 0) > 0 {
-            return "\(visualChangeCount ?? 0) 处视觉变更待复核"
-        }
-        return "HTML、PDF、PPTX 可进入导出复核"
-    }
-
-    var preflightIcon: String {
-        if blockingExportRiskCount > 0 { return "exclamationmark.triangle.fill" }
-        if pptxReviewRiskCount > 0 { return "checklist" }
-        if (visualChangeCount ?? 0) > 0 { return "rectangle.2.swap" }
-        return "checkmark.seal.fill"
-    }
-
-    var blockingExportRiskCount: Int {
-        var count = 0
-        count += brokenImages
-        count += brokenMedia
-        if !cleanExport { count += 1 }
-        count += textOverflowCount ?? 0
-        count += outOfBoundsCount ?? 0
-        count += overlayBlockerCount ?? 0
-        return count
-    }
-
-    var pptxReviewRiskCount: Int {
-        var count = 0
-        if tableCount > 0 { count += 1 }
-        if spanTableCount > 0 { count += 1 }
-        if svgCount > 0 { count += 1 }
-        if (pptxEffectRiskCount ?? 0) > 0 { count += 1 }
-        if (overlapCount ?? 0) > 0 { count += 1 }
-        if runtimeCompatibilityRiskCount > 0 { count += 1 }
-        return count
-    }
-
-    var runtimeCompatibilityRiskCount: Int {
-        runtimeRiskCount ?? 0
-    }
-
-    var pptxNativeObjectCount: Int {
-        (pptxTextObjectCount ?? 0) + (pptxImageObjectCount ?? 0) + (pptxShapeObjectCount ?? 0)
-    }
-
-    var pptxMappingTotalObjectCount: Int {
-        pptxNativeObjectCount + (pptxReviewObjectCount ?? 0) + (pptxFallbackObjectCount ?? 0)
-    }
-
-    var pptxEditableEstimate: Int {
-        let total = pptxMappingTotalObjectCount
-        guard total > 0 else { return 100 }
-        return boundedScore(Int((Double(pptxNativeObjectCount) / Double(total) * 100).rounded()))
-    }
-
-    var pptxMappingRecommendation: String {
-        if (pptxFallbackObjectCount ?? 0) > 0 {
-            return "存在只能整体保留或高风险对象。若目标是可编辑 PPTX，建议先转为可编辑版；若目标是视觉完全一致，优先导出 PDF。"
-        }
-        if (pptxReviewObjectCount ?? 0) > 0 {
-            return "大部分对象可编辑导出，但表格、矢量、复杂效果或层叠对象需要导出后重点复核。"
-        }
-        return "主要由文字、图片和简单形状组成，适合导出可编辑 PPTX，仍建议抽查文本框和图片。"
-    }
-
-    var hasPPTXRepairActions: Bool {
-        tableCount > 0
-            || svgCount > 0
-            || (pptxEffectRiskCount ?? 0) > 0
-            || (overlapCount ?? 0) > 0
-            || shouldOfferEditableConversion
-            || shouldOfferPDFFallback
-    }
-
-    var shouldOfferEditableConversion: Bool {
-        (pptxFallbackObjectCount ?? 0) > 0 || runtimeCompatibilityRiskCount > 0
-    }
-
-    var shouldOfferPDFFallback: Bool {
-        (pptxFallbackObjectCount ?? 0) > 0
-            || (pptxEffectRiskCount ?? 0) > 0
-            || pptxEditabilityScore < 65
-    }
-
-    var pptxTextTargetIds: [String] {
-        normalizedTargetIds(pptxTextElementIds, fallback: pptxTextElementId)
-    }
-
-    var pptxImageTargetIds: [String] {
-        normalizedTargetIds(pptxImageElementIds, fallback: pptxImageElementId)
-    }
-
-    var pptxShapeTargetIds: [String] {
-        normalizedTargetIds(pptxShapeElementIds, fallback: pptxShapeElementId)
-    }
-
-    var pptxReviewTargetIds: [String] {
-        normalizedTargetIds(pptxReviewElementIds, fallback: pptxReviewElementId)
-    }
-
-    var pptxFallbackTargetIds: [String] {
-        normalizedTargetIds(pptxFallbackElementIds, fallback: pptxFallbackElementId)
-    }
-
-    var visualChangePreviewCanvasWidth: Int {
-        if let visualChangeCanvasWidth, visualChangeCanvasWidth > 0 {
-            return visualChangeCanvasWidth
-        }
-        return max(visualChangePreviewItems.map { $0.x + $0.w }.max() ?? 1, 1)
-    }
-
-    var visualChangePreviewCanvasHeight: Int {
-        if let visualChangeCanvasHeight, visualChangeCanvasHeight > 0 {
-            return visualChangeCanvasHeight
-        }
-        return max(visualChangePreviewItems.map { $0.y + $0.h }.max() ?? 1, 1)
-    }
-
-    var runtimeCompatibilityDetail: String {
-        let risks = runtimeCompatibilityRiskCount
-        if risks == 0 {
-            return "普通 HTML 对象，可直接精修"
-        }
-
-        var parts: [String] = []
-        if (scriptCount ?? 0) > 0 || (runtimeRootCount ?? 0) > 0 {
-            parts.append("脚本渲染")
-        }
-        if (iframeCount ?? 0) > 0 {
-            parts.append("\(iframeCount ?? 0) 个嵌入页面")
-        }
-        if (canvasCount ?? 0) > 0 {
-            parts.append("\(canvasCount ?? 0) 个画布")
-        }
-        if (shadowRootCount ?? 0) > 0 {
-            parts.append("\(shadowRootCount ?? 0) 个封装组件")
-        }
-        if (overlayBlockerCount ?? 0) > 0 {
-            parts.append("\(overlayBlockerCount ?? 0) 个遮罩")
-        }
-        if (externalResourceCount ?? 0) > 0 {
-            parts.append("\(externalResourceCount ?? 0) 个外部资源")
-        }
-        return parts.isEmpty ? "\(risks) 项动态内容风险" : parts.joined(separator: "，")
-    }
-
-    var responsiveReviewDetail: String {
-        let responsiveRules = responsiveRuleCount ?? 0
-        let responsiveRisks = responsiveLayoutRiskCount ?? 0
-        let responsiveChanges = responsiveChangeCount ?? 0
-        let widthSuffix = responsiveReviewWidthText.isEmpty ? "窄屏和宽屏" : responsiveReviewWidthText
-        if responsiveChanges > 0 {
-            return "\(responsiveChanges) 个已修改对象处在响应式规则、弹性/网格或粘性布局影响链里，导出前建议检查\(widthSuffix)。"
-        }
-        if responsiveRisks == 0 {
-            return "未检测到明显响应式规则，常规宽度复核即可。"
-        }
-        if responsiveRules > 0 {
-            return "\(responsiveRules) 条响应式规则或容器规则，修改后建议检查\(widthSuffix)。"
-        }
-        return "\(responsiveRisks) 个弹性/网格/粘性布局对象，修改后建议做多宽度预览。"
-    }
-
-    var responsiveReviewWidthText: String {
-        let widths = (responsiveReviewWidths ?? []).filter { $0 > 0 }.prefix(4)
-        guard !widths.isEmpty else { return "" }
-        return "断点附近宽度 \(widths.map { "\($0)" }.joined(separator: " / "))px"
-    }
-
-    var sourcePollutionReviewCount: Int {
-        max(0, inlineStyleChangeCount ?? 0)
-            + max(0, externalStylesheetAffectedChangeCount ?? 0)
-            + max(0, stylesheetRuleWritebackCount ?? 0)
-    }
-
-    var sourcePollutionReviewDetail: String {
-        let inlineChanges = inlineStyleChangeCount ?? 0
-        let ruleWrites = stylesheetRuleWritebackCount ?? 0
-        let stylesheets = stylesheetCount ?? 0
-        let externalSheets = externalStylesheetCount ?? 0
-        let externalAffectedChanges = externalStylesheetAffectedChangeCount ?? 0
-        let ruleTargets = stylesheetRuleWritebackTargets.prefix(3).joined(separator: "、")
-        let ruleTargetSuffix = ruleTargets.isEmpty ? "" : "（\(ruleTargets)）"
-        if ruleWrites > 0 && inlineChanges == 0 {
-            return "\(ruleWrites) 次样式修改已写入本地 CSS 规则\(ruleTargetSuffix)，源码更易继续维护。"
-        }
-        if ruleWrites > 0 && inlineChanges > 0 {
-            return "\(ruleWrites) 次写入 CSS 规则\(ruleTargetSuffix)，\(inlineChanges) 个对象仍写入 inline style。"
-        }
-        if inlineChanges > 0 && stylesheets > 0 {
-            return "\(inlineChanges) 个变化写入 inline style；原稿含 \(stylesheets) 个样式表，保存前建议抽查源码。"
-        }
-        if externalAffectedChanges > 0 {
-            return "\(externalAffectedChanges) 个已修改对象可能受 \(externalSheets) 个外部样式表影响，建议保存前复核宽度和 class 效果。"
-        }
-        if inlineChanges > 0 {
-            return "\(inlineChanges) 个对象发生 inline style 写回。"
-        }
-        return "未检测到明显源码污染风险。"
-    }
-
-    var htmlReadinessScore: Int {
-        boundedScore(
-            100
-            - (brokenImages + brokenMedia) * 18
-            - (cleanExport ? 0 : 30)
-            - (textOverflowCount ?? 0) * 10
-            - (outOfBoundsCount ?? 0) * 10
-            - min(12, (overlayBlockerCount ?? 0) * 6)
-            - min(8, (responsiveLayoutRiskCount ?? 0) * 2)
-            - min(18, (overlapCount ?? 0) * 3)
-        )
-    }
-
-    var pdfFidelityScore: Int {
-        boundedScore(
-            100
-            - (brokenImages + brokenMedia) * 22
-            - (textOverflowCount ?? 0) * 12
-            - (outOfBoundsCount ?? 0) * 12
-            - min(10, (overlayBlockerCount ?? 0) * 5)
-            - min(20, (overlapCount ?? 0) * 4)
-        )
-    }
-
-    var pptxEditabilityScore: Int {
-        boundedScore(
-            100
-            - (brokenImages + brokenMedia) * 16
-            - (textOverflowCount ?? 0) * 8
-            - (outOfBoundsCount ?? 0) * 8
-            - min(18, (overlapCount ?? 0) * 5)
-            - min(16, tableCount * 4)
-            - (spanTableCount > 0 ? 18 : 0)
-            - min(20, svgCount * 6)
-            - min(22, (pptxEffectRiskCount ?? 0) * 4)
-            - min(28, runtimeCompatibilityRiskCount * 4)
-        )
-    }
-
-    var overallExportScore: Int {
-        min(htmlReadinessScore, pdfFidelityScore, pptxEditabilityScore)
-    }
-
-    var pptxRiskSummary: String {
-        if pptxEditabilityScore >= 85 {
-            return "PPTX 可编辑性较好，导出后抽查文本框和图片即可。"
-        }
-        if pptxEditabilityScore >= 65 {
-            return "PPTX 可编辑性中等，导出后重点检查表格、SVG、复杂效果、动态组件和层级。"
-        }
-        return "PPTX 可编辑性风险较高，建议先处理红色问题并复核复杂效果、脚本渲染、嵌入页面和整体对象。"
-    }
-
-    private func boundedScore(_ value: Int) -> Int {
-        min(100, max(0, value))
-    }
-
-    private func normalizedTargetIds(_ values: [String]?, fallback: String?) -> [String] {
-        var seen = Set<String>()
-        var ids: [String] = []
-        for value in values ?? [] {
-            guard !value.isEmpty, seen.insert(value).inserted else { continue }
-            ids.append(value)
-        }
-        if let fallback, !fallback.isEmpty, seen.insert(fallback).inserted {
-            ids.append(fallback)
-        }
-        return ids
     }
 }
 
@@ -3210,7 +3092,7 @@ private struct DocumentNavigator: View {
                         HTMLDocumentCard()
                         HTMLDeliveryCheckCard(diagnostics: model.htmlDiagnostics)
 
-                        if !model.htmlTree.isEmpty {
+                        if model.workspaceMode == .advanced, !model.htmlTree.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("对象结构")
                                     .font(.caption)
@@ -3337,424 +3219,6 @@ private struct CSSLinearGradient {
     var stops: [Gradient.Stop]
 }
 
-private struct HTMLDocumentCard: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
-            .fill(MaterialTheme.surface)
-            .aspectRatio(4.0 / 3.0, contentMode: .fit)
-            .overlay(
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("HTML")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .tracking(1.2)
-                        .foregroundStyle(MaterialTheme.primary)
-                    Text("HTML 页面")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(MaterialTheme.ink)
-                    Spacer()
-                    Text("点击正文或结构")
-                        .font(.caption2)
-                        .foregroundStyle(MaterialTheme.muted)
-                }
-                .padding(8),
-                alignment: .topLeading
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
-                    .stroke(MaterialTheme.primary.opacity(0.24), lineWidth: 1)
-            )
-            .shadow(color: MaterialTheme.shadow.opacity(0.18), radius: 8, x: 0, y: 3)
-    }
-}
-
-private struct HTMLDeliveryCheckCard: View {
-    @EnvironmentObject private var model: EditorModel
-
-    var diagnostics: HTMLDiagnostics
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: headerIcon)
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(headerColor)
-                    .frame(width: 22, height: 22)
-                    .background(headerColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("交付检查")
-                        .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.ink)
-                    Text(headerSubtitle)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(headerColor)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            VStack(spacing: 7) {
-                DeliveryCheckRow(
-                    icon: resourceIcon,
-                    title: "资源",
-                    detail: resourceDetail,
-                    color: resourceColor,
-                    isClickable: diagnostics.resourceElementId != nil
-                ) {
-                    if let elementId = diagnostics.resourceElementId {
-                        model.selectHTMLNode(id: elementId)
-                    }
-                }
-
-                DeliveryCheckRow(
-                    icon: diagnostics.cleanExport ? "checkmark.seal" : "exclamationmark.triangle",
-                    title: "源码洁净度",
-                    detail: diagnostics.sourceCleanlinessDetail,
-                    color: diagnostics.cleanExport ? successColor : MaterialTheme.accentDanger,
-                    isClickable: false
-                )
-
-                if (diagnostics.visualChangeCount ?? 0) > 0 {
-                    DeliveryCheckRow(
-                        icon: "rectangle.2.swap",
-                        title: "视觉变更",
-                        detail: "\(diagnostics.visualChangeCount ?? 0) 个对象相对打开时变化",
-                        color: warningColor,
-                        isClickable: !diagnostics.visualChangeTargetIds.isEmpty
-                    ) {
-                        if let elementId = diagnostics.visualChangeTargetIds.first {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if diagnostics.runtimeCompatibilityRiskCount > 0 {
-                    DeliveryCheckRow(
-                        icon: "wand.and.rays",
-                        title: "动态内容风险",
-                        detail: diagnostics.runtimeCompatibilityDetail,
-                        color: warningColor,
-                        isClickable: diagnostics.runtimeRiskElementId != nil
-                    ) {
-                        if let elementId = diagnostics.runtimeRiskElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if diagnostics.responsiveLayoutRiskCount ?? 0 > 0 {
-                    DeliveryCheckRow(
-                        icon: "rectangle.split.3x1",
-                        title: "多宽度复核",
-                        detail: diagnostics.responsiveReviewDetail,
-                        color: warningColor,
-                        isClickable: false
-                    )
-                }
-
-                if diagnostics.sourcePollutionReviewCount > 0 {
-                    DeliveryCheckRow(
-                        icon: "curlybraces.square",
-                        title: "源码复核",
-                        detail: diagnostics.sourcePollutionReviewDetail,
-                        color: warningColor,
-                        isClickable: !diagnostics.sourceWritebackTargetIds.isEmpty
-                    ) {
-                        if let elementId = diagnostics.sourceWritebackTargetIds.first {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if diagnostics.tableCount > 0 {
-                    DeliveryCheckRow(
-                        icon: diagnostics.spanTableCount > 0 ? "tablecells.badge.ellipsis" : "tablecells",
-                        title: "表格",
-                        detail: diagnostics.spanTableCount > 0 ? "\(diagnostics.tableCount) 个表格，\(diagnostics.spanTableCount) 个含合并单元格" : "\(diagnostics.tableCount) 个表格",
-                        color: diagnostics.spanTableCount > 0 ? warningColor : successColor,
-                        isClickable: diagnostics.tableElementId != nil
-                    ) {
-                        if let elementId = diagnostics.tableElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if diagnostics.svgCount > 0 {
-                    DeliveryCheckRow(
-                        icon: "scribble.variable",
-                        title: "SVG",
-                        detail: "\(diagnostics.svgCount) 个 SVG/矢量图形",
-                        color: warningColor,
-                        isClickable: diagnostics.svgElementId != nil
-                    ) {
-                        if let elementId = diagnostics.svgElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if (diagnostics.textOverflowCount ?? 0) > 0 {
-                    DeliveryCheckRow(
-                        icon: "text.badge.exclamationmark",
-                        title: "文字",
-                        detail: "\(diagnostics.textOverflowCount ?? 0) 处文字溢出",
-                        color: MaterialTheme.accentDanger,
-                        isClickable: diagnostics.textOverflowElementId != nil
-                    ) {
-                        if let elementId = diagnostics.textOverflowElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if (diagnostics.outOfBoundsCount ?? 0) > 0 {
-                    DeliveryCheckRow(
-                        icon: "arrow.up.left.and.arrow.down.right",
-                        title: "边界",
-                        detail: "\(diagnostics.outOfBoundsCount ?? 0) 个元素超出页面",
-                        color: MaterialTheme.accentDanger,
-                        isClickable: diagnostics.outOfBoundsElementId != nil
-                    ) {
-                        if let elementId = diagnostics.outOfBoundsElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-
-                if (diagnostics.overlapCount ?? 0) > 0 {
-                    DeliveryCheckRow(
-                        icon: "square.stack.3d.up",
-                        title: "重叠",
-                        detail: "\(diagnostics.overlapCount ?? 0) 处明显重叠",
-                        color: warningColor,
-                        isClickable: diagnostics.overlapElementId != nil
-                    ) {
-                        if let elementId = diagnostics.overlapElementId {
-                            model.selectHTMLNode(id: elementId)
-                        }
-                    }
-                }
-            }
-
-            if !visibleIssues.isEmpty {
-                Divider()
-                    .overlay(MaterialTheme.hairline)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("问题定位")
-                        .font(.system(size: 10, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.muted)
-
-                    ForEach(visibleIssues) { issue in
-                        DeliveryIssueRow(issue: issue) {
-                            if let elementId = issue.elementId {
-                                model.selectHTMLNode(id: elementId)
-                            }
-                        }
-                    }
-
-                    if hiddenIssueCount > 0 {
-                        Text("还有 \(hiddenIssueCount) 项，处理后会继续显示")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(MaterialTheme.muted)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .background(MaterialTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium))
-        .overlay(
-            RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
-                .stroke(MaterialTheme.hairline, lineWidth: 1)
-        )
-        .shadow(color: MaterialTheme.shadow.opacity(0.10), radius: 8, x: 0, y: 3)
-    }
-
-    private var headerIcon: String {
-        diagnostics.issueCount > 0 ? "exclamationmark.triangle.fill" : "checkmark.seal.fill"
-    }
-
-    private var headerSubtitle: String {
-        if diagnostics.issueCount > 0 { return "\(diagnostics.issueCount) 项风险" }
-        if diagnostics.warningCount > 0 { return "\(diagnostics.warningCount) 项提示" }
-        return "可交付"
-    }
-
-    private var headerColor: Color {
-        if diagnostics.issueCount > 0 { return MaterialTheme.accentDanger }
-        if diagnostics.warningCount > 0 { return warningColor }
-        return successColor
-    }
-
-    private var resourceIcon: String {
-        diagnostics.brokenImages + diagnostics.brokenMedia > 0 ? "photo.badge.exclamationmark" : "photo.on.rectangle"
-    }
-
-    private var resourceDetail: String {
-        let broken = diagnostics.brokenImages + diagnostics.brokenMedia
-        if broken > 0 {
-            return "\(diagnostics.brokenImages) 张断链图，\(diagnostics.brokenMedia) 个断链媒体"
-        }
-
-        let embedded = diagnostics.embeddedImages ?? 0
-        if diagnostics.imageCount == 0 && diagnostics.mediaCount == 0 { return "无外部图片/媒体" }
-        if embedded > 0 { return "\(diagnostics.imageCount) 张图，\(embedded) 张已嵌入" }
-        return "\(diagnostics.imageCount) 张图，\(diagnostics.mediaCount) 个媒体"
-    }
-
-    private var resourceColor: Color {
-        diagnostics.brokenImages + diagnostics.brokenMedia > 0 ? MaterialTheme.accentDanger : successColor
-    }
-
-    private var successColor: Color {
-        Color(red: 0.06, green: 0.52, blue: 0.26)
-    }
-
-    private var warningColor: Color {
-        Color(red: 0.78, green: 0.47, blue: 0.06)
-    }
-
-    private var visibleIssues: [HTMLDiagnosticIssue] {
-        Array((diagnostics.issues ?? []).prefix(5))
-    }
-
-    private var hiddenIssueCount: Int {
-        max(0, (diagnostics.issues ?? []).count - visibleIssues.count)
-    }
-}
-
-private struct DeliveryCheckRow: View {
-    var icon: String
-    var title: String
-    var detail: String
-    var color: Color
-    var isClickable: Bool = false
-    var action: (() -> Void)? = nil
-
-    var body: some View {
-        Button {
-            action?()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(color)
-                    .frame(width: 18, height: 18)
-                    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.system(size: 10, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.ink)
-                    Text(detail)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(MaterialTheme.muted)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Spacer(minLength: 0)
-
-                if isClickable {
-                    Image(systemName: "scope")
-                        .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.primary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isClickable)
-        .opacity(isClickable ? 1 : 0.88)
-    }
-}
-
-private struct DeliveryIssueRow: View {
-    var issue: HTMLDiagnosticIssue
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(color)
-                    .frame(width: 18, height: 18)
-                    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(issue.title)
-                        .font(.system(size: 10, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.ink)
-                        .lineLimit(1)
-                    Text(issue.detail)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(MaterialTheme.muted)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Spacer(minLength: 0)
-
-                if issue.elementId != nil {
-                    Image(systemName: "scope")
-                        .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(MaterialTheme.primary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(issue.elementId == nil)
-        .opacity(issue.elementId == nil ? 0.72 : 1)
-    }
-
-    private var icon: String {
-        switch issue.kind {
-        case "broken-image", "broken-media":
-            return "photo.badge.exclamationmark"
-        case "text-overflow":
-            return "text.badge.exclamationmark"
-        case "out-of-bounds":
-            return "arrow.up.left.and.arrow.down.right"
-        case "overlap":
-            return "square.stack.3d.up"
-        case "span-table":
-            return "tablecells.badge.ellipsis"
-        case "pptx-effect-risk":
-            return "camera.filters"
-        case "visual-change":
-            return "rectangle.2.swap"
-        case "responsive-review":
-            return "rectangle.split.3x1"
-        case "source-pollution-review", "stylesheet-edit-review":
-            return "curlybraces.square"
-        case "runtime-rendered", "external-runtime-resource":
-            return "wand.and.rays"
-        case "iframe-content":
-            return "rectangle.inset.filled"
-        case "canvas-content":
-            return "square.dashed"
-        case "shadow-content":
-            return "shippingbox"
-        case "selection-overlay":
-            return "rectangle.stack.badge.minus"
-        default:
-            return issue.severity == "error" ? "exclamationmark.triangle" : "info.circle"
-        }
-    }
-
-    private var color: Color {
-        issue.severity == "error" ? MaterialTheme.accentDanger : Color(red: 0.78, green: 0.47, blue: 0.06)
-    }
-}
 
 private struct SlideThumbnailView: View, Equatable {
     private static let maxPreviewElements = 90
@@ -4077,6 +3541,9 @@ private struct HTMLTreeRow: View, Equatable {
             }
             .buttonStyle(.plain)
             .help(node.path)
+            .accessibilityLabel("\(node.chiseloTypeLabel)：\(node.label)")
+            .accessibilityHint("选择此对象")
+            .accessibilityValue(isSelected ? "已选中" : "未选中")
 
             if let children = node.children {
                 ForEach(children) { child in
@@ -4102,10 +3569,11 @@ private struct HTMLTreeRow: View, Equatable {
 }
 
 private enum InspectorTab: String, CaseIterable, Identifiable {
-    case layout = "几何"
-    case style = "样式"
+    case content = "内容"
+    case style = "外观"
+    case layout = "位置"
     case arrange = "层级"
-    case html = "精修"
+    case html = "源码"
 
     var id: String { rawValue }
 }
@@ -4147,16 +3615,27 @@ private struct GeometryMetrics {
 
 private struct InspectorPanel: View {
     @EnvironmentObject private var model: EditorModel
-    @State private var selectedTab: InspectorTab = .layout
+    @State private var selectedTab: InspectorTab = .content
     @State private var sourceDraft = ""
     @State private var sourceDraftElementID: String?
     @State private var sourceDraftOriginalSnippet = ""
+    @State private var htmlPseudoPreviewState = "none"
+    @State private var stylesheetRuleDraft = ""
+    @State private var stylesheetRuleDraftElementID: String?
+    @State private var stylesheetRuleOriginalSnippet = ""
+    @State private var stylesheetRuleValidationMessage: String?
+    @State private var stylesheetRuleValidationTask: Task<Void, Never>?
+    @State private var attributeDraftElementID: String?
+    @State private var classNameDraft = ""
+    @State private var inlineStyleDraft = ""
+    @State private var linkHrefDraft = ""
+    @State private var linkTargetDraft = ""
     @State private var pendingSourceDraftValidationID: UUID?
     @State private var sourceDraftValidationTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            MaterialPanelHeader(title: "属性", subtitle: "对象控制")
+            MaterialPanelHeader(title: "属性", subtitle: "常用编辑")
                 .padding(MaterialTheme.panelPadding)
 
             if let element = model.selectedElement {
@@ -4179,15 +3658,25 @@ private struct InspectorPanel: View {
                 }
                 .onAppear {
                     syncSourceDraft(for: element)
+                    syncHTMLAttributeDrafts(for: element)
+                    syncStylesheetRuleDraft(for: element)
                 }
                 .onChange(of: element.id) { _ in
                     syncSourceDraft(for: element)
+                    syncHTMLAttributeDrafts(for: element)
+                    syncStylesheetRuleDraft(for: element)
                 }
                 .onChange(of: element.sourceSnippet) { _ in
                     syncSourceDraft(for: element)
                 }
+                .onChange(of: element.style?.writebackRuleSnippet) { _ in
+                    syncStylesheetRuleDraft(for: element)
+                }
                 .onChange(of: sourceDraft) { _ in
                     scheduleSourceDraftValidationPreview(for: element)
+                }
+                .onChange(of: stylesheetRuleDraft) { _ in
+                    scheduleStylesheetRuleValidation(for: element)
                 }
 
                 ScrollView {
@@ -4205,16 +3694,19 @@ private struct InspectorPanel: View {
     }
 
     private var availableTabs: [InspectorTab] {
-        model.documentMode == "html" ? InspectorTab.allCases : [.layout, .style, .arrange]
+        if model.workspaceMode == .ordinary {
+            return [.content, .style, .layout]
+        }
+        return model.documentMode == "html" ? InspectorTab.allCases : [.content, .style, .layout, .arrange]
     }
 
     private var activeTab: InspectorTab {
-        availableTabs.contains(selectedTab) ? selectedTab : .layout
+        availableTabs.contains(selectedTab) ? selectedTab : .content
     }
 
     private func normalizeSelectedTab() {
         if !availableTabs.contains(selectedTab) {
-            selectedTab = .layout
+            selectedTab = .content
         }
     }
 
@@ -4240,23 +3732,47 @@ private struct InspectorPanel: View {
         scheduleSourceDraftValidationPreview(for: element, delay: 0)
     }
 
+    private func syncHTMLAttributeDrafts(for element: EditorElement) {
+        attributeDraftElementID = element.id
+        classNameDraft = element.className ?? ""
+        inlineStyleDraft = element.inlineStyle ?? ""
+        linkHrefDraft = element.linkHref ?? ""
+        linkTargetDraft = element.linkTarget ?? ""
+    }
+
     @ViewBuilder
     private func inspectorContent(for element: EditorElement) -> some View {
+        if model.documentMode == "html" {
+            PrecisionSafetyCard(element: element) { elementId in
+                model.selectHTMLNode(id: elementId)
+            }
+        }
+
         switch activeTab {
+        case .content:
+            contentGroups(for: element)
         case .layout:
-            objectGroup(element)
             geometryGroup
-            quickAdjustGroup
-            alignmentGroup(for: element)
+            if !isGeometryLockedSelection {
+                quickAdjustGroup
+                alignmentGroup(for: element)
+            }
         case .style:
             styleGroups(for: element)
             boxStyleGroup
+            boxModelGroup
+            layoutGroup
+            miscStyleGroup
             htmlAssetGroups
         case .arrange:
-            layerStackGroup
-            layerGroup
-            alignmentGroup(for: element)
+            if !isGeometryLockedSelection {
+                layerStackGroup
+                layerGroup
+                alignmentGroup(for: element)
+            }
         case .html:
+            objectGroup(element)
+            htmlAttributesGroup(element)
             htmlSourceSyncGroup(element)
             htmlControlsGroup
         }
@@ -4272,7 +3788,7 @@ private struct InspectorPanel: View {
                     Text("请选择一个对象")
                         .font(.headline)
                         .foregroundStyle(MaterialTheme.ink)
-                    Text("位置、层级、对齐等精准控制会显示在这里。")
+                    Text("点选文字、图片、色块或表格后，常用编辑会显示在这里。")
                         .font(.callout)
                         .foregroundStyle(MaterialTheme.muted)
                 }
@@ -4293,27 +3809,6 @@ private struct InspectorPanel: View {
         GroupBox("对象") {
             VStack(alignment: .leading, spacing: 8) {
                 LabeledContent("对象", value: element.chiseloTypeLabel)
-                if let status = element.chiseloEditabilityStatus {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: status.icon)
-                            .font(.system(size: 11, weight: .heavy))
-                            .foregroundStyle(status.color)
-                            .frame(width: 18, height: 18)
-                            .background(status.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(status.title)
-                                .font(.system(size: 11, weight: .heavy))
-                                .foregroundStyle(MaterialTheme.ink)
-                            Text(status.detail)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(MaterialTheme.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(9)
-                    .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
-                }
                 if let writeback = element.style?.writebackStatus {
                     SourceWritebackStatusBadge(status: writeback)
                 }
@@ -4346,9 +3841,144 @@ private struct InspectorPanel: View {
         }
     }
 
+    private func htmlAttributesGroup(_ element: EditorElement) -> some View {
+        GroupBox("HTML 属性 / CSS") {
+            VStack(alignment: .leading, spacing: 10) {
+                StyleTextField(label: "class", value: $classNameDraft)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("inline style")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(MaterialTheme.primary)
+                    TextEditor(text: $inlineStyleDraft)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(MaterialTheme.ink)
+                        .padding(8)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 58, maxHeight: 118)
+                        .background(MaterialInputBackground())
+                }
+
+                if supportsLinkAttributes(element) {
+                    Divider()
+                    StyleTextField(label: "href", value: $linkHrefDraft)
+                    StyleTextField(label: "target", value: $linkTargetDraft)
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        model.applySelectedHTMLAttributes(
+                            className: classNameDraft,
+                            inlineStyle: inlineStyleDraft,
+                            linkHref: supportsLinkAttributes(element) ? linkHrefDraft : "",
+                            linkTarget: supportsLinkAttributes(element) ? linkTargetDraft : ""
+                        )
+                    } label: {
+                        Label("应用属性", systemImage: "checkmark.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(MaterialButtonStyle(compact: true))
+                    .disabled(!canApplyHTMLAttributeDrafts(for: element))
+
+                    Button {
+                        syncHTMLAttributeDrafts(for: element)
+                    } label: {
+                        Label("恢复", systemImage: "arrow.uturn.backward")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(MaterialButtonStyle(compact: true))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func contentGroups(for element: EditorElement) -> some View {
+        if supportsTextControls(element) {
+            textContentGroup
+        }
+
+        if supportsImageControls(element) {
+            imageInfoGroup
+        }
+
+        if model.documentMode == "html", isTableSelection {
+            tableGroup
+        }
+
+        if model.documentMode == "html", isCellSelection {
+            cellStyleGroup
+        }
+
+        quickAdjustGroup
+    }
+
+    private var textContentGroup: some View {
+        GroupBox("文字内容") {
+            VStack(alignment: .leading, spacing: 8) {
+                TextEditor(text: textContentBinding(defaultValue: ""))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.ink)
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .frame(minHeight: 76, maxHeight: 132)
+                    .background(MaterialInputBackground())
+
+                Text("这里改的是当前选中对象的文字，不会自动改同类对象。")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(MaterialTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var geometryGroup: some View {
-        GroupBox("几何") {
+        if isGeometryLockedSelection {
+            GroupBox("表格安全编辑") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("单元格保持在表格流中，避免改动位置或尺寸时挤压、裁切其他单元格。")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
+                            CommandButton(title: "改文字", icon: "text.cursor", command: "editText")
+                            CommandButton(title: "整表", icon: "tablecells", command: "selectTable")
+                        }
+                    }
+
+                    if isTableSelection {
+                        tableOperationGrid
+                    }
+
+                    if isCellSelection {
+                        cellActionGrid
+                    }
+                }
+            }
+        } else {
+            GroupBox("几何") {
             VStack(alignment: .leading, spacing: 12) {
+                if let notice = model.selectedElement?.chiseloGeometrySafetyNotice {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: notice.icon)
+                            .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(notice.color)
+                            .frame(width: 18, height: 18)
+                            .background(notice.color.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+
+                        Text(notice.detail)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(9)
+                    .background(notice.color.opacity(0.07), in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+                }
+
                 Grid(horizontalSpacing: 10, verticalSpacing: 10) {
                     GridRow {
                         NumberField(label: "X", value: binding(\.x))
@@ -4391,10 +4021,13 @@ private struct InspectorPanel: View {
                 }
             }
         }
+        }
     }
 
+    @ViewBuilder
     private var quickAdjustGroup: some View {
-        GroupBox("快速调整") {
+        if !isGeometryLockedSelection {
+            GroupBox("快速调整") {
             VStack(spacing: 10) {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {
@@ -4444,6 +4077,7 @@ private struct InspectorPanel: View {
                 }
             }
         }
+        }
     }
 
     private var textStyleGroup: some View {
@@ -4477,8 +4111,8 @@ private struct InspectorPanel: View {
 
     @ViewBuilder
     private func styleGroups(for element: EditorElement) -> some View {
-        if let writeback = element.style?.writebackStatus {
-            styleWritebackGroup(writeback)
+        if let style = element.style, style.writebackStatus != nil {
+            styleWritebackGroup(style)
         }
 
         if supportsTextControls(element) {
@@ -4490,10 +4124,211 @@ private struct InspectorPanel: View {
         }
     }
 
-    private func styleWritebackGroup(_ status: EditorElementStyle.WritebackStatus) -> some View {
-        GroupBox("源码写回") {
-            SourceWritebackStatusBadge(status: status)
+    @ViewBuilder
+    private func styleWritebackGroup(_ style: EditorElementStyle) -> some View {
+        if let status = style.writebackStatus {
+            GroupBox("源码写回") {
+            VStack(alignment: .leading, spacing: 10) {
+                SourceWritebackStatusBadge(status: status)
+
+                if let ruleLine = status.ruleLine {
+                    Text("规则行号约 \(ruleLine)")
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(status.color)
+                }
+
+                if let ruleSnippet = status.ruleSnippet {
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        Text(ruleSnippet)
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(MaterialTheme.ink)
+                            .textSelection(.enabled)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(minHeight: 52, maxHeight: 120, alignment: .topLeading)
+                    .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                            .stroke(MaterialTheme.hairline, lineWidth: 1)
+                    )
+                }
+
+                HStack(spacing: 8) {
+                    if let ruleSnippet = status.ruleSnippet {
+                        Button {
+                            copySourceSnippet(ruleSnippet)
+                            model.status = "已复制 CSS 规则片段"
+                        } label: {
+                            Label("复制规则", systemImage: "doc.on.doc")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(MaterialButtonStyle(compact: true))
+                    }
+
+                    if status.target != nil {
+                        Button {
+                            model.selectNodesForSelectedStylesheetRule()
+                        } label: {
+                            Label("选择命中对象", systemImage: "scope")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(MaterialButtonStyle(compact: true))
+                    }
+
+                    if let sourceURL = status.sourceURL, !sourceURL.isEmpty {
+                        Button {
+                            model.revealLocalResource(urlString: sourceURL)
+                        } label: {
+                            Label("定位文件", systemImage: "folder")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(MaterialButtonStyle(compact: true))
+                    }
+                }
+
+                if let ruleSnippet = status.ruleSnippet {
+                    Divider()
+
+                    Text("规则编辑")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(MaterialTheme.muted)
+
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        TextEditor(text: $stylesheetRuleDraft)
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(MaterialTheme.ink)
+                            .padding(10)
+                            .scrollContentBackground(.hidden)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(minHeight: 72, maxHeight: 180, alignment: .topLeading)
+                    .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                            .stroke(MaterialTheme.hairline, lineWidth: 1)
+                    )
+
+                    if let validationMessage = stylesheetRuleValidationMessage,
+                       stylesheetRuleDraft.trimmingCharacters(in: .whitespacesAndNewlines) != ruleSnippet.trimmingCharacters(in: .whitespacesAndNewlines) {
+                        Text(validationMessage)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(MaterialTheme.accentDanger)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            restoreStylesheetRuleDraft(for: style)
+                        } label: {
+                            Label("恢复", systemImage: "arrow.uturn.backward")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(MaterialButtonStyle(compact: true))
+                        .disabled(!canRestoreStylesheetRuleDraft(for: style))
+
+                        Button {
+                            model.applySelectedStylesheetRule(stylesheetRuleDraft)
+                        } label: {
+                            Label("应用规则", systemImage: "checkmark.square")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(MaterialButtonStyle(compact: true))
+                        .disabled(!canApplyStylesheetRuleDraft(for: style))
+                    }
+                }
+
+                if let matchSummary = style.writebackMatchSummary, !matchSummary.items.isEmpty {
+                    Divider()
+                    stylesheetRuleMatchSummaryGroup(matchSummary)
+                }
+            }
         }
+        }
+    }
+
+    private func stylesheetRuleMatchSummaryGroup(_ summary: StylesheetRuleMatchSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "scope")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+                Text("命中对象")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.ink)
+                Text("\(summary.count)")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(MaterialTheme.primary.opacity(0.10), in: RoundedRectangle(cornerRadius: 5))
+                Spacer(minLength: 0)
+            }
+
+            LazyVStack(spacing: 5) {
+                ForEach(summary.items) { item in
+                    stylesheetRuleMatchRow(item, selector: summary.selector)
+                }
+
+                if summary.count > summary.items.count {
+                    Text("另有 \(summary.count - summary.items.count) 个命中对象，可用“选择命中对象”整组复查。")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 1)
+                }
+            }
+        }
+        .padding(8)
+        .background(MaterialTheme.surfaceTint, in: RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
+                .stroke(MaterialTheme.hairline, lineWidth: 1)
+        )
+    }
+
+    private func stylesheetRuleMatchRow(_ item: EditorSourceNodeItem, selector: String) -> some View {
+        Button {
+            locateSourceNodeItem(item, statusPrefix: "已定位规则命中对象")
+        } label: {
+            HStack(alignment: .top, spacing: 7) {
+                Text(item.tagName.uppercased())
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(MaterialTheme.primaryDark)
+                    .frame(width: 38, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.label.isEmpty ? item.tagName : item.label)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(MaterialTheme.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Text(item.path)
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "scope")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.primary)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(MaterialTheme.separator, lineWidth: 1)
+        )
+        .help("\(selector)\n\(item.path)")
     }
 
     private var imageInfoGroup: some View {
@@ -4552,6 +4387,170 @@ private struct InspectorPanel: View {
         }
     }
 
+    private var boxModelGroup: some View {
+        GroupBox("盒模型") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("内边距 Padding")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.muted)
+                Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                    GridRow {
+                        NumberField(label: "上", value: styleDoubleBinding(\.paddingTop, defaultValue: 0))
+                        NumberField(label: "右", value: styleDoubleBinding(\.paddingRight, defaultValue: 0))
+                    }
+                    GridRow {
+                        NumberField(label: "下", value: styleDoubleBinding(\.paddingBottom, defaultValue: 0))
+                        NumberField(label: "左", value: styleDoubleBinding(\.paddingLeft, defaultValue: 0))
+                    }
+                }
+                Text("外边距 Margin")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(MaterialTheme.muted)
+                Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                    GridRow {
+                        NumberField(label: "上", value: styleDoubleBinding(\.marginTop, defaultValue: 0))
+                        NumberField(label: "右", value: styleDoubleBinding(\.marginRight, defaultValue: 0))
+                    }
+                    GridRow {
+                        NumberField(label: "下", value: styleDoubleBinding(\.marginBottom, defaultValue: 0))
+                        NumberField(label: "左", value: styleDoubleBinding(\.marginLeft, defaultValue: 0))
+                    }
+                }
+            }
+        }
+    }
+
+    private var layoutGroup: some View {
+        GroupBox("布局") {
+            VStack(alignment: .leading, spacing: 12) {
+                styleChoiceRow(
+                    title: "Display",
+                    value: styleStringBinding(\.display, defaultValue: "block"),
+                    options: [
+                        StylePresetOption(title: "block", value: "block"),
+                        StylePresetOption(title: "flex", value: "flex"),
+                        StylePresetOption(title: "grid", value: "grid"),
+                        StylePresetOption(title: "inline", value: "inline"),
+                        StylePresetOption(title: "none", value: "none")
+                    ]
+                )
+                if model.selectedElement?.style?.display?.contains("flex") == true ||
+                   model.selectedElement?.style?.display?.contains("grid") == true {
+                    styleChoiceRow(
+                        title: "方向",
+                        value: styleStringBinding(\.flexDirection, defaultValue: "row"),
+                        options: [
+                            StylePresetOption(title: "横排", value: "row"),
+                            StylePresetOption(title: "竖排", value: "column"),
+                            StylePresetOption(title: "横反", value: "row-reverse"),
+                            StylePresetOption(title: "竖反", value: "column-reverse")
+                        ]
+                    )
+                    styleChoiceRow(
+                        title: "主轴对齐",
+                        value: styleStringBinding(\.justifyContent, defaultValue: "normal"),
+                        options: [
+                            StylePresetOption(title: "起始", value: "flex-start"),
+                            StylePresetOption(title: "居中", value: "center"),
+                            StylePresetOption(title: "末尾", value: "flex-end"),
+                            StylePresetOption(title: "两端", value: "space-between"),
+                            StylePresetOption(title: "均匀", value: "space-around")
+                        ]
+                    )
+                    styleChoiceRow(
+                        title: "交叉轴",
+                        value: styleStringBinding(\.alignItems, defaultValue: "normal"),
+                        options: [
+                            StylePresetOption(title: "起始", value: "flex-start"),
+                            StylePresetOption(title: "居中", value: "center"),
+                            StylePresetOption(title: "末尾", value: "flex-end"),
+                            StylePresetOption(title: "拉伸", value: "stretch"),
+                            StylePresetOption(title: "基线", value: "baseline")
+                        ]
+                    )
+                    Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                        GridRow {
+                            NumberField(label: "间距 Gap", value: styleDoubleBinding(\.gap, defaultValue: 0))
+                        }
+                    }
+                    styleChoiceRow(
+                        title: "换行",
+                        value: styleStringBinding(\.flexWrap, defaultValue: "nowrap"),
+                        options: [
+                            StylePresetOption(title: "不换行", value: "nowrap"),
+                            StylePresetOption(title: "换行", value: "wrap"),
+                            StylePresetOption(title: "反向", value: "wrap-reverse")
+                        ]
+                    )
+                }
+                styleChoiceRow(
+                    title: "Position",
+                    value: styleStringBinding(\.position, defaultValue: "static"),
+                    options: [
+                        StylePresetOption(title: "static", value: "static"),
+                        StylePresetOption(title: "relative", value: "relative"),
+                        StylePresetOption(title: "absolute", value: "absolute"),
+                        StylePresetOption(title: "fixed", value: "fixed"),
+                        StylePresetOption(title: "sticky", value: "sticky")
+                    ]
+                )
+                styleChoiceRow(
+                    title: "Overflow",
+                    value: styleStringBinding(\.overflow, defaultValue: "visible"),
+                    options: [
+                        StylePresetOption(title: "visible", value: "visible"),
+                        StylePresetOption(title: "hidden", value: "hidden"),
+                        StylePresetOption(title: "scroll", value: "scroll"),
+                        StylePresetOption(title: "auto", value: "auto")
+                    ]
+                )
+            }
+        }
+    }
+
+    private var miscStyleGroup: some View {
+        GroupBox("其他样式") {
+            VStack(alignment: .leading, spacing: 12) {
+                Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                    GridRow {
+                        NumberField(label: "透明度", value: styleDoubleBinding(\.opacity, defaultValue: 1), fractionLength: 2)
+                        NumberField(label: "字间距", value: styleDoubleBinding(\.letterSpacing, defaultValue: 0), fractionLength: 2)
+                    }
+                }
+                styleChoiceRow(
+                    title: "文字装饰",
+                    value: styleStringBinding(\.textDecoration, defaultValue: "none"),
+                    options: [
+                        StylePresetOption(title: "无", value: "none"),
+                        StylePresetOption(title: "下划线", value: "underline"),
+                        StylePresetOption(title: "删除线", value: "line-through"),
+                        StylePresetOption(title: "上划线", value: "overline")
+                    ]
+                )
+                styleChoiceRow(
+                    title: "大小写",
+                    value: styleStringBinding(\.textTransform, defaultValue: "none"),
+                    options: [
+                        StylePresetOption(title: "无", value: "none"),
+                        StylePresetOption(title: "全大写", value: "uppercase"),
+                        StylePresetOption(title: "全小写", value: "lowercase"),
+                        StylePresetOption(title: "首字母", value: "capitalize")
+                    ]
+                )
+                styleChoiceRow(
+                    title: "空白处理",
+                    value: styleStringBinding(\.whiteSpace, defaultValue: "normal"),
+                    options: [
+                        StylePresetOption(title: "normal", value: "normal"),
+                        StylePresetOption(title: "nowrap", value: "nowrap"),
+                        StylePresetOption(title: "pre", value: "pre"),
+                        StylePresetOption(title: "pre-wrap", value: "pre-wrap")
+                    ]
+                )
+            }
+        }
+    }
+
     @ViewBuilder
     private var htmlAssetGroups: some View {
         if model.documentMode == "html" {
@@ -4567,15 +4566,19 @@ private struct InspectorPanel: View {
 
     private var tableGroup: some View {
         GroupBox("表格") {
-            Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                GridRow {
-                    CommandButton(title: "+行", icon: "plus.square", command: "tableAddRowAfter")
-                    CommandButton(title: "-行", icon: "minus.square", command: "tableDeleteRow")
-                }
-                GridRow {
-                    CommandButton(title: "+列", icon: "plus.rectangle.on.rectangle", command: "tableAddColumnAfter")
-                    CommandButton(title: "-列", icon: "minus.rectangle", command: "tableDeleteColumn")
-                }
+            tableOperationGrid
+        }
+    }
+
+    private var tableOperationGrid: some View {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+            GridRow {
+                CommandButton(title: "+行", icon: "plus.square", command: "tableAddRowAfter")
+                CommandButton(title: "-行", icon: "minus.square", command: "tableDeleteRow")
+            }
+            GridRow {
+                CommandButton(title: "+列", icon: "plus.rectangle.on.rectangle", command: "tableAddColumnAfter")
+                CommandButton(title: "-列", icon: "minus.rectangle", command: "tableDeleteColumn")
             }
         }
     }
@@ -4614,17 +4617,21 @@ private struct InspectorPanel: View {
                     options: textAlignmentPresets
                 )
 
-                Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                    GridRow {
-                        CommandButton(title: "左", icon: "text.alignleft", command: "cellAlignLeft")
-                        CommandButton(title: "中", icon: "text.aligncenter", command: "cellAlignCenter")
-                        CommandButton(title: "右", icon: "text.alignright", command: "cellAlignRight")
-                    }
-                    GridRow {
-                        CommandButton(title: "表头", icon: "tablecells.badge.ellipsis", command: "cellStyleHeader")
-                        CommandButton(title: "柔和", icon: "paintbrush", command: "cellStyleSoft")
-                    }
-                }
+                cellActionGrid
+            }
+        }
+    }
+
+    private var cellActionGrid: some View {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+            GridRow {
+                CommandButton(title: "左", icon: "text.alignleft", command: "cellAlignLeft")
+                CommandButton(title: "中", icon: "text.aligncenter", command: "cellAlignCenter")
+                CommandButton(title: "右", icon: "text.alignright", command: "cellAlignRight")
+            }
+            GridRow {
+                CommandButton(title: "表头", icon: "tablecells.badge.ellipsis", command: "cellStyleHeader")
+                CommandButton(title: "柔和", icon: "paintbrush", command: "cellStyleSoft")
             }
         }
     }
@@ -5056,11 +5063,44 @@ private struct InspectorPanel: View {
     @ViewBuilder
     private var htmlControlsGroup: some View {
         if model.documentMode == "html" {
+            GroupBox("状态预览") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
+                            pseudoPreviewButton(title: "常态", icon: "circle", state: "none")
+                            pseudoPreviewButton(title: "Hover", icon: "hand.point.up.left", state: "hover")
+                            pseudoPreviewButton(title: "Focus", icon: "cursorarrow.rays", state: "focus")
+                        }
+                    }
+
+                    Text("预览只作用于当前选中对象，方便检查按钮、卡片和表单的伪类样式。")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(MaterialTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             GroupBox("布局模式") {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {
                         CommandButton(title: "自由", icon: "arrow.up.left.and.arrow.down.right", command: "setLayoutFree")
                         CommandButton(title: "变换", icon: "move.3d", command: "setLayoutTransform")
+                    }
+                }
+            }
+
+            GroupBox("插入元素") {
+                Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                    GridRow {
+                        CommandButton(title: "模块", icon: "square.dashed", command: "insertDiv")
+                        CommandButton(title: "段落", icon: "text.alignleft", command: "insertParagraph")
+                    }
+                    GridRow {
+                        CommandButton(title: "图片", icon: "photo", command: "insertImage")
+                        CommandButton(title: "链接", icon: "link", command: "insertLink")
+                    }
+                    GridRow {
+                        CommandButton(title: "表格", icon: "tablecells", command: "insertTable")
                     }
                 }
             }
@@ -5090,6 +5130,18 @@ private struct InspectorPanel: View {
                 .foregroundStyle(MaterialTheme.muted)
                 .materialCard()
         }
+    }
+
+    private func pseudoPreviewButton(title: String, icon: String, state: String) -> some View {
+        let isSelected = htmlPseudoPreviewState == state
+        return Button {
+            htmlPseudoPreviewState = state
+            model.setHTMLPseudoPreviewState(state)
+        } label: {
+            Label(title, systemImage: icon)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(MaterialButtonStyle(filled: isSelected, compact: true))
     }
 
     private var selectedTagName: String {
@@ -5150,6 +5202,78 @@ private struct InspectorPanel: View {
         let original = element.sourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let draft = sourceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         return !draft.isEmpty && draft != original && validation.severity != .error
+    }
+
+    private func syncStylesheetRuleDraft(for element: EditorElement) {
+        let snippet = element.style?.writebackRuleSnippet ?? ""
+        guard !snippet.isEmpty else {
+            stylesheetRuleDraft = ""
+            stylesheetRuleDraftElementID = nil
+            stylesheetRuleOriginalSnippet = ""
+            stylesheetRuleValidationMessage = nil
+            stylesheetRuleValidationTask?.cancel()
+            return
+        }
+
+        guard stylesheetRuleDraftElementID != element.id else {
+            if stylesheetRuleOriginalSnippet != snippet {
+                stylesheetRuleOriginalSnippet = snippet
+                stylesheetRuleDraft = snippet
+                stylesheetRuleValidationMessage = nil
+            } else if stylesheetRuleDraft.isEmpty {
+                stylesheetRuleDraft = snippet
+            }
+            return
+        }
+
+        stylesheetRuleDraftElementID = element.id
+        stylesheetRuleOriginalSnippet = snippet
+        stylesheetRuleDraft = snippet
+        stylesheetRuleValidationMessage = nil
+        stylesheetRuleValidationTask?.cancel()
+    }
+
+    private func restoreStylesheetRuleDraft(for style: EditorElementStyle) {
+        let snippet = style.writebackRuleSnippet ?? ""
+        stylesheetRuleValidationTask?.cancel()
+        stylesheetRuleDraft = snippet
+        stylesheetRuleOriginalSnippet = snippet
+        stylesheetRuleValidationMessage = nil
+        model.status = "已恢复当前 CSS 规则片段"
+    }
+
+    private func canRestoreStylesheetRuleDraft(for style: EditorElementStyle) -> Bool {
+        let original = (style.writebackRuleSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let draft = stylesheetRuleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !original.isEmpty && draft != original
+    }
+
+    private func canApplyStylesheetRuleDraft(for style: EditorElementStyle) -> Bool {
+        let original = (style.writebackRuleSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let draft = stylesheetRuleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !draft.isEmpty && draft != original && stylesheetRuleValidationMessage == nil
+    }
+
+    private func scheduleStylesheetRuleValidation(for element: EditorElement) {
+        let original = (element.style?.writebackRuleSnippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let draft = stylesheetRuleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        stylesheetRuleValidationTask?.cancel()
+
+        guard !draft.isEmpty, draft != original else {
+            stylesheetRuleValidationMessage = nil
+            return
+        }
+
+        stylesheetRuleValidationTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            guard !Task.isCancelled else { return }
+            model.validateSelectedStylesheetRuleDraft(stylesheetRuleDraft) { message in
+                Task { @MainActor in
+                    guard !Task.isCancelled else { return }
+                    stylesheetRuleValidationMessage = message
+                }
+            }
+        }
     }
 
     private func sourceDraftValidation(for element: EditorElement) -> SourceDraftValidation {
@@ -5228,12 +5352,12 @@ private struct InspectorPanel: View {
                 Spacer(minLength: 0)
                 Text("保留 \(summary.preservedCount) · 新增 \(summary.addedCount) · 替换 \(summary.unmatchedCount)")
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(summary.hasStructureRisk ? Color(red: 0.78, green: 0.47, blue: 0.06) : MaterialTheme.muted)
+                    .foregroundStyle(summary.hasStructureRisk ? MaterialTheme.accentWarning : MaterialTheme.muted)
             }
 
             Text(summary.riskSummary)
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(summary.hasStructureRisk ? Color(red: 0.78, green: 0.47, blue: 0.06) : MaterialTheme.muted)
+                .foregroundStyle(summary.hasStructureRisk ? MaterialTheme.accentWarning : MaterialTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
             ForEach(sourceDraftMappingPreviewItems(summary)) { item in
@@ -5323,11 +5447,11 @@ private struct InspectorPanel: View {
     private func sourceDraftMappingColor(for item: SourceDraftMappingItem) -> Color {
         switch item.slot {
         case "preserved":
-            return Color(red: 0.06, green: 0.52, blue: 0.26)
+            return MaterialTheme.accentSuccess
         case "added":
             return MaterialTheme.primary
         default:
-            return Color(red: 0.78, green: 0.47, blue: 0.06)
+            return MaterialTheme.accentWarning
         }
     }
 
@@ -5356,11 +5480,30 @@ private struct InspectorPanel: View {
     }
 
     private var isSelectedImage: Bool {
-        selectedTagName == "img" || model.selectedElement?.type == "image"
+        selectedTagName == "img" || model.selectedElement?.type == "image" || (model.selectedElement?.semanticRole == "image" && model.selectedElement?.imageSource != nil)
+    }
+
+    private func supportsLinkAttributes(_ element: EditorElement) -> Bool {
+        selectedTagName == "a" || element.semanticRole == "link" || element.linkHref != nil || element.linkTarget != nil
+    }
+
+    private func canApplyHTMLAttributeDrafts(for element: EditorElement) -> Bool {
+        let classChanged = classNameDraft.trimmingCharacters(in: .whitespacesAndNewlines) != (element.className ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let styleChanged = inlineStyleDraft.trimmingCharacters(in: .whitespacesAndNewlines) != (element.inlineStyle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let linkChanged = supportsLinkAttributes(element)
+            && (
+                linkHrefDraft.trimmingCharacters(in: .whitespacesAndNewlines) != (element.linkHref ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                || linkTargetDraft.trimmingCharacters(in: .whitespacesAndNewlines) != (element.linkTarget ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        return classChanged || styleChanged || linkChanged
     }
 
     private var isCellSelection: Bool {
         selectedTagName == "td" || selectedTagName == "th"
+    }
+
+    private var isGeometryLockedSelection: Bool {
+        model.documentMode == "html" && model.selectedElement?.editability == "table-structure"
     }
 
     private var isTableSelection: Bool {
@@ -5373,7 +5516,7 @@ private struct InspectorPanel: View {
     }
 
     private func supportsImageControls(_ element: EditorElement) -> Bool {
-        element.type == "image" || selectedTagName == "img"
+        element.semanticRole != "image-reference" && (element.type == "image" || selectedTagName == "img" || element.imageSource?.isEmpty == false)
     }
 
     private var textAlignmentPresets: [StylePresetOption] {
@@ -5497,6 +5640,16 @@ private struct InspectorPanel: View {
         }
     }
 
+    private func textContentBinding(defaultValue: String) -> Binding<String> {
+        Binding {
+            model.selectedElement?.text ?? defaultValue
+        } set: { value in
+            guard var element = model.selectedElement else { return }
+            element.text = value
+            model.updateElement(element)
+        }
+    }
+
     private func imageSourceBinding(defaultValue: String) -> Binding<String> {
         Binding {
             model.selectedElement?.imageSource ?? defaultValue
@@ -5548,12 +5701,12 @@ private struct InspectorSelectionHeader: View {
                     .font(.caption)
                     .foregroundStyle(MaterialTheme.muted)
 
-                if let path, !path.isEmpty {
-                    Text(path)
+                if let actionHint {
+                    Text(actionHint)
                         .font(.caption2)
-                        .foregroundStyle(MaterialTheme.muted.opacity(0.82))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(MaterialTheme.primaryDark)
                         .lineLimit(2)
-                        .textSelection(.enabled)
                 }
             }
 
@@ -5573,6 +5726,22 @@ private struct InspectorSelectionHeader: View {
 
     private var iconName: String {
         element.chiseloIconName
+    }
+
+    private var actionHint: String? {
+        if element.type == "html-group" || element.type == "deck-group" {
+            return "已选中一组对象，可整组移动、对齐或分布。"
+        }
+        if element.imageSource?.isEmpty == false || element.semanticRole == "image" {
+            return "可拖动、缩放、替换图片或调整显示方式。"
+        }
+        if element.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return "可直接改字、拖动、缩放和调整外观。"
+        }
+        if let path, !path.isEmpty {
+            return "源码路径已移到“源码”页，当前页只放常用编辑。"
+        }
+        return nil
     }
 }
 
@@ -5594,6 +5763,19 @@ private struct SourceWritebackStatusBadge: View {
                         .foregroundStyle(MaterialTheme.ink)
                     if let target = status.target {
                         Text(target)
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(status.color)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                if let sourceLabel = status.sourceLabel {
+                    HStack(spacing: 5) {
+                        Image(systemName: status.sourceKind == "linked-local" ? "externaldrive" : "text.alignleft")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundStyle(status.color)
+                        Text(sourceLabel)
                             .font(.system(size: 9, weight: .heavy, design: .monospaced))
                             .foregroundStyle(status.color)
                             .lineLimit(1)
@@ -5759,8 +5941,8 @@ private struct SourceDraftValidation: Equatable {
 
     var color: Color {
         switch severity {
-        case .ok: return Color(red: 0.06, green: 0.52, blue: 0.26)
-        case .warning: return Color(red: 0.78, green: 0.47, blue: 0.06)
+        case .ok: return MaterialTheme.accentSuccess
+        case .warning: return MaterialTheme.accentWarning
         case .error: return MaterialTheme.accentDanger
         }
     }
@@ -6025,6 +6207,86 @@ private struct LayerStackRow: View, Equatable {
 
 private extension EditorElement {
     typealias EditabilityStatus = (title: String, detail: String, icon: String, color: Color)
+    typealias PrecisionSafetyStatus = (title: String, detail: String, operations: [String], targetId: String?, containerId: String?, icon: String, color: Color)
+
+    var chiseloPrecisionSafetyStatus: PrecisionSafetyStatus? {
+        if let title = editSafetyTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !title.isEmpty {
+            let level = editSafetyLevel?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "free"
+            let detail = editSafetyDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallbackDetail: String
+            switch level {
+            case "danger":
+                fallbackDetail = "该对象存在裁剪、越界或结构风险，移动前请先确认父级边界。"
+            case "locked":
+                fallbackDetail = "该对象不适合直接拖动，请使用对应结构工具或选择父级对象。"
+            case "caution", "warning":
+                fallbackDetail = "该对象受布局或父容器影响，修改后建议复核。"
+            default:
+                fallbackDetail = "可拖拽、缩放、改字和改样式。"
+            }
+
+            return (
+                title,
+                detail?.isEmpty == false ? detail! : fallbackDetail,
+                editSafetyOperations ?? [],
+                editSafetyTargetId,
+                editSafetyContainerId,
+                precisionSafetyIcon(for: level),
+                precisionSafetyColor(for: level)
+            )
+        }
+
+        if let status = chiseloEditabilityStatus {
+            return (
+                status.title,
+                status.detail,
+                [],
+                id,
+                nil,
+                status.icon,
+                status.color
+            )
+        }
+
+        return nil
+    }
+
+    var chiseloGeometrySafetyNotice: PrecisionSafetyStatus? {
+        let level = editSafetyLevel?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard level == "danger" || level == "locked" || level == "caution" || level == "warning" else {
+            return nil
+        }
+        return chiseloPrecisionSafetyStatus
+    }
+
+    private func precisionSafetyIcon(for level: String) -> String {
+        switch level {
+        case "danger":
+            return "exclamationmark.triangle.fill"
+        case "locked":
+            return "lock.fill"
+        case "caution", "warning":
+            return "hand.raised.fill"
+        case "free":
+            return "checkmark.seal.fill"
+        default:
+            return "viewfinder"
+        }
+    }
+
+    private func precisionSafetyColor(for level: String) -> Color {
+        switch level {
+        case "danger", "locked":
+            return MaterialTheme.accentDanger
+        case "caution", "warning":
+            return MaterialTheme.accentWarning
+        case "free":
+            return MaterialTheme.accentSuccess
+        default:
+            return MaterialTheme.primary
+        }
+    }
 
     var chiseloEditabilityStatus: EditabilityStatus? {
         guard editability != nil || fidelity != nil || captureNote != nil else { return nil }
@@ -6032,16 +6294,20 @@ private extension EditorElement {
         let note = captureNote?.trimmingCharacters(in: .whitespacesAndNewlines)
         switch editability ?? "" {
         case "text-editable":
-            return ("可编辑文本", note?.isEmpty == false ? note! : "文字可直接修改，并保留当前字体、颜色和位置。", "textformat", Color(red: 0.06, green: 0.52, blue: 0.26))
+            return ("可编辑文本", note?.isEmpty == false ? note! : "文字可直接修改，并保留当前字体、颜色和位置。", "textformat", MaterialTheme.accentSuccess)
         case "replaceable":
-            return ("可替换图片", note?.isEmpty == false ? note! : "图片保持为独立对象，可继续替换和调整。", "photo", Color(red: 0.06, green: 0.52, blue: 0.26))
+            return ("可替换图片", note?.isEmpty == false ? note! : "图片保持为独立对象，可继续替换和调整。", "photo", MaterialTheme.accentSuccess)
+        case "reference":
+            return ("图片引用", note?.isEmpty == false ? note! : "这是 HTML 里的图片引用或占位，不是可替换图片节点。", "photo", MaterialTheme.accentWarning)
+        case "table-structure":
+            return ("表格内部对象", note?.isEmpty == false ? note! : "可改字、改样式或使用表格行列/单元格操作；移动位置请选中整张表。", "tablecells", MaterialTheme.accentDanger)
         case "style-editable":
             return ("可调样式对象", note?.isEmpty == false ? note! : "形状、背景或边框已转为可调整对象。", "square.on.square", MaterialTheme.primary)
         case "whole-object":
-            return ("整体保真对象", note?.isEmpty == false ? note! : "该区域不能可靠拆分，已作为整体对象保留。", "rectangle.dashed", Color(red: 0.78, green: 0.47, blue: 0.06))
+            return ("整体保真对象", note?.isEmpty == false ? note! : "该区域不能可靠拆分，已作为整体对象保留。", "rectangle.dashed", MaterialTheme.accentWarning)
         default:
             if fidelity == "approximated" {
-                return ("近似还原", note?.isEmpty == false ? note! : "复杂视觉效果已转成可编辑近似对象。", "wand.and.rays", Color(red: 0.78, green: 0.47, blue: 0.06))
+                return ("近似还原", note?.isEmpty == false ? note! : "复杂视觉效果已转成可编辑近似对象。", "wand.and.rays", MaterialTheme.accentWarning)
             }
             return ("捕获对象", note?.isEmpty == false ? note! : "由当前渲染页面捕获。", "viewfinder", MaterialTheme.primary)
         }
@@ -6074,6 +6340,10 @@ private extension EditorElement {
     var chiseloTypeLabel: String {
         if let semanticLabel, !semanticLabel.isEmpty {
             return semanticLabel
+        }
+
+        if semanticRole == "image-reference" {
+            return "图片引用"
         }
 
         if type == "deck-group" { return "模块组" }
@@ -6112,7 +6382,7 @@ private extension EditorElement {
         switch semanticRole ?? "" {
         case "heading", "paragraph", "text", "list-item", "caption":
             return "textformat"
-        case "image", "figure":
+        case "image", "image-reference", "figure":
             return "photo"
         case "table", "table-section", "table-row", "table-cell", "table-header-cell", "table-like":
             return "tablecells"
@@ -6155,6 +6425,10 @@ private extension HTMLTreeNode {
             return semanticLabel
         }
 
+        if semanticRole == "image-reference" {
+            return "图片引用"
+        }
+
         switch tagName.lowercased() {
         case "img":
             return "图片"
@@ -6181,7 +6455,7 @@ private extension HTMLTreeNode {
         switch semanticRole ?? "" {
         case "heading", "paragraph", "text", "list-item", "caption":
             return "textformat"
-        case "image", "figure":
+        case "image", "image-reference", "figure":
             return "photo"
         case "table", "table-section", "table-row", "table-cell", "table-header-cell", "table-like":
             return "tablecells"
@@ -6470,7 +6744,18 @@ private struct StyleTextField: View {
 }
 
 private extension EditorElementStyle {
-    typealias WritebackStatus = (title: String, detail: String, target: String?, icon: String, color: Color)
+    typealias WritebackStatus = (
+        title: String,
+        detail: String,
+        target: String?,
+        sourceLabel: String?,
+        sourceKind: String?,
+        sourceURL: String?,
+        ruleSnippet: String?,
+        ruleLine: Int?,
+        icon: String,
+        color: Color
+    )
 
     var writebackStatus: WritebackStatus? {
         guard let kind = writebackKind?.trimmingCharacters(in: .whitespacesAndNewlines), !kind.isEmpty else {
@@ -6480,6 +6765,14 @@ private extension EditorElementStyle {
         let target = writebackTarget?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedTarget = target?.isEmpty == false ? target : nil
         let detail = writebackDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sourceLabel = writebackSourceLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSourceLabel = sourceLabel?.isEmpty == false ? sourceLabel : nil
+        let sourceKind = writebackSourceKind?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sourceURL = writebackSourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSourceURL = sourceURL?.isEmpty == false ? sourceURL : nil
+        let ruleSnippet = writebackRuleSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedRuleSnippet = ruleSnippet?.isEmpty == false ? ruleSnippet : nil
+        let ruleLine = writebackRuleLine
 
         if kind == "stylesheet-rule" {
             let selector = normalizedTarget ?? "CSS 规则"
@@ -6487,8 +6780,13 @@ private extension EditorElementStyle {
                 "写回 CSS 规则",
                 detail?.isEmpty == false ? detail! : "安全样式修改会优先写回 \(selector)。",
                 selector,
+                normalizedSourceLabel,
+                sourceKind,
+                normalizedSourceURL,
+                normalizedRuleSnippet,
+                ruleLine,
                 "curlybraces",
-                Color(red: 0.06, green: 0.52, blue: 0.26)
+                MaterialTheme.accentSuccess
             )
         }
 
@@ -6497,8 +6795,13 @@ private extension EditorElementStyle {
                 "写入对象 style",
                 detail?.isEmpty == false ? detail! : "样式修改会写在当前对象的 inline style 上。",
                 normalizedTarget,
+                normalizedSourceLabel,
+                sourceKind,
+                normalizedSourceURL,
+                normalizedRuleSnippet,
+                ruleLine,
                 "paintbrush.pointed",
-                Color(red: 0.78, green: 0.47, blue: 0.06)
+                MaterialTheme.accentWarning
             )
         }
 
@@ -6522,7 +6825,12 @@ private extension EditorElementStyle {
             writebackKind: nil,
             writebackLabel: nil,
             writebackTarget: nil,
-            writebackDetail: nil
+            writebackDetail: nil,
+            writebackSourceKind: nil,
+            writebackSourceLabel: nil,
+            writebackSourceURL: nil,
+            writebackRuleSnippet: nil,
+            writebackRuleLine: nil
         )
     }
 }
@@ -6637,23 +6945,23 @@ private struct MaterialDivider: View {
 private struct MaterialSidebarBackground: View {
     var body: some View {
         RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel)
-            .fill(.thinMaterial)
+            .fill(.ultraThinMaterial)
             .background(
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel)
-                    .fill(MaterialTheme.surfaceStrong.opacity(0.54))
+                    .fill(MaterialTheme.surfaceChrome)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusPanel)
-                    .stroke(MaterialTheme.hairline.opacity(0.86), lineWidth: 1)
+                    .stroke(MaterialTheme.hairline.opacity(0.78), lineWidth: 1)
             )
-            .shadow(color: MaterialTheme.shadow.opacity(0.07), radius: 12, x: 0, y: 4)
+            .shadow(color: MaterialTheme.shadow.opacity(0.055), radius: 14, x: 0, y: 4)
     }
 }
 
 private struct MaterialInputBackground: View {
     var body: some View {
         RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
-            .fill(MaterialTheme.surfaceStrong)
+            .fill(MaterialTheme.surfaceFloating)
             .overlay(
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
                     .stroke(MaterialTheme.separator.opacity(0.82), lineWidth: 1)
@@ -6675,7 +6983,7 @@ private struct MaterialGroupBoxStyle: GroupBoxStyle {
     }
 }
 
-private struct MaterialButtonStyle: ButtonStyle {
+struct MaterialButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     var filled: Bool = false
@@ -6693,8 +7001,8 @@ private struct MaterialButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusSmall)
                     .fill(backgroundColor)
                     .shadow(
-                        color: MaterialTheme.shadow.opacity(isEnabled ? (configuration.isPressed ? 0.10 : 0.18) : 0.04),
-                        radius: isEnabled ? (configuration.isPressed ? 2 : 7) : 2,
+                        color: MaterialTheme.shadow.opacity(shadowOpacity(isPressed: configuration.isPressed)),
+                        radius: isEnabled ? (configuration.isPressed ? 2 : 6) : 0,
                         x: 0,
                         y: isEnabled ? (configuration.isPressed ? 1 : 2) : 1
                     )
@@ -6716,9 +7024,17 @@ private struct MaterialButtonStyle: ButtonStyle {
 
     private var backgroundColor: Color {
         if !isEnabled {
-            return MaterialTheme.surface.opacity(0.72)
+            return MaterialTheme.surfaceChrome.opacity(0.72)
         }
-        return filled ? MaterialTheme.primary : MaterialTheme.surface
+        return filled ? MaterialTheme.primary : MaterialTheme.surfaceFloating
+    }
+
+    private func shadowOpacity(isPressed: Bool) -> Double {
+        guard isEnabled else { return 0 }
+        if filled {
+            return isPressed ? 0.10 : 0.16
+        }
+        return isPressed ? 0.04 : 0.08
     }
 }
 
@@ -6729,11 +7045,15 @@ private struct MaterialCardModifier: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
                     .fill(.regularMaterial)
-                    .shadow(color: MaterialTheme.shadow.opacity(0.14), radius: 12, x: 0, y: 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
+                            .fill(MaterialTheme.surfaceFloating)
+                    )
+                    .shadow(color: MaterialTheme.shadow.opacity(0.08), radius: 12, x: 0, y: 4)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: MaterialTheme.radiusMedium)
-                    .stroke(MaterialTheme.hairline, lineWidth: 1)
+                    .stroke(MaterialTheme.hairline.opacity(0.82), lineWidth: 1)
             )
     }
 }

@@ -35,6 +35,12 @@ final class DirectHTMLSourceCleanlinessTest: NSObject, WKNavigationDelegate, WKS
           const editor = window.ChiseloEditor;
           await editor.openHTMLFromBase64('\(base64)', '');
           await sleep(180);
+          const originalHTML = new TextDecoder().decode(Uint8Array.from(atob('\(base64)'), char => char.charCodeAt(0)));
+
+          const untouchedExport = editor.exportHTML();
+          if (untouchedExport !== originalHTML) {
+            throw new Error('Untouched HTML did not round-trip byte-for-byte.');
+          }
 
           const selected = editor.selectHTML('#editable');
           if (!selected) throw new Error('Could not select editable fixture text.');
@@ -75,7 +81,7 @@ final class DirectHTMLSourceCleanlinessTest: NSObject, WKNavigationDelegate, WKS
           node.blur();
           await sleep(120);
           const exportedAfterBlur = editor.exportHTML();
-          if (!exportedAfterBlur.includes('id="editable" contenteditable="plaintext-only" spellcheck="false"') || exportedAfterBlur.includes('--chiselo-edit-') || exportedAfterBlur.includes('data-chiselo')) {
+          if (exportedAfterBlur !== originalHTML || !exportedAfterBlur.includes('id="editable" contenteditable="plaintext-only" spellcheck="false"') || exportedAfterBlur.includes('--chiselo-edit-') || exportedAfterBlur.includes('data-chiselo')) {
             throw new Error('Export after blur did not preserve original editable attributes cleanly.');
           }
 
@@ -84,7 +90,8 @@ final class DirectHTMLSourceCleanlinessTest: NSObject, WKNavigationDelegate, WKS
             cleanExport: diagnosticsWhileEditing.cleanExport,
             exportArtifactCount: diagnosticsWhileEditing.exportArtifactCount,
             sourceCleanlinessScore: diagnosticsWhileEditing.sourceCleanlinessScore,
-            exportedLength: exportedWhileEditing.length
+            exportedLength: exportedWhileEditing.length,
+            exactUntouchedRoundTrip: untouchedExport === originalHTML
           });
         })().catch(error => {
           window.webkit.messageHandlers.sourceCleanliness.postMessage({

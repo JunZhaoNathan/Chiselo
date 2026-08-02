@@ -54,7 +54,9 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                 const x = rect.left + Math.min(24, Math.max(4, rect.width / 4));
                 const y = rect.top + Math.min(24, Math.max(4, rect.height / 2));
 
-                target.dispatchEvent(new win.PointerEvent('pointerdown', {
+                let observedPointerDowns = 0;
+                doc.addEventListener('pointerdown', () => { observedPointerDowns += 1; });
+                const pointerDownDispatched = target.dispatchEvent(new win.PointerEvent('pointerdown', {
                   bubbles: true,
                   cancelable: true,
                   button: 0,
@@ -62,6 +64,7 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
                   clientY: y,
                   pointerId: 31
                 }));
+                const selectionAfterPointerDown = window.ChiseloEditor.getSelection();
                 doc.dispatchEvent(new win.PointerEvent('pointerup', {
                   bubbles: true,
                   cancelable: true,
@@ -74,7 +77,7 @@ final class DirectQuickActionsCompactTest: NSObject, WKNavigationDelegate, WKScr
 
                 const selected = window.ChiseloEditor.getSelection();
                 if (!selected || selected.tagName !== target.tagName.toLowerCase()) {
-                  throw new Error(`Target was not selected. selected=${selected && selected.tagName}`);
+                  throw new Error(`Target was not selected. selected=${selected && selected.tagName} immediate=${selectionAfterPointerDown && selectionAfterPointerDown.tagName} observedPointerDowns=${observedPointerDowns} dispatchResult=${pointerDownDispatched} sandbox=${iframe.getAttribute('sandbox')}`);
                 }
 
                 const quickBar = document.querySelector('#selectionBox .quick-action-bar');

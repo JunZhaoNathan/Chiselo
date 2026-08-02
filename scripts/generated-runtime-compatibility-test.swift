@@ -59,7 +59,7 @@ final class GeneratedRuntimeCompatibilityTest: NSObject, WKNavigationDelegate, W
         let script = """
         void (async () => {
           const editor = window.ChiseloEditor;
-          await editor.openHTMLFromBase64('\(base64)', '');
+          await editor.openHTMLFromBase64('\(base64)', '', { runtimeMode: 'live' });
           await new Promise(resolve => setTimeout(resolve, 450));
 
           const diagnostics = editor.getImportDiagnostics();

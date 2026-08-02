@@ -38,7 +38,13 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
 
           const title = editor.selectHTML('.hero-title');
           if (!title) throw new Error('Could not select unique class title.');
-          const titleWritebackOk = title.style?.writebackKind === 'stylesheet-rule' && title.style?.writebackTarget === '.hero-title' && String(title.style?.writebackDetail || '').includes('CSS');
+          const titleWritebackOk = title.style?.writebackKind === 'stylesheet-rule'
+            && title.style?.writebackTarget === '.hero-title'
+            && String(title.style?.writebackDetail || '').includes('CSS')
+            && title.style?.writebackSourceKind === 'inline-style'
+            && String(title.style?.writebackSourceLabel || '').includes('<style #1>')
+            && String(title.style?.writebackRuleSnippet || '').includes('.hero-title')
+            && Number(title.style?.writebackRuleLine || 0) >= 1;
           editor.updateElement({
             id: title.id,
             x: title.x,
@@ -101,7 +107,11 @@ final class DirectHTMLStylesheetWritebackTest: NSObject, WKNavigationDelegate, W
 
           const shared = editor.selectHTML('.shared-card');
           if (!shared) throw new Error('Could not select shared class card.');
-          const sharedWritebackOk = shared.style?.writebackKind === 'inline-style' && shared.style?.writebackTarget === 'style' && String(shared.style?.writebackDetail || '').includes('误改同类对象');
+          const sharedWritebackOk = shared.style?.writebackKind === 'inline-style'
+            && shared.style?.writebackTarget === 'style'
+            && String(shared.style?.writebackDetail || '').includes('误改同类对象')
+            && shared.style?.writebackSourceKind === 'inline-style'
+            && shared.style?.writebackSourceLabel === '当前对象';
           editor.updateElement({
             id: shared.id,
             x: shared.x,

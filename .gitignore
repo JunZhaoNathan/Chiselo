@@ -1,6 +1,8 @@
 .build/
 .swiftpm/
 DerivedData/
+.vscode/
+.wrangler/
 outputs/
 dist/
 build/
@@ -15,9 +17,12 @@ node_modules/
 *.xcscmblueprint
 *.xcresult/
 *.moved-aside
+*.chiselo-backup.html
+*.chiselo-backup.aislide
 *.swp
 *.bak
 *.aislide.tmp
+RELEASE-IDENTITY.md
 *.dmg
 *.zip
 *.app/

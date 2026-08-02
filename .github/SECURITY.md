@@ -25,7 +25,9 @@ Include:
 
 - Chiselo is intended for local files chosen by the user.
 - Chiselo should not be used as a browser for untrusted websites.
-- Malicious HTML can still execute browser-side JavaScript inside the editing iframe.
+- HTML opens in static safety mode. Source scripts, inline event handlers, JavaScript URLs, refresh redirects, and nested iframe scripts are made inert before rendering; the editing iframe still permits Chiselo's own event-driven editing code.
+- Dynamic compatibility is an explicit per-document opt-in for trusted HTML and allows browser-side JavaScript and forms inside the editing iframe.
+- Static safety does not block passive CSS, image, font, or other resource loading; do not treat it as a complete untrusted-content sandbox.
 - Do not open confidential files from unknown sources.
 
 This security model will be tightened as the project matures.

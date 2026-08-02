@@ -55,11 +55,11 @@ final class DigitalTransformationAcceptanceTest: NSObject, WKNavigationDelegate,
                   x: title.x + 8,
                   y: title.y + 4,
                   w: 720,
-                  h: 170,
+                  h: 76,
                   style: {
                     ...editedTitle.style,
                     color: 'rgb(75, 59, 120)',
-                    fontSize: 60,
+                    fontSize: 52,
                     lineHeight: 1.05
                   }
                 });

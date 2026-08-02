@@ -13,15 +13,19 @@
         <section class="stage" id="stage" aria-label="Slide canvas">
           <div class="slide-surface" id="slideSurface"></div>
           <div class="element-layer" id="elementLayer"></div>
-          <div class="guide-layer" id="guideLayer"></div>
-          <div class="page-boundary-layer" id="pageBoundaryLayer"></div>
-          <div class="hover-box" id="hoverBox" hidden></div>
-          <div class="selection-box" id="selectionBox" hidden></div>
+          <div class="guide-layer" id="guideLayer" aria-hidden="true"></div>
+          <div class="page-boundary-layer" id="pageBoundaryLayer" aria-hidden="true"></div>
+          <div class="hover-box" id="hoverBox" aria-hidden="true" hidden></div>
+          <div class="selection-box" id="selectionBox" aria-hidden="true" hidden></div>
         </section>
       </div>
     </div>
   </main>
 
+  <script src="./runtime-safety.js"></script>
+  <script src="./source-mapping.js"></script>
+  <script src="./visual-change.js"></script>
+  <script src="./editor-geometry.js"></script>
   <script src="./editor.js"></script>
 </body>
 </html>

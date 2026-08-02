@@ -67,6 +67,12 @@ final class HTMLDiagnosticsWebpageFlowTest: NSObject, WKNavigationDelegate, WKSc
         let base64 = Data(Self.fixtureHTML.utf8).base64EncodedString()
         let script = """
         void window.ChiseloEditor.openHTMLFromBase64('\(base64)', '')
+          .then(() => {
+            window.webkit.messageHandlers.chiselo.postMessage({
+              type: 'htmlDiagnosticsChanged',
+              diagnostics: window.ChiseloEditor.getImportDiagnostics()
+            });
+          })
           .catch(error => console.error(error));
         """
 

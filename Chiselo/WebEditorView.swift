@@ -18,6 +18,7 @@ struct WebEditorView: NSViewRepresentable {
         let webView = DropAwareWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.editorModel = model
+        context.coordinator.editorURL = editorIndexURL()
         webView.allowsMagnification = false
         webView.setValue(false, forKey: "drawsBackground")
 
@@ -63,11 +64,34 @@ struct WebEditorView: NSViewRepresentable {
                 model.status = model.hasOpenDocument ? "编辑器已就绪" : "打开项目或拖入 HTML 文件开始"
             }
         }
+
+        var editorURL: URL?
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let editorWebView = webView as? DropAwareWebView else {
+                decisionHandler(.cancel)
+                return
+            }
+            let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? false
+            let allowed = HTMLRuntimeSecurityPolicy.allowsNavigation(
+                to: navigationAction.request.url,
+                isMainFrame: isMainFrame,
+                mode: editorWebView.runtimeSecurityMode,
+                editorURL: editorURL
+            )
+            decisionHandler(allowed ? .allow : .cancel)
+        }
     }
 }
 
-private final class DropAwareWebView: WKWebView {
+final class DropAwareWebView: WKWebView {
     weak var editorModel: EditorModel?
+    private let runtimeSecurityController = HTMLRuntimeSecurityController()
+    private(set) var runtimeSecurityMode: HTMLRuntimeSecurityMode = .isolated
 
     private let filenamesType = NSPasteboard.PasteboardType("NSFilenamesPboardType")
 
@@ -79,6 +103,18 @@ private final class DropAwareWebView: WKWebView {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         registerForDraggedTypes([.fileURL, filenamesType])
+    }
+
+    func applyRuntimeSecurity(
+        _ mode: HTMLRuntimeSecurityMode,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        runtimeSecurityController.apply(mode, to: configuration.userContentController) { [weak self] result in
+            if case .success = result {
+                self?.runtimeSecurityMode = mode
+            }
+            completion(result)
+        }
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
