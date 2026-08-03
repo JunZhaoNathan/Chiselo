@@ -2,7 +2,7 @@
 
 All notable changes to Chiselo will be documented here.
 
-## Unreleased
+## 0.1.23 - 2026-08-03
 
 - Replaced the non-commercial source-available license with Apache-2.0 and
   added a separate Chiselo Trademark Policy for product identity.
@@ -12,6 +12,12 @@ All notable changes to Chiselo will be documented here.
   `rg` is unavailable on the CI runner.
 - Made the WebKit deck-gesture regression wait for the editor runtime instead
   of assuming it is ready on the first callback.
+
+- Made PPTX design checks portable on CI runners without `rg`.
+
+## Unreleased
+
+No unreleased changes.
 
 ## 0.1.22 - 2026-08-02
 
