@@ -1504,7 +1504,11 @@ final class EditorModel: ObservableObject {
 
     private func renderExport(html: String, outputURL: URL, format: RenderExportFormat) {
         let baseURL = openedURL?.deletingLastPathComponent()
-        let exporter = HTMLRenderExporter(html: html, baseURL: baseURL)
+        let exporter = HTMLRenderExporter(
+            html: html,
+            baseURL: baseURL,
+            trustedContent: activeHTMLRuntimeMode == .live
+        )
         activeRenderExporter = exporter
 
         if format == .pptx {

@@ -93,6 +93,8 @@ git push -u origin main
 
 - Do not commit `outputs/`, `.build/`, `.app`, or `.dmg` files.
 - Upload DMG files through GitHub Releases, not normal git commits.
-- Keep the license language clear: source-available non-commercial; commercial use is forbidden.
-- Do not call the project OSI open source, because the license restricts commercial use.
+- Keep the license language clear: Apache-2.0 open source with a separate
+  Chiselo Trademark Policy.
+- Describe forks accurately: they may use the code, but may not present a
+  modified or commercial product as official Chiselo without permission.
 - If Git asks for credentials, use GitHub browser login, GitHub Desktop, or a Personal Access Token. Do not paste a GitHub password into random prompts.

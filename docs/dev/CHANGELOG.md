@@ -2,6 +2,17 @@
 
 All notable changes to Chiselo will be documented here.
 
+## Unreleased
+
+- Replaced the non-commercial source-available license with Apache-2.0 and
+  added a separate Chiselo Trademark Policy for product identity.
+- Made PDF and PPTX export retain static-safe script and remote-resource
+  restrictions unless the user explicitly chose trusted dynamic compatibility.
+- Added safe-export runtime coverage and made release preflight work when
+  `rg` is unavailable on the CI runner.
+- Made the WebKit deck-gesture regression wait for the editor runtime instead
+  of assuming it is ready on the first callback.
+
 ## 0.1.22 - 2026-08-02
 
 - Fixed direct HTML selection boxes drifting from their visible target after an embedded responsive preview scrolls. The overlay now aligns to the iframe's actual on-screen bounds without changing document geometry, styles, or source.

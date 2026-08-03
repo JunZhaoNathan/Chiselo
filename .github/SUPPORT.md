@@ -1,6 +1,6 @@
 # Support
 
-Chiselo is a personal, non-commercial preview project.
+Chiselo is an early open-source preview project.
 
 For public help:
 
@@ -11,4 +11,5 @@ For public help:
 
 For private security concerns, see [SECURITY.md](./SECURITY.md).
 
-Commercial support is not available under this license.
+Community support is provided through GitHub issues. The project does not
+currently offer a commercial support program.

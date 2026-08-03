@@ -27,7 +27,7 @@ Existing HTML
 - Runtime conversion workflow: complex or script-rendered HTML can be converted to a fixed-canvas precision-editing version when direct editing is not stable enough.
 - Document lifecycle: tabs independently track original source, current source, linked CSS changes, runtime mode, and unsaved state; close and quit decisions pass through one protected workflow.
 - Save coordinator: HTML and changed local stylesheets are validated, staged, snapshotted, committed, and automatically rolled back as one transaction.
-- Runtime security: static-safe mode combines inert page scripts with native WebKit network and navigation rules; trusted compatibility removes those restrictions only after confirmation.
+- Runtime security: static-safe mode combines inert page scripts with native WebKit network and navigation rules. PDF and PPTX rendering preserve that safe default; trusted compatibility removes those restrictions only after confirmation.
 - Editor runtime modules: runtime safety, source-node mapping, visual-change classification, and numeric geometry primitives are loaded before the main editor runtime through explicit frozen browser APIs, keeping security, source preservation, snapshot comparison, and geometry calculations independent from shared canvas state. DOM capture, diagnostic orchestration, gesture state, and revert execution remain in the main runtime where editor state is owned.
 - UI layers: ordinary mode exposes visual content/style/layout tasks; advanced mode adds structure, source, runtime, layering, and professional export controls.
 - Responsive viewport: desktop/tablet/mobile preview changes iframe layout width only and never becomes document state.

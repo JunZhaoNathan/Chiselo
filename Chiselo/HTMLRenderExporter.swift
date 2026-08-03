@@ -74,6 +74,7 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
 
     private let html: String
     private let baseURL: URL?
+    private let trustedContent: Bool
     private let webView: WKWebView
     private var renderCompletion: ((Result<[RenderedPage], Error>) -> Void)?
     private var editableCompletion: ((Result<[EditablePage], Error>) -> Void)?
@@ -84,9 +85,10 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
         case editable
     }
 
-    init(html: String, baseURL: URL?) {
+    init(html: String, baseURL: URL?, trustedContent: Bool = false) {
         self.html = html
         self.baseURL = baseURL
+        self.trustedContent = trustedContent
         self.webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1280, height: 720))
         super.init()
         webView.navigationDelegate = self
@@ -95,13 +97,40 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
     func renderPages(completion: @escaping (Result<[RenderedPage], Error>) -> Void) {
         renderMode = .rendered
         renderCompletion = completion
-        webView.loadHTMLString(html, baseURL: baseURL)
+        loadDocument()
     }
 
     func renderEditablePages(completion: @escaping (Result<[EditablePage], Error>) -> Void) {
         renderMode = .editable
         editableCompletion = completion
-        webView.loadHTMLString(html, baseURL: baseURL)
+        loadDocument()
+    }
+
+    private func loadDocument() {
+        guard !trustedContent else {
+            webView.loadHTMLString(html, baseURL: baseURL)
+            return
+        }
+
+        WKContentRuleListStore.default().compileContentRuleList(
+            forIdentifier: "Chiselo.SafeExport.v1",
+            encodedContentRuleList: Self.safeExportRemoteResourceRules
+        ) { [weak self] ruleList, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let error {
+                    self.finishCurrentExport(with: error)
+                    return
+                }
+                guard let ruleList else {
+                    self.finishCurrentExport(with: ExportError.safeRenderPolicyUnavailable)
+                    return
+                }
+
+                self.webView.configuration.userContentController.add(ruleList)
+                self.webView.loadHTMLString(Self.safeRenderShell(for: self.html), baseURL: self.baseURL)
+            }
+        }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -236,6 +265,15 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
         let callback = editableCompletion
         editableCompletion = nil
         callback?(result)
+    }
+
+    private func finishCurrentExport(with error: Error) {
+        switch renderMode {
+        case .rendered:
+            finishRendered(.failure(error))
+        case .editable:
+            finishEditable(.failure(error))
+        }
     }
 
     static func writePDF(pages: [RenderedPage], to url: URL) throws {
@@ -409,6 +447,52 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
 
     private static let emuPerPixel = 914_400.0 / 96.0
     private static let pageSelector = ".slide, .sheet, .page, [data-slide], [data-page], [role=doc-page], [aria-roledescription=slide], [class~=slide], [class^=slide-], [class*=slide-], [class~=page], [class^=page-], [class*=page-], [id^=slide], [id*=-slide], [id^=page], [id*=-page]"
+    private static let safeExportRemoteResourceRules = """
+    [
+      {
+        "trigger": {
+          "url-filter": "^https?://",
+          "resource-type": ["document", "image", "style-sheet", "script", "font", "media", "svg-document", "raw"]
+        },
+        "action": { "type": "block" }
+      }
+    ]
+    """
+
+    private static func safeRenderShell(for html: String) -> String {
+        let sourceBase64 = Data(html.utf8).base64EncodedString()
+        return """
+        <!doctype html>
+        <html><head><meta charset="utf-8"></head><body><script>
+        (() => {
+          const source = new TextDecoder().decode(Uint8Array.from(atob('\(sourceBase64)'), byte => byte.charCodeAt(0)));
+          const parsed = new DOMParser().parseFromString(source, 'text/html');
+          const nodes = [parsed.documentElement, ...parsed.querySelectorAll('*')];
+          const urlAttributes = ['href', 'src', 'xlink:href', 'action', 'formaction', 'data'];
+
+          for (const node of nodes) {
+            if (node.matches?.('script')) node.setAttribute('type', 'application/x-chiselo-blocked');
+            for (const attribute of [...(node.attributes || [])]) {
+              if (/^on[a-z0-9_-]+$/i.test(attribute.name)) node.removeAttribute(attribute.name);
+            }
+            for (const name of urlAttributes) {
+              const value = node.getAttribute?.(name) || '';
+              if (/^\\s*javascript:/i.test(value)) node.removeAttribute(name);
+            }
+            if (node.matches?.('meta[http-equiv]') && /^refresh$/i.test(node.getAttribute('http-equiv') || '')) {
+              node.removeAttribute('http-equiv');
+            }
+            if (node.matches?.('iframe')) node.setAttribute('sandbox', '');
+          }
+
+          const doctype = /^\\s*<!doctype\\b/i.test(source) ? '<!doctype html>\\n' : '';
+          document.open();
+          document.write(doctype + parsed.documentElement.outerHTML);
+          document.close();
+        })();
+        </script></body></html>
+        """
+    }
 
     private static func runZip(in root: URL, output: URL) throws {
         let process = Process()
@@ -1686,6 +1770,7 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
         case imageDecodeFailed
         case pdfCreationFailed
         case pptxZipFailed
+        case safeRenderPolicyUnavailable
         case editableExtractionFailed
         case editableExtractionFailedWithMessage(String)
 
@@ -1701,6 +1786,8 @@ final class HTMLRenderExporter: NSObject, WKNavigationDelegate {
                 return "Could not create PDF."
             case .pptxZipFailed:
                 return "Could not package PPTX."
+            case .safeRenderPolicyUnavailable:
+                return "Could not install the safe export policy."
             case .editableExtractionFailed:
                 return "Could not extract editable objects from the HTML document."
             case .editableExtractionFailedWithMessage(let message):

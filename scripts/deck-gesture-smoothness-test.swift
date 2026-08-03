@@ -10,6 +10,7 @@ final class DeckGestureSmoothnessTest: NSObject, WKNavigationDelegate, WKScriptM
     private var isMeasuringSelectionBridge = false
     private var selectionMessageCount = 0
     private var startSelection: [String: Any]?
+    private var preparationAttempts = 0
 
     init(editorURL: URL) {
         self.editorURL = editorURL
@@ -88,7 +89,7 @@ final class DeckGestureSmoothnessTest: NSObject, WKNavigationDelegate, WKScriptM
         let script = """
         (() => {
           const editor = window.ChiseloEditor;
-          if (!editor) throw new Error('ChiseloEditor is not available.');
+          if (!editor) return null;
           const startSelection = editor.selectElementById('title');
           if (!startSelection) throw new Error('Could not select default title element.');
 
@@ -108,13 +109,28 @@ final class DeckGestureSmoothnessTest: NSObject, WKNavigationDelegate, WKScriptM
                 fail("Prepare gesture script failed: \(error.localizedDescription)")
             }
 
-            guard let payload = result as? [String: Any],
-                  let startSelection = payload["startSelection"] as? [String: Any] else {
+            guard let payload = result as? [String: Any] else {
+                self.retryGesturePreparation()
+                return
+            }
+
+            guard let startSelection = payload["startSelection"] as? [String: Any] else {
                 fail("Prepare gesture script returned an invalid payload.")
             }
 
             self.startSelection = startSelection
             runPointerSequence()
+        }
+    }
+
+    private func retryGesturePreparation() {
+        preparationAttempts += 1
+        guard preparationAttempts <= 30 else {
+            fail("ChiseloEditor did not become ready after \(preparationAttempts) attempts.")
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.runGesture()
         }
     }
 

@@ -21,12 +21,23 @@ run_with_retry() {
 
 echo "==> Checking for local-only paths and old project names"
 LOCAL_PATH_OR_OLD_NAME_PATTERN="/Users/[^[:space:]'\"]+|/var/folders/|TemporaryItems|Documents/Codex|Htmlhunter|htmlhunter|HTMLHUNTER"
-if rg -n "$LOCAL_PATH_OR_OLD_NAME_PATTERN" \
-  -g '!.git/**' \
-  -g '!.build/**' \
-  -g '!outputs/**' \
-  -g '!scripts/release-preflight.sh' \
-  .; then
+if command -v rg >/dev/null 2>&1; then
+  LOCAL_PATH_MATCHES="$(rg -n "$LOCAL_PATH_OR_OLD_NAME_PATTERN" \
+    -g '!.git/**' \
+    -g '!.build/**' \
+    -g '!outputs/**' \
+    -g '!scripts/release-preflight.sh' \
+    . || true)"
+else
+  LOCAL_PATH_MATCHES="$(grep -RInE \
+    --exclude-dir=.git \
+    --exclude-dir=.build \
+    --exclude-dir=outputs \
+    --exclude=release-preflight.sh \
+    "$LOCAL_PATH_OR_OLD_NAME_PATTERN" . || true)"
+fi
+if [[ -n "$LOCAL_PATH_MATCHES" ]]; then
+  printf '%s\n' "$LOCAL_PATH_MATCHES"
   echo "Found local-only paths or old project names." >&2
   exit 1
 fi
@@ -90,6 +101,9 @@ SAVE_ROLLBACK_TEST_BIN="/tmp/chiselo-save-transaction-rollback-test"
 swiftc Chiselo/SafeFileHistory.swift Chiselo/HTMLSaveCoordinator.swift scripts/html-save-transaction-rollback-test.swift -o "$SAVE_ROLLBACK_TEST_BIN"
 "$SAVE_ROLLBACK_TEST_BIN"
 swift scripts/html-runtime-safety-test.swift
+EXPORT_RUNTIME_SAFETY_TEST_BIN="/tmp/chiselo-export-runtime-safety-test"
+swiftc Chiselo/HTMLRenderExporter.swift scripts/export-runtime-safety-test.swift -o "$EXPORT_RUNTIME_SAFETY_TEST_BIN"
+"$EXPORT_RUNTIME_SAFETY_TEST_BIN"
 swift scripts/html-responsive-viewport-test.swift
 swift scripts/direct-html-pseudo-preview-test.swift
 swift scripts/direct-html-editor-shell-stability-test.swift

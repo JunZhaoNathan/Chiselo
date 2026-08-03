@@ -2,13 +2,16 @@
 
 Thanks for helping Chiselo improve.
 
-Chiselo is a non-commercial, source-available project. By contributing, you agree that your contribution can be distributed under the [Chiselo Personal Non-Commercial License 1.0](../LICENSE).
+Chiselo is open-source software under [Apache-2.0](../LICENSE). By submitting
+a contribution, you license it under Apache-2.0. The Chiselo name, icon,
+tagline, and Vellumloop branding remain subject to the
+[Trademark Policy](../TRADEMARKS.md).
 
 ## Ground Rules
 
 - Keep the product goal clear: Chiselo is an HTML finishing and delivery tool, focused on precise visual refinement, delivery checks, and HTML/PDF/PPTX export.
 - Prefer small, testable changes.
-- Do not add commercial-only dependencies or license-incompatible code.
+- Do not add license-incompatible dependencies or proprietary code.
 - Do not paste proprietary code or private documents into issues or pull requests.
 - Include before/after screenshots for visual editing changes when possible.
 

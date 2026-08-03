@@ -1,11 +1,16 @@
-# Docs
+# Documentation
 
-Chiselo documentation is split into user docs, developer docs, and release notes.
+This index keeps the product surface, end-user guidance, and engineering detail
+separate. Start with the shortest path for your role.
 
 ## User Docs
 
 - [Install](user/INSTALL.md)
 - [Usage Guide](user/USAGE.md)
+
+## Product
+
+- [Product Strategy](product/PRODUCT_STRATEGY.md)
 
 ## Developer Docs
 
@@ -20,6 +25,8 @@ Chiselo documentation is split into user docs, developer docs, and release notes
 
 ## Release Notes
 
+- [0.1.22](releases/RELEASE_NOTES_0.1.22_PREVIEW.md)
+- [0.1.21](releases/RELEASE_NOTES_0.1.21_PREVIEW.md)
 - [0.1.20 Preview](releases/RELEASE_NOTES_0.1.20_PREVIEW.md)
 - [0.1.19 Preview](releases/RELEASE_NOTES_0.1.19_PREVIEW.md)
 - [0.1.18 Preview](releases/RELEASE_NOTES_0.1.18_PREVIEW.md)

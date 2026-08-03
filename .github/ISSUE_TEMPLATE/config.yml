@@ -1,1 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/JunZhaoNathan/Chiselo/tree/main/docs
+    about: Start with installation, usage, and architecture documentation.
+  - name: Security report
+    url: https://github.com/JunZhaoNathan/Chiselo/security/policy
+    about: Report vulnerabilities privately; do not open a public issue.

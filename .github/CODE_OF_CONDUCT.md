@@ -8,7 +8,7 @@ Chiselo welcomes practical, respectful collaboration.
 - Critique code and design decisions, not people.
 - Assume contributors may have different levels of programming experience.
 - Keep issues focused on reproducible behavior, product direction, or concrete improvements.
-- Respect the non-commercial license.
+- Respect the Apache-2.0 license and the Chiselo Trademark Policy.
 
 ## Unacceptable Behavior
 
