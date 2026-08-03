@@ -72,17 +72,25 @@ swiftc "$ROOT_DIR/Chiselo/HTMLRenderExporter.swift" "$ROOT_DIR/scripts/export-ht
 
 unzip -q "$OUTPUT" -d "$UNZIP_DIR"
 
-if ! rg -q '<a:gradFill' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
+contains() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$1" "$2"
+  else
+    grep -qE "$1" "$2"
+  fi
+}
+
+if ! contains '<a:gradFill' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
   echo "Missing native gradient fill in editable PPTX." >&2
   exit 1
 fi
 
-if ! rg -q '<a:outerShdw' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
+if ! contains '<a:outerShdw' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
   echo "Missing native shadow in editable PPTX." >&2
   exit 1
 fi
 
-if ! rg -q 'BETA' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
+if ! contains 'BETA' "$UNZIP_DIR/ppt/slides/slide1.xml"; then
   echo "Missing pseudo-element text in editable PPTX." >&2
   exit 1
 fi

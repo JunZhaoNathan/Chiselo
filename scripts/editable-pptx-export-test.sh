@@ -24,9 +24,19 @@ xmllint --noout \
   "$WORK_DIR/ppt/slides/slide1.xml" \
   "$WORK_DIR/[Content_Types].xml"
 
-shape_count="$(rg -o '<p:sp[ >]' "$WORK_DIR/ppt/slides" | wc -l | tr -d ' ')"
-text_count="$(rg -o '<a:t>' "$WORK_DIR/ppt/slides" | wc -l | tr -d ' ')"
-picture_count="$(rg -o '<p:pic' "$WORK_DIR/ppt/slides" | wc -l | tr -d ' ')"
+match_count() {
+  local pattern="$1"
+
+  if command -v rg >/dev/null 2>&1; then
+    rg -o "$pattern" "$WORK_DIR/ppt/slides" | wc -l | tr -d ' '
+  else
+    grep -RhoE "$pattern" "$WORK_DIR/ppt/slides" | wc -l | tr -d ' '
+  fi
+}
+
+shape_count="$(match_count '<p:sp[ >]')"
+text_count="$(match_count '<a:t>')"
+picture_count="$(match_count '<p:pic')"
 page_count="$(find "$WORK_DIR/ppt/slides" -maxdepth 1 -name 'slide*.xml' | wc -l | tr -d ' ')"
 
 if [[ "$page_count" -lt 1 || "$shape_count" -lt 10 || "$text_count" -lt 10 ]]; then
