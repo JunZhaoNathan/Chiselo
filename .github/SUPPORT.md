@@ -1,6 +1,6 @@
 # Support
 
-Chiselo is an early open-source preview project.
+Chiselo is an early public source-available project under CC BY-NC 4.0.
 
 For public help:
 

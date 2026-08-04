@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml/badge.svg)](https://github.com/JunZhaoNathan/Chiselo/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/JunZhaoNathan/Chiselo?display_name=tag&label=release)](https://github.com/JunZhaoNathan/Chiselo/releases/latest)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/license-CC--BY--NC--4.0-d97706.svg)](LICENSE)
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS%2013%2B-111827)](docs/user/INSTALL.md)
 [![Website](https://img.shields.io/badge/website-chiselo.vellumloop.com-216b62)](https://chiselo.vellumloop.com/)
 
@@ -89,10 +89,13 @@ before/after export whenever it is safe to share.
 
 ## License And Brand
 
-The source code is free and open source under [Apache-2.0](LICENSE).
+The source is publicly available under [CC BY-NC 4.0](LICENSE): copying,
+modification, and sharing are permitted for non-commercial purposes with
+attribution. Commercial use requires prior written permission. This is not an
+OSI-approved open-source license.
 
 The Chiselo name, icon, `Chisel your HTML.` tagline, and Vellumloop branding do
-not transfer with the code. Forks, hosted services, and commercial products
-must use a distinct identity; see the [Trademark Policy](TRADEMARKS.md).
+not transfer with the code. Forks and hosted services must use a distinct
+identity; see the [Trademark Policy](TRADEMARKS.md).
 
 Chiselo is made by [Vellumloop](https://vellumloop.com/).

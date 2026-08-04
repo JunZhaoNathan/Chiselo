@@ -85,8 +85,9 @@ html2ppt
 html2pptx
 pdf-export
 pptx-export
-open-source
-apache-2.0
+source-available
+noncommercial-license
+cc-by-nc-4-0
 ```
 
 ## First Preview Post
@@ -99,9 +100,10 @@ Chiselo is a macOS visual HTML editor for existing and AI-generated pages. It op
 Official website: https://chiselo.vellumloop.com/
 Chiselo is made by Vellumloop: https://vellumloop.com/
 
-Chiselo is free and open-source under Apache-2.0. The Chiselo name, icon,
-tagline, and Vellumloop branding are protected; forks and commercial products
-must use a distinct identity. See TRADEMARKS.md.
+Chiselo is publicly source-available under CC BY-NC 4.0. You may use, modify,
+and share it non-commercially with attribution. Commercial use needs prior
+written permission. The Chiselo name, icon, tagline, and Vellumloop branding
+are protected; see LICENSE and TRADEMARKS.md.
 
 Stars are appreciated if you want to follow the project.
 ```
@@ -116,8 +118,9 @@ Chiselo 服务于 Dreamweaver 用户熟悉的“打开已有 HTML，直接改页
 官网：https://chiselo.vellumloop.com/
 Chiselo 由 Vellumloop 制作：https://vellumloop.com/
 
-Chiselo 采用 Apache-2.0 开源许可证。Chiselo 名称、图标、标语和
-Vellumloop 品牌不随源码授权；分支和商业产品必须使用独立名称与视觉身份。
+Chiselo 采用 CC BY-NC 4.0 非商业许可：可署名非商业使用、修改和传播；
+商业使用需要事先书面许可。它不是 OSI 开源许可证。Chiselo 名称、图标、
+标语和 Vellumloop 品牌不随源码授权，详见 LICENSE 和 TRADEMARKS.md。
 
 如果你觉得这个方向有价值，欢迎 star。
 ```

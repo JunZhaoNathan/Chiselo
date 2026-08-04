@@ -17,7 +17,10 @@ All notable changes to Chiselo will be documented here.
 
 ## Unreleased
 
-No unreleased changes.
+- Changed the current source license to CC BY-NC 4.0. Commercial use now
+  requires prior written permission; this is source-available rather than
+  OSI-approved open source. Historical releases through `v0.1.23` retain the
+  Apache-2.0 license supplied with those releases.
 
 ## 0.1.22 - 2026-08-02
 

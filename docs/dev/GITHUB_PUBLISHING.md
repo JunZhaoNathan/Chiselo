@@ -30,10 +30,11 @@ The DMG should be uploaded later as a GitHub Release asset.
 
 ## License Position
 
-Chiselo is open-source software under Apache-2.0. Commercial users may use and
-modify the code under that license, but the Chiselo name, icon, tagline, and
-Vellumloop branding are protected. Do not let a fork, hosted service, or paid
-offering imply that it is an official Chiselo product; see `TRADEMARKS.md`.
+Chiselo is publicly source-available under CC BY-NC 4.0. Non-commercial use,
+modification, and sharing require attribution; commercial use needs prior
+written permission. This is not an OSI-approved open-source license. The
+Chiselo name, icon, tagline, and Vellumloop branding are also protected; see
+`TRADEMARKS.md`.
 
 This is not legal advice. If the project becomes commercially important, ask a
 lawyer to review the trademark policy and registrations in the relevant markets.
@@ -73,7 +74,7 @@ Chiselo helps you refine existing HTML pages and visual documents, run delivery 
 Topics:
 
 ```text
-macos swiftui wkwebview html-editor visual-editor wysiwyg layout-editor html-layout-editor editable-html html-finishing delivery-check html-to-pdf html-to-pptx html2ppt html2pptx pdf-export pptx-export open-source apache-2.0
+macos swiftui wkwebview html-editor visual-editor wysiwyg layout-editor html-layout-editor editable-html html-finishing delivery-check html-to-pdf html-to-pptx html2ppt html2pptx pdf-export pptx-export source-available noncommercial-license cc-by-nc-4-0
 ```
 
 Star reminder for README or pinned issue:

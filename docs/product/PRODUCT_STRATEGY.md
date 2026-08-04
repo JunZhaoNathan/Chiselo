@@ -36,12 +36,13 @@ Before adding a feature, prefer work that strengthens one of these outcomes:
 Do not add site management, hosting, prompt-to-page generation, or a general
 code editor unless the product direction changes deliberately.
 
-## Open Source And Brand
+## License And Brand
 
-The source code is Apache-2.0. People may use, modify, and distribute the code,
-including commercially. The Chiselo name, icon, tagline, and Vellumloop
-branding remain protected so forks and paid products need their own identity.
-See [TRADEMARKS.md](../../TRADEMARKS.md).
+The source is publicly available under CC BY-NC 4.0. People may use, modify,
+and share it non-commercially with attribution; commercial use needs written
+permission. This is not OSI open source. The Chiselo name, icon, tagline, and
+Vellumloop branding are separately protected; see
+[TRADEMARKS.md](../../TRADEMARKS.md).
 
 ## Maintenance Rules
 
