@@ -42,7 +42,3 @@ Good pull requests include:
 - commands that were run;
 - screenshots or exported artifacts for UI/export changes;
 - notes about limitations or remaining risks.
-
-## Project Voice
-
-The repository is intentionally honest that Chiselo started as a vibe-coded project by a non-programmer using AI assistance. Improvements are welcome, but please keep feedback practical and kind.

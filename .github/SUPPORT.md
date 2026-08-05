@@ -13,3 +13,5 @@ For private security concerns, see [SECURITY.md](./SECURITY.md).
 
 Community support is provided through GitHub issues. The project does not
 currently offer a commercial support program.
+
+For commercial licensing, contact [support@vellumloop.com](mailto:support@vellumloop.com).

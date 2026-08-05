@@ -32,7 +32,7 @@ make a precise visual change, review it, and deliver the original format.
 2. Open an existing `.html`, `.htm`, or `.xhtml` file.
 3. Select a visible object, make the adjustment, then review the change before saving or exporting.
 
-Current release: `0.1.23` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
+Current release: `0.1.24` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
 
 ## Product Boundary
 
@@ -53,7 +53,7 @@ has already been made.
 - [Install](docs/user/INSTALL.md) and [usage](docs/user/USAGE.md): end-user guides.
 - [Architecture](docs/dev/architecture.md) and [testing](docs/dev/TESTING.md): how the app is built and verified.
 - [Roadmap](docs/dev/ROADMAP.md) and [changelog](docs/dev/CHANGELOG.md): what is next and what changed.
-- [Release notes](docs/releases/RELEASE_NOTES_0.1.23_PREVIEW.md): current packaged build details.
+- [Release notes](docs/releases/RELEASE_NOTES_0.1.24_PREVIEW.md): current packaged build details.
 
 ## Build From Source
 
@@ -92,7 +92,8 @@ before/after export whenever it is safe to share.
 The source is publicly available under [CC BY-NC 4.0](LICENSE): copying,
 modification, and sharing are permitted for non-commercial purposes with
 attribution. Commercial use requires prior written permission. This is not an
-OSI-approved open-source license.
+OSI-approved open-source license. For commercial licensing, contact
+[support@vellumloop.com](mailto:support@vellumloop.com).
 
 The Chiselo name, icon, `Chisel your HTML.` tagline, and Vellumloop branding do
 not transfer with the code. Forks and hosted services must use a distinct

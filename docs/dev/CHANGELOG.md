@@ -15,12 +15,16 @@ All notable changes to Chiselo will be documented here.
 
 - Made PPTX design checks portable on CI runners without `rg`.
 
-## Unreleased
+## 0.1.24 - 2026-08-05
 
-- Changed the current source license to CC BY-NC 4.0. Commercial use now
+- Changed the source license to CC BY-NC 4.0. Commercial use now
   requires prior written permission; this is source-available rather than
   OSI-approved open source. Historical releases through `v0.1.23` retain the
   Apache-2.0 license supplied with those releases.
+
+## Unreleased
+
+No unreleased changes.
 
 ## 0.1.22 - 2026-08-02
 
