@@ -1,6 +1,6 @@
 # Chiselo 0.1.18 Preview
 
-Chiselo 0.1.18 tightens the zero-collateral editing contract for existing and conventional AI-generated HTML: a local text or style edit is now checked against the complete computed visual state and DOM source of visible non-target objects.
+Chiselo 0.1.18 tightens the zero-collateral editing contract for existing and conventional HTML: a local text or style edit is now checked against the complete computed visual state and DOM source of visible non-target objects.
 
 ## Highlights
 

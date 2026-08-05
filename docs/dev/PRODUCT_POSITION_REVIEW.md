@@ -2,13 +2,13 @@
 
 ## Core Position
 
-Chiselo is built to replace Dreamweaver's existing-HTML visual editing workflow for the AI HTML era, without copying Dreamweaver's site-building, FTP, or traditional IDE surface.
+Chiselo is built to improve Dreamweaver's existing-HTML visual editing workflow, without copying its site-building, FTP, or traditional IDE surface.
 
 It starts from an existing HTML file. The job is to make that file easier to inspect, adjust, polish, and deliver with high visual fidelity.
 
 ## Product Promise
 
-- Static pages and conventional AI-generated HTML must be simpler to edit than in Dreamweaver.
+- Static pages and conventional HTML must be simpler to edit than in Dreamweaver.
 - Source preservation, save safety, and change review must be more reliable and more visible to the user.
 - Complex dynamic pages must enter an explicit trusted compatibility mode instead of silently weakening the default safety boundary.
 - Existing HTML remains the product's input and source of truth; Chiselo does not require a proprietary project model before editing can begin.
@@ -19,7 +19,7 @@ It starts from an existing HTML file. The job is to make that file easier to ins
 - A precision adjustment tool for text, images, tables, cards, modules, spacing, alignment, and page boundaries.
 - A delivery preflight tool for clean HTML, high-fidelity PDF, and best-effort editable PPTX.
 - A safer editing workflow with backups, version snapshots, diagnostics, and restore paths.
-- A nontechnical visual editor for mature HTML produced by AI or other tools.
+- A nontechnical visual editor for mature HTML produced by people or other tools.
 
 ## What Chiselo Is Not
 
@@ -87,7 +87,7 @@ Avoid as product identity:
 - full Dreamweaver replacement;
 - code editor.
 
-Always qualify the Dreamweaver comparison by naming the workflow being replaced. Existing and AI-generated HTML are both first-class inputs. Dynamic applications remain a trusted compatibility case rather than the default workflow.
+Always qualify the Dreamweaver comparison by naming the workflow being improved. Existing HTML from people or other tools is a first-class input. Dynamic applications remain a trusted compatibility case rather than the default workflow.
 
 ## Next Product Priorities
 

@@ -2,7 +2,7 @@
 
 ## Product Direction
 
-Chiselo should replace Dreamweaver's existing-HTML visual editing workflow for the AI HTML era. It should not reproduce Dreamweaver's site-building, FTP, or traditional IDE surface.
+Chiselo should make the existing-HTML visual editing workflow faster and easier to understand. It should not reproduce Dreamweaver's site-building, FTP, or traditional IDE surface.
 
 The core idea:
 
@@ -11,8 +11,8 @@ The core idea:
 - Chiselo builds object-level controls on top of that rendered result.
 - Export checks and compiler targets focus on delivery quality: HTML, PDF, PPTX, and future formats.
 - Chiselo should cover the high-value visual editing loop associated with Dreamweaver without inheriting full IDE complexity.
-- Chiselo accepts existing and AI-generated HTML; it does not generate sites, scaffold projects, manage servers, or become a code-first IDE.
-- Static and conventional AI-generated HTML should be simpler to edit than in Dreamweaver.
+- Chiselo accepts existing HTML from people or other tools; it does not generate sites, scaffold projects, manage servers, or become a code-first IDE.
+- Static and conventional HTML should be simpler to edit than in Dreamweaver.
 - Source preservation, save safety, and change review should be more reliable and explicit.
 - Complex dynamic pages should use a clearly disclosed trusted compatibility mode.
 

@@ -23,7 +23,7 @@ Do not commit these to the repository:
 - `.build/`;
 - `outputs/`;
 - `Chiselo.app`;
-- `Chiselo-0.1.20.dmg`;
+- `Chiselo-0.1.24.dmg`;
 - logs, temp files, local caches, and unreferenced temporary screenshots.
 
 The DMG should be uploaded later as a GitHub Release asset.
@@ -143,23 +143,23 @@ To rebuild the default package:
 ```bash
 scripts/release-preflight.sh
 CHISELO_NOTARIZE=1 scripts/package-dmg.sh
-hdiutil verify outputs/Chiselo-0.1.20.dmg
-xcrun stapler validate outputs/Chiselo-0.1.20.dmg
-spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.20.dmg
+hdiutil verify outputs/Chiselo-0.1.24.dmg
+xcrun stapler validate outputs/Chiselo-0.1.24.dmg
+spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.24.dmg
 ```
 
 Default release asset:
 
 ```text
-outputs/Chiselo-0.1.20.dmg
-outputs/Chiselo-0.1.20-macOS-arm64-appcast.xml
+outputs/Chiselo-0.1.24.dmg
+outputs/Chiselo-0.1.24-macOS-arm64-appcast.xml
 outputs/latest/appcast-arm64.xml
 ```
 
 If using a custom package output from the Codex build folder, upload:
 
 ```text
-outputs/codex-build/Chiselo-0.1.20.dmg
+outputs/codex-build/Chiselo-0.1.24.dmg
 ```
 
 Only upload one DMG to GitHub Releases unless you intentionally built multiple variants. Upload the `latest/appcast-*.xml` file to the feed path configured in `SUFeedURL` if you want in-app update checks to see this release.
@@ -181,13 +181,13 @@ Do not announce automatic updates until the online verification passes.
 4. Create a new tag:
 
 ```text
-v0.1.20
+v0.1.24
 ```
 
 5. Release title:
 
 ```text
-Chiselo 0.1.20
+Chiselo 0.1.24
 ```
 
 6. Leave `Set as a pre-release` unchecked for downloadable public builds.
@@ -195,7 +195,7 @@ Chiselo 0.1.20
 8. Paste the text from:
 
 ```text
-docs/releases/RELEASE_NOTES_0.1.20_PREVIEW.md
+docs/releases/RELEASE_NOTES_0.1.24_PREVIEW.md
 ```
 
 9. Upload the DMG file.

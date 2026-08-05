@@ -13,6 +13,6 @@ Chiselo 0.1.19 strengthens stable precision editing while the imported HTML canv
 
 ## Scope
 
-This preview targets existing static HTML and conventional AI-generated HTML. Complex dynamic applications still require explicit trusted compatibility mode, and cross-origin resources remain subject to browser security boundaries.
+This preview targets existing static HTML and conventional HTML. Complex dynamic applications still require explicit trusted compatibility mode, and cross-origin resources remain subject to browser security boundaries.
 
 This source version has not been signed, notarized, uploaded, or published.

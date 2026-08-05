@@ -1,6 +1,6 @@
 # Chiselo 0.1.15 Preview
 
-Chiselo 0.1.15 completes the current light-Dreamweaver optimization pass for safely refining existing and AI-generated HTML without creating a site project.
+Chiselo 0.1.15 completes the current light-Dreamweaver optimization pass for safely refining existing HTML without creating a site project.
 
 ## Highlights
 
@@ -28,4 +28,4 @@ Chiselo 0.1.15 completes the current light-Dreamweaver optimization pass for saf
 
 ## Product Boundary
 
-Chiselo now covers the core workflow of a light Dreamweaver for static and conventional AI-generated HTML. It deliberately does not replace full site management, FTP, backend development, framework tooling, databases, or a general-purpose code IDE.
+Chiselo now covers the core workflow of a light Dreamweaver for static and conventional HTML. It deliberately does not replace full site management, FTP, backend development, framework tooling, databases, or a general-purpose code IDE.

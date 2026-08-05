@@ -18,9 +18,9 @@ Confirm:
 
 ```bash
 codesign --verify --deep --strict --verbose=2 outputs/Chiselo.app
-hdiutil verify outputs/Chiselo-0.1.20.dmg
-xcrun stapler validate outputs/Chiselo-0.1.20.dmg
-spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.20.dmg
+hdiutil verify outputs/Chiselo-0.1.24.dmg
+xcrun stapler validate outputs/Chiselo-0.1.24.dmg
+spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.24.dmg
 plutil -p outputs/Chiselo.app/Contents/Info.plist | grep -E 'SUPublicEDKey|SUFeedURL|CFBundleShortVersionString|CFBundleVersion'
 ```
 
@@ -43,10 +43,10 @@ The online verification must pass before telling users to use `检查更新…`.
 
 ## GitHub Release
 
-1. Create a release tag such as `v0.1.20`.
+1. Create a release tag such as `v0.1.24`.
 2. Create a GitHub release from that tag.
-3. Upload `outputs/Chiselo-0.1.20.dmg`.
-4. Include release notes from `docs/releases/RELEASE_NOTES_0.1.20_PREVIEW.md` for the current preview.
+3. Upload `outputs/Chiselo-0.1.24.dmg`.
+4. Include release notes from `docs/releases/RELEASE_NOTES_0.1.24_PREVIEW.md` for the current release.
 5. Upload the generated Sparkle appcast, such as `outputs/latest/appcast-arm64.xml`, to the feed URL written into `SUFeedURL`, or run `scripts/publish-r2-release.sh`.
 6. Run `scripts/verify-online-update.sh`.
 7. Do not mark downloadable public builds as `Pre-release`. GitHub's `/releases/latest` endpoint ignores prereleases, so website download buttons should point at a normal latest release.

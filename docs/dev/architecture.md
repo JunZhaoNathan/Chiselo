@@ -4,13 +4,13 @@ Chiselo should behave like a native macOS app while keeping browser-grade HTML r
 
 Slogan: **Chisel your HTML**.
 
-Positioning: **AI-era light Dreamweaver for existing HTML + object-level visual refinement + protected save and delivery**.
+Positioning: **A focused visual editor for existing HTML, with object-level refinement, protected save, and reliable delivery**.
 
 ## Product Shape
 
 ```text
 Existing HTML
-  or AI-generated mature HTML
+  or an HTML page produced by another tool
   -> SwiftUI macOS editor
   -> WKWebView precise canvas
   -> Object-level visual refinement
@@ -48,6 +48,6 @@ Existing HTML
 ## Current Boundaries
 
 - Chiselo edits files; it does not create or manage a website project.
-- Static and conventional AI-generated HTML are the primary compatibility target.
+- Static and conventional HTML are the primary compatibility target.
 - Arbitrary framework applications, cross-origin embedded content, animation timelines, server code, databases, FTP/SFTP publishing, and full IDE code intelligence are outside the light editor scope.
 - PDF is the fidelity target; editable PPTX is a best-effort compiler target.

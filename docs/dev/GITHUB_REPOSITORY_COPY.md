@@ -13,7 +13,7 @@ macOS visual HTML editor for existing webpages — edit rendered HTML, preserve 
 Search-friendly:
 
 ```text
-A Dreamweaver alternative for existing HTML: visually edit rendered pages, preserve source, review changes, and save safely on macOS.
+A focused macOS editor for existing HTML: visually edit rendered pages, preserve source, review changes, and save safely.
 ```
 
 Search-optimized:
@@ -31,7 +31,7 @@ Chiselo is a macOS visual HTML editor for existing webpages. It supports direct 
 ## Chinese Intro
 
 ```text
-Chiselo 服务于 Dreamweaver 用户熟悉的“打开已有 HTML，直接改页面”工作流。在 macOS 上打开已有 HTML，可视化调整文字、图片、表格、模块和版式，保护源码，审查修改，再安全保存。
+Chiselo 服务于“打开已有 HTML，直接改页面”的工作流。在 macOS 上打开已有 HTML，可视化调整文字、图片、表格、模块和版式，保护源码，审查修改，再安全保存。
 ```
 
 ## English Intro
@@ -93,9 +93,9 @@ cc-by-nc-4-0
 ## First Preview Post
 
 ```text
-I am releasing the first public preview of Chiselo.
+I am releasing a public preview of Chiselo.
 
-Chiselo is a macOS visual HTML editor for existing pages. It opens the original HTML as the working document, lets you adjust visible objects directly, reviews changes, and protects saves. The workflow covers the practical existing-HTML editing work many people associate with Dreamweaver. Complex dynamic pages use an explicit trusted compatibility mode.
+Chiselo is a macOS visual HTML editor for existing pages. It opens the original HTML as the working document, lets you adjust visible objects directly, reviews changes, and protects saves. Complex dynamic pages use an explicit trusted compatibility mode.
 
 Official website: https://chiselo.vellumloop.com/
 Chiselo is made by Vellumloop: https://vellumloop.com/
@@ -111,9 +111,9 @@ Stars are appreciated if you want to follow the project.
 中文版本：
 
 ```text
-我发布了 Chiselo 的第一个公开预览版。
+我发布了 Chiselo 的公开预览版。
 
-Chiselo 服务于 Dreamweaver 用户熟悉的“打开已有 HTML，直接改页面”工作流。它在 macOS 上直接打开已有 HTML，让用户可视化调整文字、图片、表格、模块和版式，保护源码、审查修改并安全保存。复杂动态页面使用明确的可信兼容模式。
+Chiselo 服务于“打开已有 HTML，直接改页面”的工作流。它在 macOS 上直接打开已有 HTML，让用户可视化调整文字、图片、表格、模块和版式，保护源码、审查修改并安全保存。复杂动态页面使用明确的可信兼容模式。
 
 官网：https://chiselo.vellumloop.com/
 Chiselo 由 Vellumloop 制作：https://vellumloop.com/
