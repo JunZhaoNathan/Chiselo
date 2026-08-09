@@ -26,7 +26,7 @@ DEFAULT_DEVELOPER_ID="Developer ID Application: ${TEAM_NAME} (${TEAM_ID})"
 SIGNING_IDENTITY="${CODESIGN_IDENTITY:-${SIGN_IDENTITY:-}}"
 RELEASE_PREFIX="${CHISELO_R2_PREFIX:-chiselo}"
 DOWNLOAD_BASE_URL="${CHISELO_DOWNLOAD_BASE_URL:-https://downloads.vellumloop.com}"
-DOWNLOAD_URL="${CHISELO_DOWNLOAD_URL:-${DOWNLOAD_BASE_URL%/}/$RELEASE_PREFIX/Chiselo-${VERSION}.dmg}"
+DOWNLOAD_URL="${CHISELO_DOWNLOAD_URL:-}"
 SWIFTPM_SCRATCH_PATH="${CHISELO_SWIFTPM_SCRATCH_PATH:-}"
 SPARKLE_PUBLIC_KEY="${CHISELO_SPARKLE_PUBLIC_KEY:-}"
 SPARKLE_FRAMEWORK="${CHISELO_SPARKLE_FRAMEWORK:-}"
@@ -75,6 +75,9 @@ compute_build_fingerprint() {
 }
 
 BUILD_FINGERPRINT="$(compute_build_fingerprint)"
+if [[ -z "$DOWNLOAD_URL" ]]; then
+  DOWNLOAD_URL="${DOWNLOAD_BASE_URL%/}/$RELEASE_PREFIX/Chiselo-${VERSION}.dmg?build=$BUILD_FINGERPRINT"
+fi
 
 if [[ -z "$SIGNING_IDENTITY" ]]; then
   if security find-identity -v -p codesigning 2>/dev/null | grep -F "\"$DEFAULT_DEVELOPER_ID\"" >/dev/null; then

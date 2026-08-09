@@ -11,6 +11,8 @@ PUBLIC_BASE_URL="${CHISELO_DOWNLOAD_BASE_URL:-https://downloads.vellumloop.com}"
 VERSION="${CHISELO_VERSION:-$DEFAULT_VERSION}"
 BUNDLE_VERSION="${CHISELO_BUILD_NUMBER:-$DEFAULT_BUILD_NUMBER}"
 ARCH="${CHISELO_PUBLIC_ARCH:-$(uname -m)}"
+APP_BUNDLE="${CHISELO_APP_BUNDLE:-$OUTPUT_DIR/Chiselo.app}"
+INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 PREPARE_ONLY=0
 
 if [[ "${1:-}" == "--prepare-only" ]]; then
@@ -73,12 +75,16 @@ upload_object() {
 require_file "$DMG_PATH"
 require_file "$APPCAST_PATH"
 require_file "$LATEST_APPCAST_PATH"
+require_file "$INFO_PLIST"
 
 asset_name="Chiselo-$VERSION.dmg"
 latest_name="Chiselo-latest-macOS-$PUBLIC_ARCH.dmg"
 appcast_name="Chiselo-$VERSION-macOS-$PUBLIC_ARCH-appcast.xml"
 latest_appcast_name="appcast-$PUBLIC_ARCH.xml"
 generic_latest_appcast_name="appcast.xml"
+build_fingerprint="$(plutil -extract ChiseloBuildFingerprint raw -o - "$INFO_PLIST")"
+download_url="${CHISELO_DOWNLOAD_URL:-${PUBLIC_BASE_URL%/}/$PREFIX/$asset_name?build=$build_fingerprint}"
+latest_download_url="${CHISELO_LATEST_DOWNLOAD_URL:-${PUBLIC_BASE_URL%/}/$PREFIX/latest/$latest_name?build=$build_fingerprint}"
 size_bytes="$(stat -f '%z' "$DMG_PATH")"
 checksum="$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
 
@@ -95,8 +101,8 @@ cat > "$MANIFEST_PATH" <<MANIFEST
   "appcast_filename": "$appcast_name",
   "size_bytes": $size_bytes,
   "sha256": "$checksum",
-  "download_url": "${PUBLIC_BASE_URL%/}/$PREFIX/$asset_name",
-  "latest_download_url": "${PUBLIC_BASE_URL%/}/$PREFIX/latest/$latest_name",
+  "download_url": "$download_url",
+  "latest_download_url": "$latest_download_url",
   "appcast_url": "${PUBLIC_BASE_URL%/}/$PREFIX/latest/$latest_appcast_name"
 }
 MANIFEST

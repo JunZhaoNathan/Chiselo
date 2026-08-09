@@ -20,6 +20,8 @@ All notable changes to Chiselo will be documented here.
   direct edits isolated to the selected object.
 - Bumped the Sparkle build number to `25` so existing `0.1.24` installations
   can receive this update.
+- Added build-fingerprint query keys to release download URLs so a rebuilt
+  artifact cannot be confused with stale CDN bytes from the same version.
 
 ## 0.1.24 - 2026-08-05
 

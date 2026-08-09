@@ -20,6 +20,8 @@ delivery of the current editor fixes.
   of accumulating duplicate style and script blocks.
 - The complete zoomed canvas interaction gate now runs reliably in WebKit and
   continues to verify high-zoom drag and resize geometry.
+- Release download URLs include the exact build fingerprint, preventing stale
+  CDN bytes from being served for a regenerated artifact.
 
 This Apple Silicon macOS package uses version `0.1.25` and Sparkle build `25`,
 allowing existing `0.1.24` users to receive the update normally.

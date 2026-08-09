@@ -23,8 +23,8 @@ LATEST_APPCAST_PATH="$OUTPUT_DIR/latest/appcast-$PUBLIC_ARCH.xml"
 APP_BUNDLE="${CHISELO_APP_BUNDLE:-$OUTPUT_DIR/Chiselo.app}"
 INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 FEED_URL="${CHISELO_SPARKLE_FEED_URL:-${DOWNLOAD_BASE_URL%/}/$BUCKET_PREFIX/latest/appcast-$PUBLIC_ARCH.xml}"
-DMG_URL="${CHISELO_DOWNLOAD_URL:-${DOWNLOAD_BASE_URL%/}/$BUCKET_PREFIX/Chiselo-${VERSION}.dmg}"
-LATEST_DMG_URL="${DOWNLOAD_BASE_URL%/}/$BUCKET_PREFIX/latest/Chiselo-latest-macOS-$PUBLIC_ARCH.dmg"
+DMG_URL="${CHISELO_DOWNLOAD_URL:-}"
+LATEST_DMG_URL="${CHISELO_LATEST_DOWNLOAD_URL:-}"
 
 require_file() {
   local path="$1"
@@ -54,6 +54,13 @@ packaged_version="$(plutil -extract CFBundleShortVersionString raw -o - "$INFO_P
 packaged_build="$(plutil -extract CFBundleVersion raw -o - "$INFO_PLIST")"
 packaged_feed_url="$(plutil -extract SUFeedURL raw -o - "$INFO_PLIST")"
 sparkle_public_key="$(plutil -extract SUPublicEDKey raw -o - "$INFO_PLIST")"
+build_fingerprint="$(plutil -extract ChiseloBuildFingerprint raw -o - "$INFO_PLIST")"
+if [[ -z "$DMG_URL" ]]; then
+  DMG_URL="${DOWNLOAD_BASE_URL%/}/$BUCKET_PREFIX/Chiselo-${VERSION}.dmg?build=$build_fingerprint"
+fi
+if [[ -z "$LATEST_DMG_URL" ]]; then
+  LATEST_DMG_URL="${DOWNLOAD_BASE_URL%/}/$BUCKET_PREFIX/latest/Chiselo-latest-macOS-$PUBLIC_ARCH.dmg?build=$build_fingerprint"
+fi
 
 if [[ "$packaged_version" != "$VERSION" || "$packaged_build" != "$BUNDLE_VERSION" ]]; then
   echo "Packaged app version mismatch: app=$packaged_version ($packaged_build), expected=$VERSION ($BUNDLE_VERSION)" >&2
