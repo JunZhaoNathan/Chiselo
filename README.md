@@ -32,7 +32,7 @@ make a precise visual change, review it, and deliver the original format.
 2. Open an existing `.html`, `.htm`, or `.xhtml` file.
 3. Select a visible object, make the adjustment, then review the change before saving or exporting.
 
-Current release: `0.1.24` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
+Current release: `0.1.25` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
 
 ## Product Boundary
 
@@ -53,7 +53,7 @@ has already been made.
 - [Install](docs/user/INSTALL.md) and [usage](docs/user/USAGE.md): end-user guides.
 - [Architecture](docs/dev/architecture.md) and [testing](docs/dev/TESTING.md): how the app is built and verified.
 - [Roadmap](docs/dev/ROADMAP.md) and [changelog](docs/dev/CHANGELOG.md): what is next and what changed.
-- [Release notes](docs/releases/RELEASE_NOTES_0.1.24_PREVIEW.md): current packaged build details.
+- [Release notes](docs/releases/RELEASE_NOTES_0.1.25_PREVIEW.md): current packaged build details.
 
 ## Build From Source
 

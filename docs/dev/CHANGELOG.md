@@ -2,6 +2,32 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.25 - 2026-08-09
+
+- Bound asynchronous save, export, and editable-layout conversion to the tab
+  that initiated the operation, and disabled tab switching and closing until
+  the operation finishes.
+- Preserved the source tab's unsaved state when editable-layout conversion
+  fails before creating the converted document.
+- Made history restoration use a prepared temporary file, atomic replacement,
+  and rollback so a failed restore cannot delete the current document.
+- Made editable HTML runtime injection idempotent and added coverage for
+  repeated export.
+- Fixed WebKit canvas interaction coverage by hosting the test view in a real
+  noninteractive window, preventing hidden-page timer suspension during zoomed
+  resize and text-edit assertions.
+- Preserved each converted text fragment exactly once and kept selection and
+  direct edits isolated to the selected object.
+- Bumped the Sparkle build number to `25` so existing `0.1.24` installations
+  can receive this update.
+
+## 0.1.24 - 2026-08-05
+
+- Changed the source license to CC BY-NC 4.0. Commercial use now
+  requires prior written permission; this is source-available rather than
+  OSI-approved open source. Historical releases through `v0.1.23` retain the
+  Apache-2.0 license supplied with those releases.
+
 ## 0.1.23 - 2026-08-03
 
 - Replaced the non-commercial source-available license with Apache-2.0 and
@@ -12,19 +38,7 @@ All notable changes to Chiselo will be documented here.
   `rg` is unavailable on the CI runner.
 - Made the WebKit deck-gesture regression wait for the editor runtime instead
   of assuming it is ready on the first callback.
-
 - Made PPTX design checks portable on CI runners without `rg`.
-
-## 0.1.24 - 2026-08-05
-
-- Changed the source license to CC BY-NC 4.0. Commercial use now
-  requires prior written permission; this is source-available rather than
-  OSI-approved open source. Historical releases through `v0.1.23` retain the
-  Apache-2.0 license supplied with those releases.
-
-## Unreleased
-
-No unreleased changes.
 
 ## 0.1.22 - 2026-08-02
 

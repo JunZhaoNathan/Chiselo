@@ -6,6 +6,9 @@ final class DirectHTMLCanvasInteractionTest: NSObject, WKNavigationDelegate, WKS
     private let editorURL: URL
     private let htmlURL: URL
     private var webView: WKWebView?
+    private var hostWindow: NSWindow?
+    private var lastProgressAt = Date()
+    private var watchdog: Timer?
 
     init(editorURL: URL, htmlURL: URL) {
         self.editorURL = editorURL
@@ -22,10 +25,30 @@ final class DirectHTMLCanvasInteractionTest: NSObject, WKNavigationDelegate, WKS
         let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1180, height: 900), configuration: configuration)
         webView.navigationDelegate = self
         self.webView = webView
+        let hostWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1180, height: 900),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        hostWindow.isReleasedWhenClosed = false
+        hostWindow.alphaValue = 0.01
+        hostWindow.ignoresMouseEvents = true
+        hostWindow.contentView = webView
+        hostWindow.orderFrontRegardless()
+        self.hostWindow = hostWindow
         webView.loadFileURL(editorURL, allowingReadAccessTo: editorURL.deletingLastPathComponent())
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 45) { [weak self] in
-            self?.fail("Timed out waiting for direct interaction result.")
+        lastProgressAt = Date()
+        watchdog = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let idleSeconds = Date().timeIntervalSince(self.lastProgressAt)
+            if idleSeconds > 60 {
+                self.fail("Timed out after \(Int(idleSeconds)) seconds without interaction progress.")
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 180) { [weak self] in
+            self?.fail("Timed out waiting for the complete direct interaction result.")
         }
     }
 
@@ -42,7 +65,12 @@ final class DirectHTMLCanvasInteractionTest: NSObject, WKNavigationDelegate, WKS
             let script = """
             void window.ChiseloEditor.openHTMLFromBase64('\(base64)', \(baseLiteral))
               .then(async () => {
-                const progress = (step) => window.webkit.messageHandlers.directInteraction.postMessage({ type: 'progress', step });
+                const testStartedAt = performance.now();
+                const progress = (step) => window.webkit.messageHandlers.directInteraction.postMessage({
+                  type: 'progress',
+                  step,
+                  elapsedMs: Math.round(performance.now() - testStartedAt)
+                });
                 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
                 progress('loaded');
                 const initialViewport = window.ChiseloEditor.getViewportState();
@@ -654,7 +682,9 @@ final class DirectHTMLCanvasInteractionTest: NSObject, WKNavigationDelegate, WKS
 
         if body["type"] as? String == "progress" {
             if let step = body["step"] as? String {
-                print("Progress: \(step)")
+                lastProgressAt = Date()
+                let elapsedMs = body["elapsedMs"] as? Int ?? 0
+                print("Progress: \(step) (\(elapsedMs) ms)")
             }
             return
         }

@@ -121,12 +121,29 @@ final class DirectHTMLEditIsolationTest: NSObject, WKNavigationDelegate, WKScrip
 
           const entries = [{ node: target, compareSource: false }, ...peers];
           const initial = snapshot(entries);
+          const sourceBeforeSelection = target.outerHTML;
+          const exportBeforeSelection = editor.exportHTML();
           const targetId = target.getAttribute('data-chiselo-id');
-          if (!targetId || !editor.selectHTMLById(targetId)) throw new Error('Could not select real text target.');
+          if (!targetId || !editor.selectHTML(`[data-chiselo-id="${targetId}"]`, { reveal: false })) {
+            throw new Error('Could not select real text target.');
+          }
+          await wait(40);
+          const afterSelection = snapshot(entries);
+          assertSame('selection', initial, afterSelection);
+          assertStyleSame('selection', 0, '', initial[0].style, afterSelection[0].style);
+          assertStyleSame('selection', 0, '::before ', initial[0].beforeStyle, afterSelection[0].beforeStyle);
+          assertStyleSame('selection', 0, '::after ', initial[0].afterStyle, afterSelection[0].afterStyle);
+          if (target.outerHTML !== sourceBeforeSelection) {
+            throw new Error('Selecting one object mutated the selected source node.');
+          }
+          if (editor.exportHTML() !== exportBeforeSelection) {
+            throw new Error('Selecting one object changed the HTML export.');
+          }
+
           editor.setSelectedHTMLText('A much longer replacement title that must remain inside its original object frame without moving any neighboring module');
           await wait(80);
           const afterText = snapshot(entries);
-          assertSame('text edit', initial, afterText);
+          assertSame('text edit', afterSelection, afterText);
 
           const selectedTitle = editor.getSelection();
           editor.updateElement({
@@ -179,6 +196,7 @@ final class DirectHTMLEditIsolationTest: NSObject, WKNavigationDelegate, WKScrip
 
           window.webkit.messageHandlers.editIsolation.postMessage({
             type: 'result',
+            selectionStable: true,
             textStable: true,
             styleStable: true,
             geometryStable: true,
@@ -200,7 +218,8 @@ final class DirectHTMLEditIsolationTest: NSObject, WKNavigationDelegate, WKScrip
         if body["type"] as? String == "error" {
             fail(body["message"] as? String ?? "Unknown edit isolation error.")
         }
-        guard body["textStable"] as? Bool == true,
+        guard body["selectionStable"] as? Bool == true,
+              body["textStable"] as? Bool == true,
               body["styleStable"] as? Bool == true,
               body["geometryStable"] as? Bool == true else {
             fail("Edit isolation assertions were not satisfied: \(body)")

@@ -44,6 +44,7 @@ swift scripts/direct-html-stylesheet-writeback-test.swift
 swift scripts/direct-html-edit-isolation-test.swift
 swift scripts/direct-html-canvas-interaction-test.swift
 swift scripts/import-adapter-test.swift
+swift scripts/editable-text-capture-test.swift
 swift scripts/generated-runtime-compatibility-test.swift
 swift scripts/editable-layout-ir-test.swift
 swift scripts/precision-adjustment-test.swift

@@ -120,6 +120,7 @@ for real_case in \
   run_with_retry 2 swift scripts/direct-html-canvas-interaction-test.swift "$real_case"
 done
 swift scripts/import-adapter-test.swift
+swift scripts/editable-text-capture-test.swift
 swift scripts/precision-adjustment-test.swift
 swift scripts/five-slide-acceptance-test.swift
 swift scripts/generated-fixtures-editing-test.swift

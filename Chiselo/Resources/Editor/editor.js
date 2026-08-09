@@ -7334,8 +7334,8 @@
 
     const textStartZ = imageZ + 100;
     let textZ = textStartZ;
-    for (const node of textNodes(page)) {
-      const element = textElementFromNode(doc, node, pageRect, pageIndex + 1, textZ);
+    for (const capture of textCaptures(page)) {
+      const element = textElementFromCapture(doc, capture, pageRect, pageIndex + 1, textZ);
       if (element) {
         elements.push(element);
         textZ += 1;
@@ -7433,39 +7433,124 @@
       });
   }
 
-  function textNodes(page) {
-    const selectors = [
-      "h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,caption,dt,dd,button,a,label,td,th,pre,code",
-      ".eyebrow,.band-subtitle,.role-emphasis,.section-title,.stat strong,.stat span,.location-text,.email",
-      "[class*='title'],[class*='heading'],[class*='subtitle'],[class*='caption'],[class*='label'],[class*='metric'],[class*='value']"
-    ];
-    const seen = new Set();
-    const nodes = [];
+  function textCaptures(page) {
+    const candidates = textCaptureCandidateNodes(page);
+    const candidateSet = new Set(candidates);
+    const textNodes = visibleTextNodes(page);
+    const textNodesByOwner = new Map();
+    const ownersWithNestedText = new Set();
 
-    for (const selector of selectors) {
-      for (const node of page.querySelectorAll(selector)) {
-        if (seen.has(node) || node.closest("svg,script,style,noscript")) continue;
-        seen.add(node);
-        nodes.push(node);
+    for (const textNode of textNodes) {
+      const owner = nearestTextCaptureOwner(textNode, candidateSet, page);
+      if (!owner) continue;
+      if (!textNodesByOwner.has(owner)) textNodesByOwner.set(owner, []);
+      textNodesByOwner.get(owner).push(textNode);
+
+      let ancestor = owner.parentElement;
+      while (ancestor && page.contains(ancestor)) {
+        if (candidateSet.has(ancestor)) ownersWithNestedText.add(ancestor);
+        if (ancestor === page) break;
+        ancestor = ancestor.parentElement;
       }
     }
 
-    for (const node of page.querySelectorAll("span,div")) {
-      if (seen.has(node) || node.closest("svg,script,style,noscript")) continue;
-      if (!hasMeaningfulDirectText(node)) continue;
-      const text = normalizedText(node);
-      if (!text || text.length > 220) continue;
-      seen.add(node);
-      nodes.push(node);
+    const captures = [];
+    for (const owner of candidates) {
+      const ownedTextNodes = textNodesByOwner.get(owner) || [];
+      if (!ownedTextNodes.length) continue;
+
+      const ownerRect = owner.getBoundingClientRect();
+
+      if (!ownersWithNestedText.has(owner) && ownerRect.width >= 1 && ownerRect.height >= 1) {
+        captures.push({
+          node: owner,
+          styleNode: owner,
+          text: normalizedText(owner),
+          rect: ownerRect,
+          sourceKind: "text"
+        });
+        continue;
+      }
+
+      for (const textNode of ownedTextNodes) {
+        const capture = textFragmentCapture(textNode, owner);
+        if (capture) captures.push(capture);
+      }
     }
 
+    return captures;
+  }
+
+  function textCaptureCandidateNodes(page) {
+    const namedSelector = [
+      ".eyebrow,.band-subtitle,.role-emphasis,.section-title,.stat strong,.stat span,.location-text,.email",
+      "[class*='title'],[class*='heading'],[class*='subtitle'],[class*='caption'],[class*='label'],[class*='metric'],[class*='value']"
+    ].join(",");
+    const nodes = uniqueElements([
+      ...page.querySelectorAll(`${DIRECT_TEXT_SELECTOR},${namedSelector}`),
+      ...[...page.querySelectorAll("*")].filter((node) => hasMeaningfulDirectText(node))
+    ]);
+
     return nodes.filter((node) => {
-      const rect = node.getBoundingClientRect();
-      if (rect.width < 5 || rect.height < 5) return false;
+      if (!node?.matches || node.closest("svg,script,style,noscript,template")) return false;
+      if (isDirectNonEditableElement(node)) return false;
       const style = node.ownerDocument.defaultView.getComputedStyle(node);
       if (!isVisibleStyle(style)) return false;
       return normalizedText(node).length > 0;
     });
+  }
+
+  function visibleTextNodes(page) {
+    const doc = page.ownerDocument;
+    const showText = doc.defaultView?.NodeFilter?.SHOW_TEXT || 4;
+    const walker = doc.createTreeWalker(page, showText);
+    const nodes = [];
+    let current = walker.nextNode();
+
+    while (current) {
+      const value = normalizedTextValue(current.textContent);
+      const parent = current.parentElement;
+      if (value && parent && !parent.closest("svg,script,style,noscript,template")) {
+        const style = doc.defaultView.getComputedStyle(parent);
+        if (isVisibleStyle(style)) nodes.push(current);
+      }
+      current = walker.nextNode();
+    }
+    return nodes;
+  }
+
+  function nearestTextCaptureOwner(textNode, candidateSet, page) {
+    let current = textNode.parentElement;
+    while (current && page.contains(current)) {
+      if (candidateSet.has(current)) return current;
+      if (current === page) break;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function textFragmentCapture(textNode, owner) {
+    const text = normalizedTextValue(textNode.textContent);
+    if (!text) return null;
+
+    const doc = textNode.ownerDocument;
+    const range = doc.createRange();
+    range.selectNodeContents(textNode);
+    const rect = range.getBoundingClientRect();
+    range.detach?.();
+    if (rect.width < 1 || rect.height < 1) return null;
+
+    return {
+      node: owner,
+      styleNode: textNode.parentElement || owner,
+      text,
+      rect,
+      sourceKind: "text-fragment"
+    };
+  }
+
+  function normalizedTextValue(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
   }
 
   function imageNodes(page) {
@@ -7567,24 +7652,26 @@
     };
   }
 
-  function textElementFromNode(doc, node, pageRect, pageNumber, z) {
-    const style = doc.defaultView.getComputedStyle(node);
-    const rect = roundedRect(node.getBoundingClientRect(), pageRect);
-    const text = normalizedText(node);
+  function textElementFromCapture(doc, capture, pageRect, pageNumber, z) {
+    const node = capture.node;
+    const styleNode = capture.styleNode || node;
+    const style = doc.defaultView.getComputedStyle(styleNode);
+    const rect = roundedRect(capture.rect || node.getBoundingClientRect(), pageRect);
+    const text = capture.text || normalizedText(node);
     if (!text || rect.w < 5 || rect.h < 5) return null;
 
     const fontSize = parseFloat(style.fontSize) || 16;
     const lineHeight = style.lineHeight === "normal" ? 1.2 : Math.max(0.8, (parseFloat(style.lineHeight) || fontSize * 1.2) / fontSize);
 
     return {
-      id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(node)}-text`, z),
+      id: uniqueElementId(`p${pageNumber}-${nodeNameSlug(styleNode)}-text`, z),
       type: "text",
-      tagName: node.tagName.toLowerCase(),
-      htmlPath: directNodePath(node),
-      semanticRole: capturedSemanticForNode(node).role,
-      semanticLabel: capturedSemanticForNode(node).label,
-      ...capturedGroupForNode(node),
-      sourceKind: "text",
+      tagName: styleNode.tagName.toLowerCase(),
+      htmlPath: directNodePath(styleNode),
+      semanticRole: capturedSemanticForNode(styleNode).role,
+      semanticLabel: capturedSemanticForNode(styleNode).label,
+      ...capturedGroupForNode(styleNode),
+      sourceKind: capture.sourceKind || "text",
       editability: "text-editable",
       fidelity: "native",
       captureNote: "保留为可直接修改的文本对象",

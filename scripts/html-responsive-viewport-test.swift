@@ -51,6 +51,10 @@ final class HTMLResponsiveViewportTest: NSObject, WKNavigationDelegate, WKScript
 
           await editor.openHTMLFromBase64('\(base64)', '', { originalSourceBase64: '\(base64)' });
           await wait();
+          const openedViewport = editor.getViewportState();
+          const openedFrame = document.querySelector('iframe.html-frame');
+          const openedFrameRect = openedFrame?.getBoundingClientRect();
+          const openedCSSPixelWidth = openedFrame?.contentWindow?.innerWidth || 0;
           editor.setHTMLPreviewWidth(1440);
           await wait();
           const desktop = inspect();
@@ -71,6 +75,11 @@ final class HTMLResponsiveViewportTest: NSObject, WKNavigationDelegate, WKScript
           await wait();
 
           const assertions = {
+            opensAtActualSize: Math.abs(openedViewport.scale - 1) < 0.001
+              && Math.abs(openedViewport.fitScale - 1) < 0.001
+              && Math.abs(openedViewport.userZoom - 1) < 0.001,
+            openedFrameUsesCSSPixels: Boolean(openedFrameRect && openedCSSPixelWidth > 0
+              && Math.abs(openedFrameRect.width - openedCSSPixelWidth) < 3),
             desktopWidth: desktop.viewportWidth === 1440,
             desktopRule: desktop.color === 'rgb(200, 20, 30)',
             tabletWidth: tablet.viewportWidth === 768,

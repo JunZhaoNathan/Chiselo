@@ -192,6 +192,7 @@ private struct BrowserTab: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(model.isDocumentOperationInProgress)
 
             Button {
                 model.closeTab(tab.id)
@@ -201,6 +202,7 @@ private struct BrowserTab: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
+            .disabled(model.isDocumentOperationInProgress)
             .help("关闭标签页")
         }
         .padding(.leading, 10)

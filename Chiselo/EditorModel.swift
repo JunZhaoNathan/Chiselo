@@ -18,6 +18,34 @@ private enum SaveReviewDecision {
 
 @MainActor
 final class EditorModel: ObservableObject {
+    private struct DocumentOperationContext {
+        let token: UUID
+        let tabID: UUID
+        let url: URL?
+        let runtimeMode: HTMLRuntimeMode
+        let title: String
+    }
+
+    private enum DocumentOperationError: LocalizedError {
+        case webViewUnavailable
+        case noHTMLReturned
+        case invalidSavePayload
+        case documentChanged
+
+        var errorDescription: String? {
+            switch self {
+            case .webViewUnavailable:
+                return "编辑器尚未准备好"
+            case .noHTMLReturned:
+                return "编辑器没有返回 HTML"
+            case .invalidSavePayload:
+                return "编辑器返回了无效的保存数据"
+            case .documentChanged:
+                return "操作期间文档已发生切换"
+            }
+        }
+    }
+
     enum WorkspaceMode: String, CaseIterable, Identifiable {
         case ordinary
         case advanced
@@ -153,6 +181,7 @@ final class EditorModel: ObservableObject {
     @Published var nextUndoLabel: String?
     @Published var nextRedoLabel: String?
     @Published var sourceDraftMappingSummary: SourceDraftMappingSummary?
+    @Published private(set) var isDocumentOperationInProgress: Bool = false
 
     var hasOpenDocument: Bool {
         activeTabID != nil && !tabs.isEmpty
@@ -206,6 +235,7 @@ final class EditorModel: ObservableObject {
     private var pendingHTMLVisualBaselineCapture = false
     private var tabSafetyInfo: [UUID: OpenTabSafetyInfo] = [:]
     private var sourceDraftValidationRequestID: Int = 0
+    private var activeDocumentOperationToken: UUID?
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -843,6 +873,11 @@ final class EditorModel: ObservableObject {
     }
 
     func openDeck() {
+        guard !isDocumentOperationInProgress else {
+            status = "请等待当前保存、导出或转换完成"
+            return
+        }
+
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
@@ -853,6 +888,10 @@ final class EditorModel: ObservableObject {
     }
 
     func activateTab(_ id: UUID) {
+        guard !isDocumentOperationInProgress else {
+            status = "当前文档操作完成后才能切换标签页"
+            return
+        }
         guard activeTabID != id, tabs.contains(where: { $0.id == id }) else { return }
         captureActiveTabSnapshot { [weak self] in
             self?.loadTab(id: id)
@@ -864,6 +903,10 @@ final class EditorModel: ObservableObject {
     }
 
     func requestCloseTab(_ id: UUID) {
+        guard !isDocumentOperationInProgress else {
+            status = "当前文档操作完成后才能关闭标签页"
+            return
+        }
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         guard tabs[index].hasUnsavedChanges else {
             closeTabImmediately(id)
@@ -970,6 +1013,12 @@ final class EditorModel: ObservableObject {
     }
 
     func openDroppedURLs(_ urls: [URL]) {
+        guard !isDocumentOperationInProgress else {
+            status = "当前文档操作完成后才能打开其他文件"
+            isFileDropTargeted = false
+            return
+        }
+
         let openableURLs = urls.filter(canOpenURL)
         guard !openableURLs.isEmpty else {
             status = "拖入 HTML、HTM、XHTML 或 Chiselo 项目文件即可打开"
@@ -1320,8 +1369,7 @@ final class EditorModel: ObservableObject {
                 at: openedURL,
                 fallbackExtension: documentMode == "html" ? "html" : "aislide"
             )
-            try FileManager.default.removeItem(at: openedURL)
-            try FileManager.default.copyItem(at: snapshotURL, to: openedURL)
+            try restoreSnapshotFile(from: snapshotURL, to: openedURL)
 
             let restoredContent = try readTextFile(at: openedURL)
             updateActiveTabAfterSave(url: openedURL, mode: documentMode, content: restoredContent)
@@ -1340,26 +1388,33 @@ final class EditorModel: ObservableObject {
     }
 
     func exportHTML() {
-        guard hasOpenDocument else {
-            status = "请先打开项目或拖入 HTML 文件"
-            return
-        }
+        guard let context = beginDocumentOperation() else { return }
 
-        exportCurrentHTML { [weak self] html in
-            self?.saveHTML(html)
+        exportCurrentHTML(for: context) { [weak self] result in
+            guard let self else { return }
+            defer { self.finishDocumentOperation(context) }
+            switch result {
+            case .success(let html):
+                self.saveHTML(html)
+            case .failure(let error):
+                self.status = "Export failed: \(error.localizedDescription)"
+            }
         }
     }
 
     func exportEditableHTML() {
-        guard hasOpenDocument else {
-            status = "请先打开项目或拖入 HTML 文件"
-            return
-        }
+        guard let context = beginDocumentOperation() else { return }
 
-        exportCurrentHTML { [weak self] html in
+        exportCurrentHTML(for: context) { [weak self] result in
             guard let self else { return }
-            let editableHTML = self.selfEditableHTML(from: html)
-            self.saveHTML(editableHTML, defaultName: self.editableHTMLDefaultName)
+            defer { self.finishDocumentOperation(context) }
+            switch result {
+            case .success(let html):
+                let editableHTML = self.selfEditableHTML(from: html)
+                self.saveHTML(editableHTML, defaultName: self.editableHTMLDefaultName(for: context.url))
+            case .failure(let error):
+                self.status = "Export failed: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -1369,11 +1424,24 @@ final class EditorModel: ObservableObject {
             return
         }
 
-        guard let url = chooseSaveURL(defaultName: "document.pdf", contentTypes: [.pdf]) else { return }
+        guard let context = beginDocumentOperation() else { return }
+        guard let url = chooseSaveURL(defaultName: "document.pdf", contentTypes: [.pdf]) else {
+            finishDocumentOperation(context)
+            return
+        }
         status = "Rendering PDF..."
 
-        exportCurrentHTML { [weak self] html in
-            self?.renderExport(html: html, outputURL: url, format: .pdf)
+        exportCurrentHTML(for: context) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let html):
+                self.renderExport(html: html, outputURL: url, format: .pdf, context: context) {
+                    self.finishDocumentOperation(context)
+                }
+            case .failure(let error):
+                self.status = "Export failed: \(error.localizedDescription)"
+                self.finishDocumentOperation(context)
+            }
         }
     }
 
@@ -1383,11 +1451,24 @@ final class EditorModel: ObservableObject {
             return
         }
 
-        guard let url = chooseSaveURL(defaultName: "document.pptx", contentTypes: [pptxContentType]) else { return }
+        guard let context = beginDocumentOperation() else { return }
+        guard let url = chooseSaveURL(defaultName: "document.pptx", contentTypes: [pptxContentType]) else {
+            finishDocumentOperation(context)
+            return
+        }
         status = "Exporting editable PPTX..."
 
-        exportCurrentHTML { [weak self] html in
-            self?.renderExport(html: html, outputURL: url, format: .pptx)
+        exportCurrentHTML(for: context) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let html):
+                self.renderExport(html: html, outputURL: url, format: .pptx, context: context) {
+                    self.finishDocumentOperation(context)
+                }
+            case .failure(let error):
+                self.status = "Export failed: \(error.localizedDescription)"
+                self.finishDocumentOperation(context)
+            }
         }
     }
 
@@ -1413,28 +1494,33 @@ final class EditorModel: ObservableObject {
             status = "转为可编辑版适用于 HTML 文档模式"
             return
         }
+        guard let context = beginDocumentOperation() else { return }
 
         status = "正在转换可编辑版..."
 
-        exportCurrentHTML { [weak self] html in
+        exportCurrentHTML(for: context) { [weak self] result in
             guard let self else { return }
-
-            if let index = self.activeTabIndex {
-                self.tabs[index].content = html
-                self.tabs[index].mode = "html"
-                self.tabs[index].needsSnapshot = false
-                self.clearEditorDirtyFlag()
+            guard case .success(let html) = result else {
+                if case .failure(let error) = result {
+                    self.status = "转换可编辑版失败：\(error.localizedDescription)"
+                } else {
+                    self.status = "转换可编辑版失败：无法读取 HTML"
+                }
+                self.finishDocumentOperation(context)
+                return
             }
 
             guard let data = html.data(using: .utf8) else {
                 self.status = "转换可编辑版失败：无法编码 HTML"
+                self.finishDocumentOperation(context)
                 return
             }
 
             let base64 = data.base64EncodedString()
-            let baseHref = self.openedURL?.deletingLastPathComponent().absoluteString ?? ""
+            let baseHref = context.url?.deletingLastPathComponent().absoluteString ?? ""
             guard let baseLiteral = self.jsStringLiteral(baseHref) else {
                 self.status = "转换可编辑版失败：无法解析资源路径"
+                self.finishDocumentOperation(context)
                 return
             }
 
@@ -1443,22 +1529,30 @@ final class EditorModel: ObservableObject {
               .then(deck => JSON.stringify(deck));
             """
 
-            self.webView?.evaluateJavaScript(script) { [weak self] result, error in
+            guard let webView = self.webView else {
+                self.status = "转换可编辑版失败：编辑器尚未准备好"
+                self.finishDocumentOperation(context)
+                return
+            }
+
+            webView.evaluateJavaScript(script) { [weak self] result, error in
                 Task { @MainActor in
                     guard let self else { return }
 
                     if let error {
                         self.status = "转换可编辑版失败：\(error.localizedDescription)"
+                        self.finishDocumentOperation(context)
                         return
                     }
 
                     guard let json = result as? String, !json.isEmpty else {
                         self.status = "转换可编辑版失败：没有可编辑对象结构"
+                        self.finishDocumentOperation(context)
                         return
                     }
 
                     let id = UUID()
-                    let title = self.frozenLayoutTitle()
+                    let title = self.frozenLayoutTitle(for: context.title)
                     self.tabs.append(EditorTab(
                         id: id,
                         title: title,
@@ -1472,42 +1566,62 @@ final class EditorModel: ObservableObject {
                     self.openedURL = nil
                     self.loadDeckJSON(json)
                     self.status = "已转换为可编辑版：\(title)"
+                    self.finishDocumentOperation(context)
                 }
             }
         }
     }
 
-    private func exportCurrentHTML(completion: @escaping (String) -> Void) {
-        guard hasOpenDocument else {
-            status = "请先打开项目或拖入 HTML 文件"
+    private func exportCurrentHTML(
+        for context: DocumentOperationContext,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        guard activeDocumentOperationToken == context.token,
+              activeTabID == context.tabID else {
+            completion(.failure(DocumentOperationError.documentChanged))
+            return
+        }
+        guard let webView else {
+            completion(.failure(DocumentOperationError.webViewUnavailable))
             return
         }
 
-        webView?.evaluateJavaScript("window.ChiseloEditor?.exportHTML();") { [weak self] result, error in
+        webView.evaluateJavaScript("window.ChiseloEditor?.exportHTML();") { [weak self] result, error in
             Task { @MainActor in
                 guard let self else { return }
 
                 if let error {
-                    self.status = "Export failed: \(error.localizedDescription)"
+                    completion(.failure(error))
                     return
                 }
 
                 guard let html = result as? String else {
-                    self.status = "Export failed: no HTML returned"
+                    completion(.failure(DocumentOperationError.noHTMLReturned))
                     return
                 }
 
-                completion(html)
+                guard self.activeDocumentOperationToken == context.token,
+                      self.activeTabID == context.tabID else {
+                    completion(.failure(DocumentOperationError.documentChanged))
+                    return
+                }
+                completion(.success(html))
             }
         }
     }
 
-    private func renderExport(html: String, outputURL: URL, format: RenderExportFormat) {
-        let baseURL = openedURL?.deletingLastPathComponent()
+    private func renderExport(
+        html: String,
+        outputURL: URL,
+        format: RenderExportFormat,
+        context: DocumentOperationContext,
+        completion: @escaping () -> Void
+    ) {
+        let baseURL = context.url?.deletingLastPathComponent()
         let exporter = HTMLRenderExporter(
             html: html,
             baseURL: baseURL,
-            trustedContent: activeHTMLRuntimeMode == .live
+            trustedContent: context.runtimeMode == .live
         )
         activeRenderExporter = exporter
 
@@ -1529,6 +1643,7 @@ final class EditorModel: ObservableObject {
                     case .failure(let error):
                         self.status = "Export failed: \(error.localizedDescription)"
                     }
+                    completion()
                 }
             }
             return
@@ -1556,6 +1671,7 @@ final class EditorModel: ObservableObject {
                 case .failure(let error):
                     self.status = "Export failed: \(error.localizedDescription)"
                 }
+                completion()
             }
         }
     }
@@ -2444,33 +2560,34 @@ final class EditorModel: ObservableObject {
         }
     }
 
-    private var editableHTMLDefaultName: String {
-        guard let openedURL else { return "document-editable.html" }
-        let baseName = openedURL.deletingPathExtension().lastPathComponent
+    private func editableHTMLDefaultName(for sourceURL: URL?) -> String {
+        guard let sourceURL else { return "document-editable.html" }
+        let baseName = sourceURL.deletingPathExtension().lastPathComponent
         let safeName = baseName.isEmpty ? "document" : baseName
         return "\(safeName)-editable.html"
     }
 
     private func selfEditableHTML(from html: String) -> String {
-        let runtime = Self.selfEditableHTMLRuntime
-        if let range = html.range(of: "</body>", options: [.caseInsensitive, .backwards]) {
-            return html.replacingCharacters(in: range, with: "\n\(runtime)\n</body>")
-        }
-
-        if let range = html.range(of: "</html>", options: [.caseInsensitive, .backwards]) {
-            return html.replacingCharacters(in: range, with: "\n\(runtime)\n</html>")
-        }
-
-        return "\(html)\n\(runtime)\n"
+        replacingSelfEditableHTMLRuntime(in: html, with: Self.selfEditableHTMLRuntime)
     }
 
     private func saveCurrentHTML() {
-        exportCurrentHTMLSavePayload { [weak self] payload in
+        guard let context = beginDocumentOperation() else { return }
+
+        exportCurrentHTMLSavePayload(for: context) { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
+                defer { self.finishDocumentOperation(context) }
 
-                guard let url = self.openedURL ?? self.chooseSaveURL(defaultName: "document.html", contentTypes: [.html]) else { return }
-                let isOverwritingOpenedFile = self.openedURL != nil
+                guard case .success(let payload) = result else {
+                    if case .failure(let error) = result {
+                        self.status = "Save failed: \(error.localizedDescription)"
+                    }
+                    return
+                }
+
+                guard let url = context.url ?? self.chooseSaveURL(defaultName: "document.html", contentTypes: [.html]) else { return }
+                let isOverwritingOpenedFile = context.url != nil
 
                 if isOverwritingOpenedFile {
                     let diagnostics = await self.currentHTMLDiagnosticsForSave() ?? self.htmlDiagnostics
@@ -2488,8 +2605,10 @@ final class EditorModel: ObservableObject {
 
                 do {
                     let persistence = try persistHTMLDocumentSavePayload(payload, to: url, safeFileHistory: self.safeFileHistory)
-                    self.openedURL = url
-                    self.updateActiveTabAfterSave(url: url, mode: "html", content: payload.html)
+                    if self.activeTabID == context.tabID {
+                        self.openedURL = url
+                    }
+                    self.updateTabAfterSave(id: context.tabID, url: url, mode: "html", content: payload.html)
                     self.status = self.htmlSaveStatus(for: url, persistence: persistence)
                 } catch {
                     self.status = "Save failed: \(error.localizedDescription)"
@@ -2498,9 +2617,17 @@ final class EditorModel: ObservableObject {
         }
     }
 
-    private func exportCurrentHTMLSavePayload(completion: @escaping (HTMLDocumentSavePayload) -> Void) {
-        guard hasOpenDocument else {
-            status = "请先打开项目或拖入 HTML 文件"
+    private func exportCurrentHTMLSavePayload(
+        for context: DocumentOperationContext,
+        completion: @escaping (Result<HTMLDocumentSavePayload, Error>) -> Void
+    ) {
+        guard activeDocumentOperationToken == context.token,
+              activeTabID == context.tabID else {
+            completion(.failure(DocumentOperationError.documentChanged))
+            return
+        }
+        guard let webView else {
+            completion(.failure(DocumentOperationError.webViewUnavailable))
             return
         }
 
@@ -2511,23 +2638,28 @@ final class EditorModel: ObservableObject {
         );
         """
 
-        webView?.evaluateJavaScript(script) { [weak self] result, error in
+        webView.evaluateJavaScript(script) { [weak self] result, error in
             Task { @MainActor in
                 guard let self else { return }
 
                 if let error {
-                    self.status = "Save failed: \(error.localizedDescription)"
+                    completion(.failure(error))
                     return
                 }
 
                 guard let json = result as? String,
                       let data = json.data(using: .utf8),
                       let payload = try? JSONDecoder().decode(HTMLDocumentSavePayload.self, from: data) else {
-                    self.status = "Save failed: no HTML returned"
+                    completion(.failure(DocumentOperationError.invalidSavePayload))
                     return
                 }
 
-                completion(payload)
+                guard self.activeDocumentOperationToken == context.token,
+                      self.activeTabID == context.tabID else {
+                    completion(.failure(DocumentOperationError.documentChanged))
+                    return
+                }
+                completion(.success(payload))
             }
         }
     }
@@ -2780,6 +2912,35 @@ final class EditorModel: ObservableObject {
         return tabs.firstIndex(where: { $0.id == activeTabID })
     }
 
+    private func beginDocumentOperation() -> DocumentOperationContext? {
+        guard hasOpenDocument, let index = activeTabIndex else {
+            status = "请先打开项目或拖入 HTML 文件"
+            return nil
+        }
+        guard activeDocumentOperationToken == nil else {
+            status = "请等待当前保存、导出或转换完成"
+            return nil
+        }
+
+        let tab = tabs[index]
+        let token = UUID()
+        activeDocumentOperationToken = token
+        isDocumentOperationInProgress = true
+        return DocumentOperationContext(
+            token: token,
+            tabID: tab.id,
+            url: tab.url,
+            runtimeMode: tab.runtimeMode,
+            title: tab.title
+        )
+    }
+
+    private func finishDocumentOperation(_ context: DocumentOperationContext) {
+        guard activeDocumentOperationToken == context.token else { return }
+        activeDocumentOperationToken = nil
+        isDocumentOperationInProgress = false
+    }
+
     private func captureActiveTabSnapshot(completion: @escaping () -> Void) {
         captureActiveTabSnapshot(force: false) { _ in completion() }
     }
@@ -3001,7 +3162,12 @@ final class EditorModel: ObservableObject {
     }
 
     private func updateActiveTabAfterSave(url: URL, mode: String, content: String) {
-        guard let index = activeTabIndex else { return }
+        guard let activeTabID else { return }
+        updateTabAfterSave(id: activeTabID, url: url, mode: mode, content: content)
+    }
+
+    private func updateTabAfterSave(id: UUID, url: URL, mode: String, content: String) {
+        guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
         tabs[index].url = url
         tabs[index].title = tabTitle(for: url)
         tabs[index].mode = mode
@@ -3010,6 +3176,7 @@ final class EditorModel: ObservableObject {
         tabs[index].localStylesheets = []
         tabs[index].needsSnapshot = false
         tabs[index].hasUnsavedChanges = false
+        guard activeTabID == id else { return }
         if mode == "html" {
             markEditorSaved(content)
         } else {
@@ -3022,8 +3189,7 @@ final class EditorModel: ObservableObject {
         return title.isEmpty ? "未命名" : title
     }
 
-    private func frozenLayoutTitle() -> String {
-        let baseTitle = activeTabIndex.flatMap { tabs.indices.contains($0) ? tabs[$0].title : nil } ?? "HTML 文档"
+    private func frozenLayoutTitle(for baseTitle: String) -> String {
         let root = baseTitle
             .replacingOccurrences(of: " - 冻结版式", with: "")
             .replacingOccurrences(of: " - 可编辑版", with: "")
