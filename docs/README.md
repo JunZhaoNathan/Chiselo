@@ -26,6 +26,7 @@ separate. Start with the shortest path for your role.
 ## Release Notes
 
 - [0.1.26](releases/RELEASE_NOTES_0.1.26_PREVIEW.md)
+- [0.1.27](releases/RELEASE_NOTES_0.1.27_PREVIEW.md)
 - [0.1.24](releases/RELEASE_NOTES_0.1.24_PREVIEW.md)
 - [0.1.23](releases/RELEASE_NOTES_0.1.23_PREVIEW.md)
 - [0.1.22](releases/RELEASE_NOTES_0.1.22_PREVIEW.md)

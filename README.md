@@ -14,7 +14,20 @@ make a precise visual change, review it, and deliver the original format.
 
 中文：Chiselo 不是从零建站工具。它服务于“已有 HTML 做最后一轮精修”的工作流：打开原文件，直接选中页面上的对象，修改文字、图片、样式或布局，复核变更后安全交付。
 
-![Chiselo editor preview](assets/chiselo-editor-preview.png)
+![Chiselo editor home](docs/assets/chiselo-0.1.27-home.png)
+
+三页工作流：打开已有 HTML，精确修改对象，再安全交付。
+
+![属性检查与单对象编辑](docs/assets/chiselo-0.1.27-inspector.png)
+
+![稳定文字编辑](docs/assets/chiselo-0.1.27-text-edit.png)
+
+![图片替换与显示方式](docs/assets/chiselo-0.1.27-image-replace.png)
+
+Chiselo 只修改已有 HTML，不新建网站项目。修改一个元素时，其他元素保持
+原位、原样；文字、图片、表格和样式都可以按对象精准调整。文字输入期间选框
+和画布视图保持锁定，不漂移、不抖动，完成后可回滚。图片可直接替换为本地文件
+或内嵌资源，并保留原 HTML 的交付路径。
 
 ## Why Chiselo
 
@@ -32,7 +45,7 @@ make a precise visual change, review it, and deliver the original format.
 2. Open an existing `.html`, `.htm`, or `.xhtml` file.
 3. Select a visible object, make the adjustment, then review the change before saving or exporting.
 
-Current release: `0.1.26` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
+Current release: `0.1.27` for Apple Silicon Macs. See the [installation guide](docs/user/INSTALL.md) and [usage guide](docs/user/USAGE.md).
 
 ## Product Boundary
 
@@ -53,7 +66,7 @@ has already been made.
 - [Install](docs/user/INSTALL.md) and [usage](docs/user/USAGE.md): end-user guides.
 - [Architecture](docs/dev/architecture.md) and [testing](docs/dev/TESTING.md): how the app is built and verified.
 - [Roadmap](docs/dev/ROADMAP.md) and [changelog](docs/dev/CHANGELOG.md): what is next and what changed.
-- [Release notes](docs/releases/RELEASE_NOTES_0.1.26_PREVIEW.md): current packaged build details.
+- [Release notes](docs/releases/RELEASE_NOTES_0.1.27_PREVIEW.md): current packaged build details.
 
 ## Build From Source
 

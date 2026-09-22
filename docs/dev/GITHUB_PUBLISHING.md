@@ -23,7 +23,7 @@ Do not commit these to the repository:
 - `.build/`;
 - `outputs/`;
 - `Chiselo.app`;
-- `Chiselo-0.1.26.dmg`;
+- `Chiselo-0.1.27.dmg`;
 - logs, temp files, local caches, and unreferenced temporary screenshots.
 
 The DMG should be uploaded later as a GitHub Release asset.
@@ -143,16 +143,16 @@ To rebuild the default package:
 ```bash
 scripts/release-preflight.sh
 CHISELO_NOTARIZE=1 scripts/package-dmg.sh
-hdiutil verify outputs/Chiselo-0.1.26.dmg
-xcrun stapler validate outputs/Chiselo-0.1.26.dmg
-spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.26.dmg
+hdiutil verify outputs/Chiselo-0.1.27.dmg
+xcrun stapler validate outputs/Chiselo-0.1.27.dmg
+spctl --assess --type open --context context:primary-signature --verbose=4 outputs/Chiselo-0.1.27.dmg
 ```
 
 Default release asset:
 
 ```text
-outputs/Chiselo-0.1.26.dmg
-outputs/Chiselo-0.1.26-macOS-arm64-appcast.xml
+outputs/Chiselo-0.1.27.dmg
+outputs/Chiselo-0.1.27-macOS-arm64-appcast.xml
 outputs/latest/appcast-arm64.xml
 ```
 
@@ -181,13 +181,13 @@ Do not announce automatic updates until the online verification passes.
 4. Create a new tag:
 
 ```text
-v0.1.26
+v0.1.27
 ```
 
 5. Release title:
 
 ```text
-Chiselo 0.1.26
+Chiselo 0.1.27
 ```
 
 6. Leave `Set as a pre-release` unchecked for downloadable public builds.
@@ -195,7 +195,7 @@ Chiselo 0.1.26
 8. Paste the text from:
 
 ```text
-docs/releases/RELEASE_NOTES_0.1.26_PREVIEW.md
+docs/releases/RELEASE_NOTES_0.1.27_PREVIEW.md
 ```
 
 9. Upload the DMG file.

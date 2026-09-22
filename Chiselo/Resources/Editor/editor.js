@@ -99,6 +99,9 @@
   let pendingDirectTextEditNode = null;
   let activeDirectTextEditNode = null;
   let activeDirectTextEditFinish = null;
+  // Text editing keeps the current canvas and selection geometry stable until
+  // the edit is committed. Reflow is settled once when editing ends.
+  let directTextEditSelectionRect = null;
   let htmlTreeTimer = null;
   let htmlTreeIdleId = null;
   let htmlDiagnosticsTimer = null;
@@ -584,8 +587,13 @@
 
   function scheduleDirectLayoutRefresh() {
     if (editorMode !== "html") return;
+    if (activeDirectTextEditNode?.isConnected) {
+      clearTimeout(directLayoutTimer);
+      directLayoutTimer = null;
+      return;
+    }
     clearTimeout(directLayoutTimer);
-    const delay = activeDirectTextEditNode?.isConnected ? 96 : 40;
+    const delay = 40;
     directLayoutTimer = setTimeout(() => {
       collapseDirectQuickActions();
       fitStage({ preserveScale: true });
@@ -611,6 +619,7 @@
 
     clearTimeout(directLayoutTimer);
     directLayoutTimer = null;
+    directTextEditSelectionRect = null;
     clearTimeout(directVisualBaselineTimer);
     directVisualBaselineTimer = null;
     clearTimeout(selectionBridgeTimer);
@@ -2605,7 +2614,13 @@
       return;
     }
 
-    const rect = nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(nodes[0]);
+    const isActiveTextSelection = activeDirectTextEditNode?.isConnected
+      && nodes.length === 1
+      && nodes[0] === activeDirectTextEditNode
+      && directTextEditSelectionRect;
+    const rect = isActiveTextSelection
+      ? { ...directTextEditSelectionRect }
+      : nodes.length > 1 ? directNodesBounds(nodes) : directNodeRect(nodes[0]);
     const geometryLocked = !directSelectionAllowsGeometry(nodes);
     const signature = nodes.map((node) => node.dataset.chiseloId || ensureDirectId(node)).join("|");
     const geometryState = geometryLocked ? "locked" : "free";
@@ -5778,6 +5793,8 @@
     node.setAttribute("contenteditable", "true");
     node.setAttribute("spellcheck", "true");
     node.focus();
+    directTextEditSelectionRect = directNodeRect(node);
+    updateSelectionBox();
 
     selectDirectTextContents(node);
     node.ownerDocument.defaultView.requestAnimationFrame(() => selectDirectTextContents(node));
@@ -5813,6 +5830,10 @@
         if (node.isConnected) {
           scheduleHTMLTreeChanged();
           scheduleHTMLDiagnosticsChanged();
+          directTextEditSelectionRect = null;
+          scheduleDirectLayoutRefresh();
+        } else {
+          directTextEditSelectionRect = null;
         }
         postSelectionChanged();
       };

@@ -32,6 +32,21 @@ Chiselo is a macOS visual HTML editor for existing webpages. It supports direct 
 
 ```text
 Chiselo 服务于“打开已有 HTML，直接改页面”的工作流。在 macOS 上打开已有 HTML，可视化调整文字、图片、表格、模块和版式，保护源码，审查修改，再安全保存。
+
+0.1.27 官网展示文案：
+
+```text
+只修改已有 HTML，不新建 HTML。像 Dreamweaver 的可视化编辑一样直接点选页面对象，精准修改文字、图片、表格和样式；修改一个元素时，其他元素不漂移、不抖动。输入期间选框和画布保持稳定，图片可替换，所有改动都可回滚，并支持签名后的热更新增量交付。
+```
+
+官网展示图：
+
+```text
+docs/assets/chiselo-0.1.27-home.png
+docs/assets/chiselo-0.1.27-inspector.png
+docs/assets/chiselo-0.1.27-text-edit.png
+docs/assets/chiselo-0.1.27-image-replace.png
+```
 ```
 
 ## English Intro

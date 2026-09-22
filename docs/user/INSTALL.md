@@ -2,7 +2,7 @@
 
 ## DMG Install
 
-1. Download `Chiselo-0.1.26.dmg` from [GitHub Releases](https://github.com/JunZhaoNathan/Chiselo/releases/latest).
+1. Download `Chiselo-0.1.27.dmg` from [GitHub Releases](https://github.com/JunZhaoNathan/Chiselo/releases/latest).
 2. Open the DMG.
 3. Drag `Chiselo.app` to `Applications`.
 4. Launch Chiselo from `Applications`.
@@ -42,8 +42,8 @@ Outputs for the current release:
 
 ```text
 outputs/Chiselo.app
-outputs/Chiselo-0.1.26.dmg
-outputs/Chiselo-0.1.26-macOS-arm64-appcast.xml
+outputs/Chiselo-0.1.27.dmg
+outputs/Chiselo-0.1.27-macOS-arm64-appcast.xml
 outputs/latest/appcast-arm64.xml
 ```
 

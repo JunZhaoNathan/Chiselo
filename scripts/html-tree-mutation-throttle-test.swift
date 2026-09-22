@@ -184,7 +184,22 @@ final class HTMLTreeMutationThrottleTest: NSObject, WKNavigationDelegate, WKScri
 
               doc.execCommand('insertText', false, 'CHISELO_DIRECT_TYPING_REFRESH_TEST');
               await sleep(700);
+              const box = document.querySelector('#selectionBox');
+              const stage = document.querySelector('#stage');
+              const rectOf = (node) => {
+                const rect = node?.getBoundingClientRect?.();
+                return rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : null;
+              };
+              const stableSnapshot = {
+                target: rectOf(target),
+                box: rectOf(box),
+                peer: rectOf(doc.querySelector('.band-subtitle')),
+                stageTransform: stage?.style.transform || '',
+                stageWidth: stage?.style.width || '',
+                stageHeight: stage?.style.height || ''
+              };
               window.webkit.messageHandlers.treeMutationTest.postMessage({ type: 'directTyped' });
+              window.__chiseloTypingSnapshot = stableSnapshot;
             })().catch(error => window.webkit.messageHandlers.treeMutationTest.postMessage({
               type: 'error',
               message: String(error && error.message || error)
@@ -211,13 +226,36 @@ final class HTMLTreeMutationThrottleTest: NSObject, WKNavigationDelegate, WKScri
           if (!doc) throw new Error('HTML iframe not found for blur.');
           const active = doc.activeElement;
           if (!active || active === doc.body) throw new Error('No direct editing element is active.');
+          const before = window.__chiseloTypingSnapshot;
+          if (!before) throw new Error('Typing stability snapshot is unavailable.');
+          const box = document.querySelector('#selectionBox');
+          const stage = document.querySelector('#stage');
+          const rectOf = (node) => {
+            const rect = node?.getBoundingClientRect?.();
+            return rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : null;
+          };
+          const after = {
+            target: rectOf(active),
+            box: rectOf(box),
+            peer: rectOf(doc.querySelector('.band-subtitle')),
+            stageTransform: stage?.style.transform || '',
+            stageWidth: stage?.style.width || '',
+            stageHeight: stage?.style.height || ''
+          };
+          const close = (left, right, tolerance = 0.5) => left && right && ['x', 'y', 'w', 'h'].every((key) => Math.abs(left[key] - right[key]) <= tolerance);
+          if (!close(before.target, after.target) || !close(before.box, after.box) || !close(before.peer, after.peer)) {
+            throw new Error(`Direct typing moved geometry: before=${JSON.stringify(before)}, after=${JSON.stringify(after)}`);
+          }
+          if (before.stageTransform !== after.stageTransform || before.stageWidth !== after.stageWidth || before.stageHeight !== after.stageHeight) {
+            throw new Error(`Direct typing changed canvas view: before=${JSON.stringify(before)}, after=${JSON.stringify(after)}`);
+          }
           active.blur();
           window.webkit.messageHandlers.treeMutationTest.postMessage({ type: 'directBlurred' });
         })();
         """
         webView?.evaluateJavaScript(script) { _, error in
             if let error {
-                self.fail("Direct blur script failed: \(error.localizedDescription)")
+                self.fail("Direct blur script failed: \(error.localizedDescription)\n\(error)")
             }
         }
     }
