@@ -94,6 +94,7 @@
   let directBaseHref = "";
   let directCanvasSize = null;
   let directPreviewWidth = null;
+  let directPreviewRenderFrame = 0;
   let directLayoutMode = "transform";
   let pendingDirectTextEditNode = null;
   let activeDirectTextEditNode = null;
@@ -617,6 +618,8 @@
 
     if (selectionBoxFrame) cancelAnimationFrame(selectionBoxFrame);
     selectionBoxFrame = 0;
+    if (directPreviewRenderFrame) cancelAnimationFrame(directPreviewRenderFrame);
+    directPreviewRenderFrame = 0;
     if (directHoverFrame) cancelAnimationFrame(directHoverFrame);
     directHoverFrame = 0;
 
@@ -913,16 +916,7 @@
 
   function directCanvas() {
     const measured = measureDirectCanvas();
-    if (!directCanvasSize) {
-      directCanvasSize = measured;
-    } else {
-      directCanvasSize = {
-        width: Math.max(directCanvasSize.width, measured.width),
-        height: Math.max(directCanvasSize.height, measured.height),
-        background: measured.background
-      };
-    }
-
+    if (!directCanvasSize) directCanvasSize = measured;
     return directCanvasSize;
   }
 
@@ -3473,11 +3467,18 @@
     const observer = new MutationObserver((mutations) => {
       let sawAddedEditableNodes = false;
       let sawRelevantMutations = false;
+      let sawStructuralCanvasMutation = false;
       for (const mutation of mutations) {
         if (mutation.type === "attributes" && (mutation.attributeName || "").startsWith("data-chiselo")) {
           continue;
         }
         sawRelevantMutations = true;
+        if (mutation.type === "childList") {
+          const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+          if (changedNodes.some((node) => node.nodeType === Node.ELEMENT_NODE)) {
+            sawStructuralCanvasMutation = true;
+          }
+        }
         if (mutation.type === "attributes" && mutation.target?.nodeType === Node.ELEMENT_NODE) {
           applyDirectEditingAssist(mutation.target);
         }
@@ -3488,6 +3489,7 @@
         }
       }
       if (!sawRelevantMutations) return;
+      if (sawStructuralCanvasMutation) directCanvasSize = null;
       const affectsTree = mutationsAffectHTMLTree(mutations);
       if (suppressDirectMutationRefresh && !affectsTree) return;
       clearDirectSelectionPayloadCache();
@@ -3515,11 +3517,10 @@
 
   function directEditableTarget(target) {
     if (!target || target.nodeType !== Node.ELEMENT_NODE) return null;
-    if (isDirectNonEditableElement(target)) return null;
+    if (isDirectRootNode(target) || isDirectNonEditableElement(target)) return null;
     const doc = target.ownerDocument;
-    if (target === doc.documentElement) return doc.body;
     const node = target.closest("body *") || doc.body;
-    return isDirectNonEditableElement(node) ? null : node;
+    return isDirectRootNode(node) || isDirectNonEditableElement(node) ? null : node;
   }
 
   function prepareDirectSubtree(root) {
@@ -3537,6 +3538,10 @@
   function isDirectNonEditableElement(node) {
     const tagName = node?.tagName?.toLowerCase?.() || "";
     return DIRECT_NON_EDITABLE_TAGS.has(tagName) || node?.hasAttribute?.("data-chiselo-style");
+  }
+
+  function isDirectRootNode(node) {
+    return Boolean(node?.matches?.("html,body"));
   }
 
   function applyDirectEditingAssist(node) {
@@ -4044,7 +4049,8 @@
     const seen = new Set();
 
     for (const node of nodes || []) {
-      if (!node || !node.isConnected || node.nodeType !== Node.ELEMENT_NODE) continue;
+      if (!node || !node.isConnected || node.nodeType !== Node.ELEMENT_NODE
+        || isDirectRootNode(node) || isDirectNonEditableElement(node)) continue;
       if (seen.has(node)) continue;
       seen.add(node);
       uniqueNodes.push(node);
@@ -4308,7 +4314,8 @@
   }
 
   function directSelectionNodes() {
-    directSelectedNodes = directSelectedNodes.filter((node) => node?.isConnected);
+    directSelectedNodes = directSelectedNodes.filter((node) => node?.isConnected
+      && !isDirectRootNode(node) && !isDirectNonEditableElement(node));
 
     if (directSelectedNode?.isConnected && !directSelectedNodes.includes(directSelectedNode)) {
       directSelectedNodes = [directSelectedNode];
@@ -4743,7 +4750,7 @@
       case "insertImage":
       case "insertLink":
       case "insertTable":
-        insertHTMLElement(name.replace(/^insert/, "").toLowerCase());
+        insertHTMLElement(action.replace(/^insert/, "").toLowerCase());
         return;
       case "duplicate":
         duplicateSelected();
@@ -4766,7 +4773,7 @@
   }
 
   function directNodeAllowsTextEdit(node) {
-    if (!node || isDirectNonEditableElement(node) || isReplaceableImageNode(node)) return false;
+    if (!node || isDirectRootNode(node) || isDirectNonEditableElement(node) || isReplaceableImageNode(node)) return false;
     if (["table", "thead", "tbody", "tfoot", "tr", "svg", "path", "line", "circle", "rect", "canvas", "video", "audio", "iframe", "input", "textarea", "select"].includes(node.tagName.toLowerCase())) return false;
     return normalizedText(node).length > 0 || node.matches?.("p,h1,h2,h3,h4,h5,h6,li,span,div,td,th,button,a");
   }
@@ -4858,8 +4865,11 @@
     const win = node.ownerDocument.defaultView;
     const computed = win.getComputedStyle(node);
     const rect = node.getBoundingClientRect();
-    const width = node.offsetWidth || rect.width;
-    const height = node.offsetHeight || rect.height;
+    // Keep sub-pixel layout coordinates intact while locking the local frame;
+    // integer offsetWidth/offsetHeight introduce visible drift on fractional
+    // grid and flex layouts.
+    const width = rect.width || node.offsetWidth;
+    const height = rect.height || node.offsetHeight;
     if (!(width > 0 && height > 0)) return false;
 
     const styleTarget = options.styleTarget || directLocalFrameStyleTarget(node);
@@ -4873,16 +4883,18 @@
       || computed.position === "fixed"
       || Boolean(targetStyle.width);
     if (computed.display === "inline") targetStyle.display = "inline-block";
-    if (fixesWidth) {
-      targetStyle.width = `${Math.round(width)}px`;
-    } else {
+    const precisePixel = (value) => `${Math.round(value * 1000) / 1000}px`;
+    if (!fixesWidth) {
       targetStyle.minWidth = "0";
-      targetStyle.maxWidth = "100%";
-      targetStyle.width = `min(${Math.round(width)}px, 100%)`;
+      targetStyle.maxWidth = "none";
     }
-    targetStyle.height = `${Math.round(height)}px`;
+    targetStyle.width = precisePixel(width);
+    targetStyle.height = precisePixel(height);
+    // Keep the local frame isolated so flow siblings never move. Overflow is
+    // marked for the diagnostics panel instead of being silently ignored.
     if (options.clipOverflow !== false && computed.overflow === "visible") {
       targetStyle.overflow = "hidden";
+      node.setAttribute("data-chiselo-edit-overflow-warning", "true");
     }
     return true;
   }
@@ -5081,29 +5093,35 @@
   function selectDirectRelative(kind) {
     if (editorMode !== "html" || !directSelectedNode) return;
 
-    const doc = directSelectedNode.ownerDocument;
     let target = null;
 
     if (kind === "parent") {
       target = directSelectedNode.parentElement;
-      if (target === doc.documentElement) target = doc.body;
+      if (isDirectRootNode(target)) target = null;
     }
 
     if (kind === "child") {
-      target = [...directSelectedNode.children].find((node) => isDirectNodeVisible(node)) || directSelectedNode.firstElementChild;
+      target = visibleTreeChildren(directSelectedNode).find((node) => isDirectNavigationNode(node)) || null;
     }
 
     if (kind === "previous") {
       target = directSelectedNode.previousElementSibling;
+      while (target && !isDirectNavigationNode(target)) target = target.previousElementSibling;
     }
 
     if (kind === "next") {
       target = directSelectedNode.nextElementSibling;
+      while (target && !isDirectNavigationNode(target)) target = target.nextElementSibling;
     }
 
-    if (target && target !== doc.documentElement) {
+    if (target && isDirectNavigationNode(target)) {
       selectDirectNode(target);
     }
+  }
+
+  function isDirectNavigationNode(node) {
+    return Boolean(node && node.nodeType === Node.ELEMENT_NODE && !isDirectRootNode(node)
+      && !isDirectNonEditableElement(node) && isDirectNodeVisible(node));
   }
 
   function beginDirectDrag(event, node, options = {}) {
@@ -5551,7 +5569,8 @@
   }
 
   function directNodeAllowsGeometry(node) {
-    return Boolean(node?.isConnected) && !directGeometryLockedNode(node);
+    return Boolean(node?.isConnected) && !isDirectRootNode(node)
+      && !isDirectNonEditableElement(node) && !directGeometryLockedNode(node);
   }
 
   function directSelectionAllowsGeometry(nodes = directSelectionNodes()) {
@@ -7088,7 +7107,7 @@
 
   function arrangeDirectSelected(mode) {
     const nodes = directSelectionNodes();
-    if (!nodes.length) return false;
+    if (!nodes.length || !directSelectionAllowsGeometry(nodes)) return false;
     pushHistory({ label: "调整层级" });
     for (const node of nodes) {
       const style = node.ownerDocument.defaultView.getComputedStyle(node);
@@ -9569,7 +9588,7 @@ ${htmlSlides}
   function selectHTML(selector, options = {}) {
     if (editorMode !== "html") return null;
     const node = directFrame?.contentDocument?.querySelector(selector);
-    if (!node) return null;
+    if (!node || isDirectRootNode(node) || isDirectNonEditableElement(node)) return null;
     if (options?.additive) {
       setDirectSelection([...directSelectionNodes(), node], node);
     } else {
@@ -9587,7 +9606,7 @@ ${htmlSlides}
     if (editorMode !== "html") return null;
     const escapedId = cssEscape(id);
     const node = directFrame?.contentDocument?.querySelector(`[data-chiselo-id="${escapedId}"]`);
-    if (!node) return null;
+    if (!node || isDirectRootNode(node) || isDirectNonEditableElement(node)) return null;
     if (additive) {
       setDirectSelection([...directSelectionNodes(), node], node);
     } else {
@@ -9602,7 +9621,7 @@ ${htmlSlides}
     const doc = directFrame?.contentDocument;
     if (!doc) return null;
 
-    const node = directTopSelectableTargetAtPoint(doc, x, y) || doc.body;
+    const node = directTopSelectableTargetAtPoint(doc, x, y);
     if (!node) return null;
 
     const selectionPayload = directElementPayloadForNode(node, directNodeRect(node));
@@ -9631,7 +9650,7 @@ ${htmlSlides}
   }
 
   function setSelectedHTMLText(text) {
-    if (editorMode !== "html" || !directSelectedNode) return null;
+    if (editorMode !== "html" || !directSelectedNode || !directNodeAllowsTextEdit(directSelectedNode)) return null;
     pushHistory({ label: "修改文字" });
     lockDirectLocalEditFrame(directSelectedNode);
     directSelectedNode.textContent = text;
@@ -9774,12 +9793,10 @@ ${htmlSlides}
       ? clampNumber(Math.round(numericWidth), 320, 2560)
       : null;
     directCanvasSize = null;
+    // One synchronous layout pass keeps the iframe's CSS viewport in sync
+    // immediately and avoids the previous render-then-render-again jump.
     renderDirectHTML({ preserveScale: true });
-    requestAnimationFrame(() => {
-      directCanvasSize = null;
-      renderDirectHTML({ preserveScale: true });
-      scheduleHTMLDiagnosticsChanged({ delay: 40, idleTimeout: 800 });
-    });
+    scheduleHTMLDiagnosticsChanged({ delay: 40, idleTimeout: 800 });
     return { width: directPreviewWidth, mode: directPreviewWidth ? "fixed" : "original" };
   }
 

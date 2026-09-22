@@ -2,6 +2,21 @@
 
 All notable changes to Chiselo will be documented here.
 
+## 0.1.26 - 2026-09-22
+
+- Prevented the document roots from being selected, edited, moved, duplicated,
+  arranged, or deleted in direct HTML mode.
+- Made hierarchy navigation skip hidden and non-editable runtime nodes.
+- Preserved sub-pixel local frames during text edits so neighboring modules do
+  not move, while keeping overflow visible in delivery diagnostics.
+- Invalidated canvas measurements only for structural element changes, allowing
+  deletion to shrink the page without responsive reflow during text edits.
+- Removed the duplicate responsive-preview render and fixed latent quick-action
+  insertion dispatch.
+- Added WKWebView coverage for root protection, filtered navigation, and canvas
+  shrink after deletion.
+- Bumped the Sparkle build number to `26` and published signed update metadata.
+
 ## 0.1.25 - 2026-08-09
 
 - Bound asynchronous save, export, and editable-layout conversion to the tab
